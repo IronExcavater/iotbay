@@ -1,1 +1,1 @@
-npm run -w web lint:staged
+npm run lint:staged
