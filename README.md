@@ -1,51 +1,96 @@
 # IOTBay Marketplace
 
-Monorepo with:
-- `web`: React + Vite frontend
-- `api`: Flask backend
+IOTBay is a two-workspace monorepo. The `web` workspace contains the React + Vite frontend, and the `api` workspace contains the Flask backend with a SQLite database.
 
-## Local setup
+## Prerequisites
 
-1. Install JavaScript dependencies:
+Install Node.js (includes npm) from https://nodejs.org/en/download and Python 3 from https://www.python.org/downloads/. Confirm both toolchains are available with:
+```bash
+node -v
+npm -v
+python3 --version
+```
+
+## Setup
+
+After cloning the repository, install JavaScript dependencies, then initialise the API virtual environment and install Python dependencies:
 ```bash
 npm install
+npm run -w api venv
+npm run -w api deps
+```
+Then initialise the backend schema:
+```bash
+npm run -w api db:migrate
 ```
 
-2. Create Python virtual environment for the API:
+## Development
+
+Run both services in separate terminal windows so frontend and backend logs stay isolated and each process can restart independently during development:
 ```bash
-npm run -w api venv:create
-```
-
-3. Install API Python dependencies:
-```bash
-npm run -w api deps:install
-```
-
-Note: run `npm run -w api venv:create` first so API scripts can use `.venv/bin/python`.
-
-## Run localhost
-
-Run these in separate terminals:
-
-Frontend (`http://localhost:5173`):
-```bash
+# Terminal 1 (frontend)
 npm run -w web dev
-```
 
-Backend (`http://localhost:5000`):
-```bash
+# Terminal 2 (backend)
 npm run -w api dev
 ```
-
-## Linting and testing
-
-Frontend lint + formatting + typecheck:
+- Frontend runs on port `5173`: `http://localhost:5173`
+- Backend runs on port `5001`: `http://localhost:5001`
+- Backend routes are prefixed with `/api/` (example below)
 ```bash
-npm run -w web lint:all
+curl http://localhost:5001/api/health
+```
+Before committing, run the top-level quality commands below; the indented hierarchy shows what each command executes:
+```text
+npm run -w web lint:all   # Frontend quality gate
+  npm run typecheck       # Detects TypeScript type errors
+  npm run eslint:fix      # Finds and fixes JS issues
+  npm run stylelint:fix   # Finds and fixes CSS issues
+  npm run prettier:fix    # Applies consistent code formatting
+
+npm run -w api check      # Backend quality gate
+  npm run lint            # Finds Python lint issues
+  npm run format          # Checks Python formatting state
+  npm run test            # Runs backend unit tests
+```
+When you need backend auto-fixes, run:
+```bash
+npm run -w api fix
 ```
 
-Backend lint and tests:
+## Database
+
+A schema change means changing database structure, for example creating a table, adding or removing a column, changing a constraint, or adding an index; it does not mean changing row data.
+
+To start a schema change, create a migration file:
 ```bash
-npm run -w api lint
-npm run -w api test
+npm run -w api db:migrate:new -- <migration_name>
 ```
+For example:
+```bash
+npm run -w api db:migrate:new -- add_product_category
+```
+The command creates a new SQL file at `api/migrations/<number>_<migration_name>.sql`; open that file and write the SQL statements for the change, then apply unapplied migrations:
+```bash
+npm run -w api db:migrate
+```
+Load shared seed data from `api/db/seed.sql` with:
+```bash
+npm run -w api db:seed:load
+```
+When intentionally updating the shared dataset, dump local rows back into `api/db/seed.sql` with:
+```bash
+npm run -w api db:seed:dump
+```
+If you need a custom local database file, set `IOTBAY_DATABASE_PATH` per command:
+```bash
+IOTBAY_DATABASE_PATH=<path_to_sqlite_file> npm run -w api db:migrate
+```
+
+## Postman
+
+Create a Postman environment (for example, `IOTBay Local`) with `baseUrl = http://localhost:5001`, then build requests with `{{baseUrl}}/api/...`; for example:
+```text
+GET {{baseUrl}}/api/health
+```
+Save requests in a collection (for example, `IOTBay API`) so the same tests can be reused by the team.

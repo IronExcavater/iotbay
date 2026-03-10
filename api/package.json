@@ -3,11 +3,19 @@
     "version": "0.0.1",
     "private": true,
     "scripts": {
-        "venv:create": "python3 -m venv .venv",
-        "deps:install": ".venv/bin/python -m pip install -r requirements.txt",
-        "dev": ".venv/bin/python -m flask --app run:app --debug run --host 0.0.0.0 --port 5000",
+        "venv": "python3 -m venv .venv",
+        "deps": ".venv/bin/python -m pip install -r requirements.txt",
+        "dev": ".venv/bin/python -m flask --app run:app --debug run --host 0.0.0.0 --port 5001",
+        "db:migrate": ".venv/bin/python -m src.db migrate",
+        "db:migrate:new": ".venv/bin/python -m src.db migrate-new",
+        "db:seed:load": ".venv/bin/python -m src.db seed-load",
+        "db:seed:dump": ".venv/bin/python -m src.db seed-dump",
         "lint": ".venv/bin/python -m ruff check .",
-        "lint:fix": ".venv/bin/python -m ruff check . --fix && .venv/bin/python -m ruff format .",
-        "test": ".venv/bin/python -m unittest discover -s tests -p 'test_*.py' -v"
+        "lint:fix": ".venv/bin/python -m ruff check . --fix",
+        "format": ".venv/bin/python -m ruff format . --check",
+        "format:fix": ".venv/bin/python -m ruff format .",
+        "fix": "npm run lint:fix && npm run format:fix",
+        "test": ".venv/bin/python -m unittest discover -s tests -p 'test_*.py' -v",
+        "check": "npm run lint && npm run format && npm run test"
     }
 }

@@ -1,10 +1,8 @@
-"""Health-check endpoints."""
-
-from flask import Blueprint, jsonify
+from flask import Blueprint
 
 health_bp = Blueprint("health", __name__)
 
 
 @health_bp.get("/health")
 def health():
-    return jsonify({"status": "ok"}), 200
+    return {"status": "ok"}, 200
