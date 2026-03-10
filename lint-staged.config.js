@@ -4,6 +4,9 @@ module.exports = {
         () => 'npm run -w web prettier:fix',
         () => 'npm run -w web typecheck',
     ],
-    'web/**/*.css': [() => 'npm run -w web stylelint:fix', () => 'npm run -w web prettier:fix'],
-    'api/**/*.py': [() => 'npm run -w api lint:fix'],
+    'web/**/*.css': [
+        () => 'npm run -w web stylelint:fix',
+        () => 'npm run -w web prettier:fix',
+    ],
+    'api/**/*.py': [() => 'npm run -w api fix'],
 };
