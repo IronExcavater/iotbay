@@ -2,7 +2,7 @@
 
 IOTBay is a two-workspace monorepo. The `web` workspace contains the React + Vite frontend, and the `api` workspace contains the Flask backend with a SQLite database.
 
-## [GitHub Project](https://github.com/users/IronExcavater/projects/1)
+#### [GitHub Project](https://github.com/users/IronExcavater/projects/1)
 
 ## Prerequisites
 
