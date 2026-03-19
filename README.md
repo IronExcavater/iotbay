@@ -4,25 +4,35 @@ IOTBay is a two-workspace monorepo. The `web` workspace contains the React + Vit
 
 ## Prerequisites
 
-Install Node.js (includes npm) from https://nodejs.org/en/download and Python 3 from https://www.python.org/downloads/. Confirm both toolchains are available with:
+- Install `Node.js` (includes `npm`): https://nodejs.org/en/download
+- Install `Python`: https://www.python.org/downloads/
+- Install `uv`: https://docs.astral.sh/uv/getting-started/installation/
+
+Confirm the toolchains are available:
 
 ```bash
 node -v
 npm -v
 python3 --version
+uv --version
 ```
 
 ## Setup
 
-After cloning the repository, install JavaScript dependencies, then initialise the API virtual environment and install Python dependencies:
+- Install JavaScript dependencies:
 
 ```bash
 npm install
+```
+
+- Initialise the API virtual environment and install Python dependencies:
+
+```bash
 npm run -w api venv
 npm run -w api deps
 ```
 
-Then initialise the backend schema:
+- Initialise the backend schema:
 
 ```bash
 npm run -w api db:migrate
@@ -61,12 +71,6 @@ npm run -w api check      # Backend quality gate
   npm run lint            # Finds Python lint issues
   npm run format          # Checks Python formatting state
   npm run test            # Runs backend unit tests
-```
-
-When you need backend auto-fixes, run:
-
-```bash
-npm run -w api fix
 ```
 
 ## Database
@@ -111,10 +115,10 @@ IOTBAY_DATABASE_PATH=<path_to_sqlite_file> npm run -w api db:migrate
 
 ## Postman
 
+Postman provides an gui interface to catalog, organise and query `http` requests for API testing and debugging: https://www.postman.com/
+
 Create a Postman environment (for example, `IOTBay Local`) with `baseUrl = http://localhost:5001`, then build requests with `{{baseUrl}}/api/...`; for example:
 
 ```text
 GET {{baseUrl}}/api/health
 ```
-
-Save requests in a collection (for example, `IOTBay API`) so the same tests can be reused by the team.
