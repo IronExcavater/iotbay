@@ -3,15 +3,17 @@ import { Link } from 'react-router-dom';
 export default function NotFoundPage() {
     return (
         <section className="space-y-3">
-            <h1 className="text-3xl font-semibold text-gray-900">Not found</h1>
+            <h1 className="text-3xl font-semibold text-gray-900">
+                Page not found
+            </h1>
             <p className="text-base text-gray-600">
-                This route does not exist in the current scaffold.
+                The page you requested does not exist.
             </p>
             <Link
                 className="text-sm font-medium text-gray-900 underline"
                 to="/"
             >
-                Go home
+                Return home
             </Link>
         </section>
     );
