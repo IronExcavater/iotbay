@@ -1,10 +1,10 @@
 import os
 
+from api.src.products.repository import ProductRepository
+from api.src.products.routes import products_bp
 from flask import Flask
 from src.db import DEFAULT_DB_PATH, migrate
-from src.repositories.product_repository import ProductRepository
 from src.routes.health import health_bp
-from src.routes.products import products_bp
 
 
 def create_app(database_path: str | None = None) -> Flask:

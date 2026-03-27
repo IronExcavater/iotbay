@@ -1,2 +1,4 @@
 Flask
+pydantic
+pydantic-settings
 ruff
