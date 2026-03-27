@@ -1,11 +1,13 @@
 import sqlite3
-from datetime import datetime, timezone
 
+from src.common.clock import UtcTime
+from src.common.web import ApiError
 from src.models import Product
 
 
-class DuplicateCodeError(Exception):
-    pass
+class DuplicateCodeError(ApiError):
+    def __init__(self) -> None:
+        super().__init__("code already exists", 409)
 
 
 class ProductRepository:
@@ -34,7 +36,7 @@ class ProductRepository:
         ]
 
     def create_product(self, name: str, code: str, price_cents: int) -> Product:
-        created_at = datetime.now(tz=timezone.utc).isoformat()
+        created_at = UtcTime.now().iso
 
         try:
             with self._connect() as connection:
@@ -46,7 +48,7 @@ class ProductRepository:
                     (name, code, price_cents, created_at),
                 )
         except sqlite3.IntegrityError as error:
-            raise DuplicateCodeError("code already exists") from error
+            raise DuplicateCodeError() from error
 
         product_id = cursor.lastrowid
         if product_id is None:
