@@ -1,7 +1,11 @@
 [tool.ruff]
 line-length = 88
+target-version = "py314"
 src = ["src", "tests"]
 extend-exclude = [".venv"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
+
+[tool.ruff.lint.pycodestyle]
+ignore-overlong-task-comments = true

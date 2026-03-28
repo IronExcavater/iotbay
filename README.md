@@ -61,16 +61,18 @@ curl http://localhost:5001/api/health
 Before committing, run the top-level quality commands below; the indented hierarchy shows what each command executes:
 
 ```text
-npm run -w web lint:all   # Frontend quality gate
+npm run -w web fix:all   # Frontend quality gate
   npm run typecheck       # Detects TypeScript type errors
   npm run eslint:fix      # Finds and fixes JS issues
   npm run stylelint:fix   # Finds and fixes CSS issues
   npm run prettier:fix    # Applies consistent code formatting
 
-npm run -w api check      # Backend quality gate
-  npm run lint            # Finds Python lint issues
-  npm run format          # Checks Python formatting state
-  npm run test            # Runs backend unit tests
+npm run -w api fix:all      # Backend quality gate
+  npm run typecheck       # Runs Pyright static typing
+  npm run lint:fix      # Finds and fixes Python issues
+  npm run format:fix    # Applies consistent code formatting
+
+npm run -w api test            # Runs backend unit tests
 ```
 
 ## Database
