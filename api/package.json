@@ -3,19 +3,22 @@
     "version": "0.0.1",
     "private": true,
     "scripts": {
-        "venv": "python3 -m venv .venv",
-        "deps": "python3 -m pip install -r requirements.txt",
-        "dev": "python3 -m flask --app run:app --debug run --host 0.0.0.0 --port 5001",
-        "db:migrate": "python3 -m src.db migrate",
-        "db:migrate:new": "python3 -m src.db migrate-new",
-        "db:seed:load": "python3 -m src.db seed-load",
-        "db:seed:dump": "python3 -m src.db seed-dump",
-        "lint": "uv run ruff check .",
-        "lint:fix": "uv run ruff check . --fix",
-        "format": "uv run ruff format . --check",
-        "format:fix": "uv run ruff format .",
+        "venv": "uv venv --seed --allow-existing",
+        "deps": "uv pip install -r requirements.txt",
+        "dev": "uv run --no-sync python -m flask --app run:app --debug run --host 0.0.0.0 --port 5001",
+        "db:migrate": "uv run --no-sync python -m src.db migrate",
+        "db:migrate:new": "uv run --no-sync python -m src.db migrate-new",
+        "db:seed:load": "uv run --no-sync python -m src.db seed-load",
+        "db:seed:dump": "uv run --no-sync python -m src.db seed-dump",
+        "typecheck": "pyright -p pyrightconfig.json",
+        "lint": "uv run --no-sync ruff check .",
+        "lint:fix": "uv run --no-sync ruff check . --fix",
+        "format": "uv run --no-sync ruff format . --check",
+        "format:fix": "uv run --no-sync ruff format .",
         "fix:all": "npm run lint:fix && npm run format:fix",
-        "test": "uv run python -m unittest discover -s tests -p 'test_*.py' -v",
-        "check": "npm run lint && npm run format && npm run test"
+        "test": "uv run --no-sync python -m unittest discover -s tests -p 'test_*.py' -v"
+    },
+    "devDependencies": {
+        "pyright": "^1.1.408"
     }
 }

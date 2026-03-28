@@ -13,7 +13,7 @@
         "stylelint:fix": "stylelint \"**/*.{css}\" --fix",
         "prettier": "prettier . -c",
         "prettier:fix": "prettier . -wu --log-level warn",
-        "lint:all": "npm run typecheck && npm run eslint:fix && npm run stylelint:fix && npm run prettier:fix"
+        "fix:all": "npm run typecheck && npm run eslint:fix && npm run stylelint:fix && npm run prettier:fix"
     },
     "dependencies": {
         "clsx": "^2.1.1",
