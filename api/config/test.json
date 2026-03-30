@@ -1,0 +1,10 @@
+{
+  "databasePath": "../data/test.sqlite3",
+  "cookieSecure": false,
+  "sessionCookieName": "iotbay_test_session",
+  "sessionLifetimeSeconds": 604800,
+  "verificationCodeLifetimeSeconds": 900,
+  "email": {
+    "sender": "noreply@iotbay.test"
+  }
+}
