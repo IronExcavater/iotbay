@@ -1,8 +1,10 @@
 import sqlite3
+from contextlib import AbstractContextManager
 
 from src.common.clock import UtcTime
 from src.common.web import ApiError
-from src.models import Product
+from src.db import connect
+from src.products.models import Product
 
 
 class DuplicateCodeError(ApiError):
@@ -15,7 +17,7 @@ class ProductRepository:
         self._database_path = database_path
 
     def list_products(self) -> list[Product]:
-        with self._connect() as connection:
+        with self.connect() as connection:
             rows = connection.execute(
                 """
                 SELECT id, name, code, price_cents, created_at
@@ -39,7 +41,7 @@ class ProductRepository:
         created_at = UtcTime.now().iso
 
         try:
-            with self._connect() as connection:
+            with self.connect() as connection:
                 cursor = connection.execute(
                     """
                     INSERT INTO products (name, code, price_cents, created_at)
@@ -62,5 +64,5 @@ class ProductRepository:
             created_at=created_at,
         )
 
-    def _connect(self) -> sqlite3.Connection:
-        return sqlite3.connect(self._database_path)
+    def connect(self) -> AbstractContextManager[sqlite3.Connection]:
+        return connect(self._database_path)

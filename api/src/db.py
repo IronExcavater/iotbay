@@ -1,8 +1,11 @@
-import os
 import re
 import sqlite3
 import sys
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
+
+from src.config import load_app_config
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_DB_PATH = ROOT_DIR / "data" / "iotbay.sqlite3"
@@ -13,7 +16,7 @@ MIGRATION_SLUG_PATTERN = re.compile(r"[^a-z0-9]+")
 
 
 def migrate(database_path: str) -> None:
-    with _connect(database_path) as db:
+    with connect(database_path) as db:
         db.execute(
             """
             CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -56,14 +59,14 @@ def seed_apply(database_path: str) -> None:
         return
 
     script = SEED_SQL_PATH.read_text(encoding="utf-8")
-    with _connect(database_path) as db:
+    with connect(database_path) as db:
         db.executescript(script)
 
 
 def seed_save(database_path: str) -> None:
     migrate(database_path)
 
-    with _connect(database_path) as db:
+    with connect(database_path) as db:
         rows = db.execute(
             """
             SELECT id, name, code, price_cents, created_at
@@ -85,10 +88,22 @@ def seed_save(database_path: str) -> None:
     SEED_SQL_PATH.write_text("\n".join(lines), encoding="utf-8")
 
 
-def _connect(database_path: str) -> sqlite3.Connection:
+@contextmanager
+def connect(database_path: str) -> Iterator[sqlite3.Connection]:
     if database_path != ":memory:":
         Path(database_path).parent.mkdir(parents=True, exist_ok=True)
-    return sqlite3.connect(database_path)
+
+    connection = sqlite3.connect(database_path)
+    connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON")
+    try:
+        yield connection
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
 
 
 def _migration_files() -> list[Path]:
@@ -136,36 +151,41 @@ def _sql_literal(db: sqlite3.Connection, value: object) -> str:
     row = db.execute("SELECT quote(?)", (value,)).fetchone()
     if row is None:
         raise RuntimeError("failed to quote SQL value")
+
     literal = row[0]
     if not isinstance(literal, str):
         raise RuntimeError("invalid SQL value")
+
     return literal
 
 
-def _database_path_from_env() -> str:
-    return os.environ.get("IOTBAY_DATABASE_PATH", str(DEFAULT_DB_PATH))
+def _database_path_from_config() -> str:
+    return load_app_config().database_path
 
 
 def main() -> int:
     if len(sys.argv) < 2:
-        print(
-            "Usage: python -m src.db [migrate|migration-new|seed-load|seed-dump] [name]"
-        )
+        _print_usage()
         return 1
 
-    command = sys.argv[1]
-    database_path = _database_path_from_env()
+    return _run_command(
+        sys.argv[1],
+        _database_path_from_config(),
+        sys.argv[2:],
+    )
 
+
+def _run_command(command: str, database_path: str, args: list[str]) -> int:
     if command == "migrate":
         migrate(database_path)
         print(f"Migrations applied for {database_path}")
         return 0
 
     if command == "migrate-new":
-        if len(sys.argv) < 3:
+        if not args:
             print("Usage: python -m src.db migrate-new <name>")
             return 1
-        migration_path = create_migration(" ".join(sys.argv[2:]))
+        migration_path = create_migration(" ".join(args))
         print(f"Created {migration_path}")
         return 0
 
@@ -179,8 +199,12 @@ def main() -> int:
         print(f"Saved shared data to {SEED_SQL_PATH}")
         return 0
 
-    print("Usage: python -m src.db [migrate|migrate-new|seed-load|seed-dump] [name]")
+    _print_usage()
     return 1
+
+
+def _print_usage() -> None:
+    print("Usage: python -m src.db [migrate|migrate-new|seed-load|seed-dump] [name]")
 
 
 if __name__ == "__main__":

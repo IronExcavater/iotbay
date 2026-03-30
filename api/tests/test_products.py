@@ -1,20 +1,15 @@
 import tempfile
 import unittest
+from pathlib import Path
 
-from src.app import create_app
+from tests.context.app import create_test_client
 
 
 class ProductRouteTestCase(unittest.TestCase):
     def setUp(self) -> None:
-        self._temp_dir = tempfile.TemporaryDirectory()
-        database_path = f"{self._temp_dir.name}/test.sqlite3"
-
-        app = create_app(database_path=database_path)
-        app.testing = True
-        self.client = app.test_client()
-
-    def tearDown(self) -> None:
-        self._temp_dir.cleanup()
+        super().setUp()
+        temp_dir = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        self.client, _ = create_test_client(temp_dir)
 
     def test_list_products_starts_empty(self) -> None:
         response = self.client.get("/api/products")
