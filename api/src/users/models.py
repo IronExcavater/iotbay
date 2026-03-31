@@ -1,6 +1,11 @@
 from dataclasses import dataclass, field
 
-from src.common.sqlite_model import BlobUuidModel, SqliteRowModel, new_id_bytes
+from src.common.sqlite_model import (
+    ApiModel,
+    BlobUuidModel,
+    SqliteRowModel,
+    new_id_bytes,
+)
 
 USER_TYPE_CUSTOMER = "customer"
 USER_TYPE_STAFF = "staff"
@@ -22,7 +27,16 @@ class Address(SqliteRowModel, BlobUuidModel):
 
 
 @dataclass(slots=True, frozen=True)
-class User(SqliteRowModel, BlobUuidModel):
+class User(SqliteRowModel, BlobUuidModel, ApiModel):
+    public_fields = (
+        "id",
+        "email",
+        "first_name",
+        "last_name",
+        "user_type",
+        "status",
+    )
+
     email: str
     password_hash: str
     first_name: str
@@ -33,3 +47,12 @@ class User(SqliteRowModel, BlobUuidModel):
     updated_at: str
     address_id: bytes | None = None
     user_id: bytes = field(default_factory=new_id_bytes)
+
+
+@dataclass(slots=True, frozen=True)
+class UserSession(SqliteRowModel, BlobUuidModel):
+    user_id: bytes
+    session_token_hash: str
+    created_at: str
+    expires_at: str
+    session_id: bytes = field(default_factory=new_id_bytes)

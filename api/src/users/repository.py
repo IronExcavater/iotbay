@@ -1,6 +1,14 @@
+import sqlite3
+
 from src.common.clock import UtcTime
 from src.common.repository import Repository
-from src.users.models import Address, User
+from src.common.web import ApiError
+from src.users.models import Address, User, UserSession
+
+
+class DuplicateEmailError(ApiError):
+    def __init__(self) -> None:
+        super().__init__("email already exists", 409)
 
 
 class UserRepository(Repository):
@@ -64,25 +72,58 @@ class UserRepository(Repository):
             address_id=address_id,
         )
 
+        try:
+            with self.connect() as connection:
+                self.insert_into(
+                    connection,
+                    "users",
+                    {
+                        "user_id": user.user_id,
+                        "email": user.email,
+                        "password_hash": user.password_hash,
+                        "first_name": user.first_name,
+                        "last_name": user.last_name,
+                        "user_type": user.user_type,
+                        "status": user.status,
+                        "address_id": user.address_id,
+                        "created_at": user.created_at,
+                        "updated_at": user.updated_at,
+                    },
+                )
+        except sqlite3.IntegrityError as error:
+            raise DuplicateEmailError() from error
+
+        return user
+
+    def create_session(
+        self,
+        *,
+        user_id: bytes,
+        session_token_hash: str,
+        created_at: str,
+        expires_at: str,
+    ) -> UserSession:
+        session = UserSession(
+            user_id=user_id,
+            session_token_hash=session_token_hash,
+            created_at=created_at,
+            expires_at=expires_at,
+        )
+
         with self.connect() as connection:
             self.insert_into(
                 connection,
-                "users",
+                "user_sessions",
                 {
-                    "user_id": user.user_id,
-                    "email": user.email,
-                    "password_hash": user.password_hash,
-                    "first_name": user.first_name,
-                    "last_name": user.last_name,
-                    "user_type": user.user_type,
-                    "status": user.status,
-                    "address_id": user.address_id,
-                    "created_at": user.created_at,
-                    "updated_at": user.updated_at,
+                    "session_id": session.session_id,
+                    "user_id": session.user_id,
+                    "session_token_hash": session.session_token_hash,
+                    "created_at": session.created_at,
+                    "expires_at": session.expires_at,
                 },
             )
 
-        return user
+        return session
 
     def find_address_by_id(self, *, address_id: bytes) -> Address | None:
         with self.connect() as connection:
@@ -131,3 +172,37 @@ class UserRepository(Repository):
             return None
 
         return User.from_row(row)
+
+    def find_user_by_session_token_hash(
+        self,
+        *,
+        session_token_hash: str,
+        now_iso: str,
+    ) -> User | None:
+        with self.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT users.*
+                FROM users
+                JOIN user_sessions
+                    ON user_sessions.user_id = users.user_id
+                WHERE user_sessions.session_token_hash = ?
+                  AND user_sessions.expires_at > ?
+                """,
+                (session_token_hash, now_iso),
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        return User.from_row(row)
+
+    def delete_session_by_token_hash(self, *, session_token_hash: str) -> None:
+        with self.connect() as connection:
+            connection.execute(
+                """
+                DELETE FROM user_sessions
+                WHERE session_token_hash = ?
+                """,
+                (session_token_hash,),
+            )

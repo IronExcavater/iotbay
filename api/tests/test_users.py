@@ -9,14 +9,14 @@ from src.users.models import (
     USER_TYPE_STAFF,
 )
 from src.users.repository import UserRepository
-from tests.context.app import create_test_client
+from tests.helpers.test_app import create_test_app_client
 
 
 class UserRepositoryTestCase(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
         temp_dir = Path(self.enterContext(tempfile.TemporaryDirectory()))
-        self.client, self.database_path = create_test_client(temp_dir)
+        self.client, self.database_path = create_test_app_client(temp_dir)
         self.repository = UserRepository(self.database_path)
 
     def test_create_address_and_load_by_id(self) -> None:

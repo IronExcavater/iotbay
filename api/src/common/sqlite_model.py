@@ -1,7 +1,7 @@
 import sqlite3
 import uuid
 from dataclasses import fields, is_dataclass
-from typing import Any, Self, cast
+from typing import Any, ClassVar, Self, cast
 
 
 def new_id_bytes() -> bytes:
@@ -41,3 +41,18 @@ class BlobUuidModel:
         if not isinstance(value, bytes):
             raise TypeError(f"{field_name} must be bytes")
         return id_bytes_to_string(value)
+
+
+class ApiModel:
+    public_fields: ClassVar[tuple[str, ...]]
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            _to_camel_case(field_name): getattr(self, field_name)
+            for field_name in self.public_fields
+        }
+
+
+def _to_camel_case(value: str) -> str:
+    head, *tail = value.split("_")
+    return head + "".join(part.capitalize() for part in tail)

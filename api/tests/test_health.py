@@ -2,14 +2,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.context.app import create_test_client
+from tests.helpers.test_app import create_test_app_client
 
 
 class HealthRouteTestCase(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
         temp_dir = Path(self.enterContext(tempfile.TemporaryDirectory()))
-        self.client, _ = create_test_client(temp_dir)
+        self.client, _ = create_test_app_client(temp_dir)
 
     def test_health_endpoint(self) -> None:
         response = self.client.get("/api/health")
