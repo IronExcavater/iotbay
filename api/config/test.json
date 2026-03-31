@@ -4,7 +4,5 @@
   "sessionCookieName": "iotbay_test_session",
   "sessionLifetimeSeconds": 604800,
   "verificationCodeLifetimeSeconds": 900,
-  "email": {
-    "sender": "noreply@iotbay.test"
-  }
+  "webUrl": "http://localhost:4173"
 }

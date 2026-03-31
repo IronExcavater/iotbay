@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from http import HTTPStatus
 
 from flask import Flask, request
+from flask.typing import ResponseReturnValue
 
 
 class ApiError(Exception):
@@ -17,7 +18,7 @@ class ApiError(Exception):
         self.status_code = status_code
         self.code = code
 
-    def to_response(self, *, code: str | None = None) -> tuple[dict[str, str], int]:
+    def to_response(self, *, code: str | None = None) -> ResponseReturnValue:
         payload = {"error": self.message}
         resolved_code = self.code if code is None else code
         if resolved_code is not None:
@@ -31,7 +32,7 @@ class ValidationError(ApiError):
 
 def register_errors(app: Flask) -> None:
     @app.errorhandler(ApiError)
-    def handle_api_error(error: ApiError) -> tuple[dict[str, str], int]:
+    def handle_api_error(error: ApiError) -> ResponseReturnValue:
         return error.to_response()
 
 

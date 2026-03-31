@@ -10,13 +10,16 @@ DEFAULT_CONFIG_PATH = ROOT_DIR / "config" / "app.json"
 DEFAULT_ENV_PATH = ROOT_DIR / ".env"
 
 
-class SmtpSettings(BaseSettings):
+class EmailConfig(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="IOTBAY_",
         env_file=str(DEFAULT_ENV_PATH),
         extra="ignore",
+        frozen=True,
     )
 
+    email_output_directory: Path = ROOT_DIR / "data" / "email-output"
+    sender: str = ""
     smtp_host: str = ""
     smtp_password: str = ""
     smtp_port: int = 587
@@ -24,15 +27,15 @@ class SmtpSettings(BaseSettings):
     smtp_username: str = ""
 
 
-class EmailConfig(BaseModel):
-    model_config = ConfigDict(frozen=True)
+class ApiAccessConfig(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="IOTBAY_",
+        env_file=str(DEFAULT_ENV_PATH),
+        extra="ignore",
+        frozen=True,
+    )
 
-    sender: str
-    smtp_host: str = ""
-    smtp_password: str = ""
-    smtp_port: int = 587
-    smtp_use_tls: bool = True
-    smtp_username: str = ""
+    api_key: str = ""
 
 
 class AppConfig(BaseModel):
@@ -44,10 +47,10 @@ class AppConfig(BaseModel):
 
     cookie_secure: bool
     database_path: str
-    email: EmailConfig
     session_cookie_name: str
     session_lifetime_seconds: int
     verification_code_lifetime_seconds: int
+    web_url: str
 
 
 def load_app_config(config_path: str | Path | None = None) -> AppConfig:
@@ -68,6 +71,18 @@ def load_app_config(config_path: str | Path | None = None) -> AppConfig:
                 if database_path.is_absolute()
                 else (path.parent / database_path).resolve()
             ),
-            "email": config.email.model_copy(update=SmtpSettings().model_dump()),
         }
     )
+
+
+def load_email_config() -> EmailConfig:
+    config = EmailConfig()
+    output_directory = config.email_output_directory.expanduser()
+    if not output_directory.is_absolute():
+        output_directory = (ROOT_DIR / output_directory).resolve()
+
+    return config.model_copy(update={"email_output_directory": output_directory})
+
+
+def load_api_access_config() -> ApiAccessConfig:
+    return ApiAccessConfig()

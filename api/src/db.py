@@ -3,6 +3,7 @@ import sqlite3
 import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 
 from src.config import load_app_config
@@ -11,6 +12,22 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_DB_PATH = ROOT_DIR / "data" / "iotbay.sqlite3"
 MIGRATIONS_DIR = ROOT_DIR / "migrations"
 SEED_SQL_PATH = ROOT_DIR / "db" / "seed.sql"
+
+
+@dataclass(slots=True, frozen=True)
+class SeedTable:
+    name: str
+    order_by: str
+
+
+SEED_TABLES = (
+    SeedTable(name="users", order_by="email ASC"),
+    SeedTable(
+        name="addresses",
+        order_by="country ASC, state ASC, suburb ASC, address_line_one ASC",
+    ),
+    SeedTable(name="products", order_by="code ASC"),
+)
 
 MIGRATION_SLUG_PATTERN = re.compile(r"[^a-z0-9]+")
 
@@ -67,21 +84,19 @@ def seed_save(database_path: str) -> None:
     migrate(database_path)
 
     with connect(database_path) as db:
-        rows = db.execute(
-            """
-            SELECT id, name, code, price_cents, created_at
-            FROM products
-            ORDER BY id ASC
-            """
-        ).fetchall()
+        lines = ["BEGIN TRANSACTION;"]
+        for table in SEED_TABLES:
+            lines.append(f"DELETE FROM {table.name};")
 
-        lines = ["BEGIN TRANSACTION;", "DELETE FROM products;"]
-        for row in rows:
-            values = ", ".join(_sql_literal(db, value) for value in row)
-            lines.append(
-                "INSERT INTO products (id, name, code, price_cents, created_at) "
-                f"VALUES ({values});"
+        for table in reversed(SEED_TABLES):
+            lines.extend(
+                _table_snapshot_lines(
+                    db,
+                    table.name,
+                    order_by=table.order_by,
+                )
             )
+
         lines.extend(["COMMIT;", ""])
 
     SEED_SQL_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -157,6 +172,30 @@ def _sql_literal(db: sqlite3.Connection, value: object) -> str:
         raise RuntimeError("invalid SQL value")
 
     return literal
+
+
+def _table_snapshot_lines(
+    db: sqlite3.Connection,
+    table_name: str,
+    *,
+    order_by: str,
+) -> list[str]:
+    rows = db.execute(f"SELECT * FROM {table_name} ORDER BY {order_by}").fetchall()
+    if not rows:
+        return []
+
+    description = db.execute(f"SELECT * FROM {table_name} LIMIT 0").description or ()
+    column_names = [str(current[0]) for current in description]
+    insert_columns = ", ".join(column_names)
+
+    lines: list[str] = []
+    for row in rows:
+        values = ", ".join(
+            _sql_literal(db, row[column_name]) for column_name in column_names
+        )
+        lines.append(f"INSERT INTO {table_name} ({insert_columns}) VALUES ({values});")
+
+    return lines
 
 
 def _database_path_from_config() -> str:
