@@ -1,22 +1,16 @@
 from http import HTTPStatus
 
-from flask import Blueprint, current_app
+from flask import Blueprint
+from src.common.app import app_extension
 from src.common.web import RequestData, ValidationError
 from src.products.repository import ProductRepository
 
 products_bp = Blueprint("products", __name__)
 
 
-def _product_repository() -> ProductRepository:
-    repository = current_app.extensions.get("product_repository")
-    if not isinstance(repository, ProductRepository):
-        raise RuntimeError("product_repository is not configured")
-    return repository
-
-
 @products_bp.get("/products")
 def list_products():
-    repository = _product_repository()
+    repository = app_extension("product_repository", ProductRepository)
 
     products = [product.to_dict() for product in repository.list_products()]
     return {"items": products}, HTTPStatus.OK
@@ -24,7 +18,7 @@ def list_products():
 
 @products_bp.post("/products")
 def create_product():
-    repository = _product_repository()
+    repository = app_extension("product_repository", ProductRepository)
 
     data = RequestData.from_request()
     price_cents = data.integer("priceCents", message="priceCents must be an integer")

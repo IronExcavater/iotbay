@@ -8,8 +8,7 @@ from src.config import load_app_config
 TEST_CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "test.json"
 
 
-# Returns FlaskClient and resolved database path
-def create_test_client(temp_dir: Path) -> tuple[FlaskClient, str]:
+def create_test_app_client(temp_dir: Path) -> tuple[FlaskClient, str]:
     config_dir = temp_dir / "config"
     config_dir.mkdir()
 

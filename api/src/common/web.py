@@ -1,8 +1,11 @@
 from dataclasses import dataclass
 from http import HTTPStatus
+from typing import TypeVar
 
 from flask import Flask, request
 from flask.typing import ResponseReturnValue
+from pydantic import BaseModel
+from pydantic import ValidationError as PydanticValidationError
 
 
 class ApiError(Exception):
@@ -30,10 +33,24 @@ class ValidationError(ApiError):
     pass
 
 
+TRequestModel = TypeVar("TRequestModel", bound=BaseModel)
+
+
 def register_errors(app: Flask) -> None:
     @app.errorhandler(ApiError)
     def handle_api_error(error: ApiError) -> ResponseReturnValue:
         return error.to_response()
+
+
+def parse_request(model: type[TRequestModel]) -> TRequestModel:
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        raise ValidationError("request body must be a JSON object")
+
+    try:
+        return model.model_validate(data)
+    except PydanticValidationError as error:
+        raise ValidationError(_request_validation_message(error)) from error
 
 
 @dataclass(slots=True, frozen=True)
@@ -74,3 +91,16 @@ class RequestData:
         if isinstance(value, bool) or not isinstance(value, int):
             raise ValidationError(message)
         return value
+
+
+def _request_validation_message(error: PydanticValidationError) -> str:
+    details = error.errors()
+    if not details:
+        return "request is invalid"
+
+    message = details[0].get("msg")
+    if isinstance(message, str) and message.startswith("Value error, "):
+        return message.replace("Value error, ", "", 1)
+    if isinstance(message, str):
+        return message
+    return "request is invalid"
