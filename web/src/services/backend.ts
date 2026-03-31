@@ -3,7 +3,7 @@ export interface HealthStatus {
 }
 
 export interface Product {
-    id: number;
+    id: string;
     name: string;
     code: string;
     priceCents: number;

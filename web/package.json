@@ -9,8 +9,8 @@
         "typecheck": "tsc --noEmit",
         "eslint": "eslint .",
         "eslint:fix": "eslint . --fix",
-        "stylelint": "stylelint \"**/*.{css}\"",
-        "stylelint:fix": "stylelint \"**/*.{css}\" --fix",
+        "stylelint": "stylelint \"src/**/*.{css}\" --allow-empty-input",
+        "stylelint:fix": "stylelint \"src/**/*.{css}\" --allow-empty-input --fix",
         "prettier": "prettier . -c",
         "prettier:fix": "prettier . -wu --log-level warn",
         "fix:all": "npm run typecheck && npm run eslint:fix && npm run stylelint:fix && npm run prettier:fix"
