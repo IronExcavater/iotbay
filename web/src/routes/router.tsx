@@ -6,6 +6,8 @@ import AuthPage from '../pages/AuthPage';
 import ErrorPage from '../pages/ErrorPage';
 import HomePage from '../pages/HomePage';
 import NotFoundPage from '../pages/NotFoundPage';
+import ResetPasswordPage from '../pages/ResetPasswordPage';
+import VerifyEmailPage from '../pages/VerifyEmailPage';
 
 export const router = createBrowserRouter([
     {
@@ -20,6 +22,14 @@ export const router = createBrowserRouter([
             {
                 path: 'auth',
                 element: <AuthPage />,
+            },
+            {
+                path: 'reset-password',
+                element: <ResetPasswordPage />,
+            },
+            {
+                path: 'verify-email',
+                element: <VerifyEmailPage />,
             },
             {
                 path: 'account',

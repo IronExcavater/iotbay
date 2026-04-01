@@ -20,6 +20,8 @@ def create_app(config_path: str | None = None) -> Flask:
         AUTH_COOKIE_SECURE=config.cookie_secure,
         AUTH_SESSION_COOKIE_NAME=config.session_cookie_name,
         AUTH_SESSION_LIFETIME_SECONDS=config.session_lifetime_seconds,
+        VERIFICATION_CODE_LIFETIME_SECONDS=config.verification_code_lifetime_seconds,
+        WEB_URL=config.web_url,
     )
 
     app.extensions.update(

@@ -1,8 +1,16 @@
-import { useState, type ChangeEventHandler, type FormEvent } from 'react';
-import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { useState, type FormEvent } from 'react';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 
-import { type RegisterInput } from '../auth/api';
+import { authApi, type RegisterInput } from '../auth/api';
 import { useAuth } from '../auth/AuthProvider';
+import { downloadHtmlArtifact } from '../auth/downloadHtmlArtifact';
+import {
+    EMAIL_MAX_LENGTH,
+    NAME_MAX_LENGTH,
+    PASSWORD_MAX_LENGTH,
+} from '../auth/limits';
+import { PasswordInput, inputClassName } from '../auth/PasswordInput';
+import { PasswordRuleList } from '../auth/PasswordRuleList';
 import { getPasswordRules } from '../auth/passwordRules';
 import { BackendError } from '../services/http';
 
@@ -30,10 +38,11 @@ const DEFAULT_VALUES: FormValues = {
 export default function AuthPage() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const { isAuthenticated, isLoading, login, register } = useAuth();
+    const { isAuthenticated, isLoading, login } = useAuth();
     const [values, setValues] = useState<FormValues>(DEFAULT_VALUES);
     const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
     const [formError, setFormError] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -60,14 +69,24 @@ export default function AuthPage() {
         setValues((current) => ({ ...current, [name]: value }));
         setFieldErrors((current) => ({ ...current, [name]: undefined }));
         setFormError(null);
+        setSuccessMessage(null);
     }
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
+        const form = event.currentTarget;
+        if (!form.reportValidity()) {
+            return;
+        }
 
-        const nextFieldErrors = validateForm(values, isSignUp, passwordRules);
+        const nextFieldErrors = validatePasswordFields(
+            values,
+            isSignUp,
+            passwordRules
+        );
         setFieldErrors(nextFieldErrors);
         setFormError(null);
+        setSuccessMessage(null);
 
         if (Object.keys(nextFieldErrors).length > 0) {
             return;
@@ -76,14 +95,26 @@ export default function AuthPage() {
         setIsSubmitting(true);
         try {
             if (isSignUp) {
-                await register(toRegisterInput(values));
+                const result = await authApi.register(toRegisterInput(values));
+                setFieldErrors({});
+                if (result.download) {
+                    downloadHtmlArtifact(result.download);
+                    setSuccessMessage('Verification email downloaded');
+                } else {
+                    setSuccessMessage(
+                        'Check your email to verify your account'
+                    );
+                }
+                setValues(DEFAULT_VALUES);
+                setShowPassword(false);
+                setShowConfirmPassword(false);
             } else {
                 await login({
                     email: values.email.trim(),
                     password: values.password,
                 });
+                navigate('/');
             }
-            navigate('/');
         } catch (error) {
             const nextErrorState = toAuthErrorState(error, isSignUp);
             setFieldErrors(nextErrorState.fieldErrors);
@@ -104,6 +135,9 @@ export default function AuthPage() {
                 noValidate
                 onSubmit={handleSubmit}
             >
+                {successMessage ? (
+                    <p className="text-sm text-emerald-700">{successMessage}</p>
+                ) : null}
                 {formError ? (
                     <p className="text-sm text-red-700">{formError}</p>
                 ) : null}
@@ -115,8 +149,10 @@ export default function AuthPage() {
                             <input
                                 autoComplete="given-name"
                                 className={inputClassName(
-                                    fieldErrors.firstName
+                                    Boolean(fieldErrors.firstName)
                                 )}
+                                maxLength={NAME_MAX_LENGTH}
+                                required
                                 onChange={(event) => {
                                     setFieldValue(
                                         'firstName',
@@ -136,7 +172,11 @@ export default function AuthPage() {
                             <span>Last name</span>
                             <input
                                 autoComplete="family-name"
-                                className={inputClassName(fieldErrors.lastName)}
+                                className={inputClassName(
+                                    Boolean(fieldErrors.lastName)
+                                )}
+                                maxLength={NAME_MAX_LENGTH}
+                                required
                                 onChange={(event) => {
                                     setFieldValue(
                                         'lastName',
@@ -158,10 +198,12 @@ export default function AuthPage() {
                     <span>Email</span>
                     <input
                         autoComplete="email"
-                        className={inputClassName(fieldErrors.email)}
+                        className={inputClassName(Boolean(fieldErrors.email))}
+                        maxLength={EMAIL_MAX_LENGTH}
                         onChange={(event) => {
                             setFieldValue('email', event.target.value);
                         }}
+                        required
                         type="email"
                         value={values.email}
                     />
@@ -178,7 +220,8 @@ export default function AuthPage() {
                         autoComplete={
                             isSignUp ? 'new-password' : 'current-password'
                         }
-                        error={fieldErrors.password}
+                        hasError={Boolean(fieldErrors.password)}
+                        maxLength={PASSWORD_MAX_LENGTH}
                         onChange={(event) => {
                             setFieldValue('password', event.target.value);
                         }}
@@ -203,7 +246,8 @@ export default function AuthPage() {
                         <span>Confirm password</span>
                         <PasswordInput
                             autoComplete="new-password"
-                            error={fieldErrors.confirmPassword}
+                            hasError={Boolean(fieldErrors.confirmPassword)}
+                            maxLength={PASSWORD_MAX_LENGTH}
                             onChange={(event) => {
                                 setFieldValue(
                                     'confirmPassword',
@@ -224,6 +268,15 @@ export default function AuthPage() {
                     </label>
                 ) : null}
 
+                {!isSignUp ? (
+                    <Link
+                        className="text-sm text-slate-600 underline"
+                        to="/reset-password"
+                    >
+                        Forgot password
+                    </Link>
+                ) : null}
+
                 <button
                     className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
                     disabled={isSubmitting}
@@ -240,18 +293,12 @@ function parseMode(value: string | null): AuthMode {
     return value === 'signup' ? 'signup' : 'signin';
 }
 
-function validateForm(
+function validatePasswordFields(
     values: FormValues,
     isSignUp: boolean,
     passwordRules: ReturnType<typeof getPasswordRules>
 ) {
     const fieldErrors: FieldErrors = {};
-
-    if (!values.email.trim()) {
-        fieldErrors.email = 'Email is required';
-    } else if (!isValidEmail(values.email)) {
-        fieldErrors.email = 'Email must be valid';
-    }
 
     if (!values.password) {
         fieldErrors.password = 'Password is required';
@@ -260,14 +307,6 @@ function validateForm(
     }
 
     if (isSignUp) {
-        if (!values.firstName.trim()) {
-            fieldErrors.firstName = 'First name is required';
-        }
-
-        if (!values.lastName.trim()) {
-            fieldErrors.lastName = 'Last name is required';
-        }
-
         if (!values.confirmPassword) {
             fieldErrors.confirmPassword = 'Confirm password is required';
         } else if (values.confirmPassword !== values.password) {
@@ -276,11 +315,6 @@ function validateForm(
     }
 
     return fieldErrors;
-}
-
-function isValidEmail(value: string) {
-    const [localPart, domain] = value.trim().split('@');
-    return Boolean(localPart && domain && domain.includes('.'));
 }
 
 function toRegisterInput(values: FormValues): RegisterInput {
@@ -312,6 +346,11 @@ function toAuthErrorState(error: unknown, isSignUp: boolean) {
                     ? {}
                     : { password: 'Email or password is incorrect' },
                 formError: isSignUp ? 'Email or password is incorrect' : null,
+            };
+        case 'EMAIL_NOT_VERIFIED':
+            return {
+                fieldErrors: {},
+                formError: 'Check your email to verify your account',
             };
         case 'PASSWORD_TOO_SHORT':
             return {
@@ -345,118 +384,4 @@ function formatMessage(message: string) {
     }
 
     return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
-}
-
-function inputClassName(error?: string) {
-    return [
-        'w-full rounded border px-3 py-2',
-        error ? 'border-red-500' : 'border-slate-300',
-    ].join(' ');
-}
-
-function PasswordRuleList({
-    rules,
-}: {
-    rules: ReturnType<typeof getPasswordRules>;
-}) {
-    return (
-        <ul
-            aria-label="Password requirements"
-            className="grid gap-1.5 text-sm text-slate-600"
-        >
-            {rules.map((rule) => (
-                <li className="flex items-start gap-2" key={rule.label}>
-                    <span
-                        aria-hidden="true"
-                        className={[
-                            'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[10px] leading-none',
-                            rule.met
-                                ? 'border-emerald-600 bg-emerald-600 text-white'
-                                : 'border-slate-300 bg-white text-transparent',
-                        ].join(' ')}
-                    >
-                        ✓
-                    </span>
-                    <span className={rule.met ? 'text-slate-900' : undefined}>
-                        <span className="sr-only">
-                            {rule.met ? 'Met: ' : 'Needed: '}
-                        </span>
-                        {rule.label}
-                    </span>
-                </li>
-            ))}
-        </ul>
-    );
-}
-
-function PasswordInput({
-    autoComplete,
-    error,
-    onChange,
-    onToggle,
-    showPassword,
-    value,
-}: {
-    autoComplete: string;
-    error?: string;
-    onChange: ChangeEventHandler<HTMLInputElement>;
-    onToggle: () => void;
-    showPassword: boolean;
-    value: string;
-}) {
-    return (
-        <div className="relative">
-            <input
-                autoComplete={autoComplete}
-                className={`${inputClassName(error)} pr-11`}
-                onChange={onChange}
-                type={showPassword ? 'text' : 'password'}
-                value={value}
-            />
-            <button
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-500 hover:text-slate-800"
-                onClick={onToggle}
-                type="button"
-            >
-                {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-            </button>
-        </div>
-    );
-}
-
-function EyeIcon() {
-    return (
-        <svg
-            aria-hidden="true"
-            fill="none"
-            height="18"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            viewBox="0 0 24 24"
-            width="18"
-        >
-            <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" />
-            <circle cx="12" cy="12" r="3" />
-        </svg>
-    );
-}
-
-function EyeOffIcon() {
-    return (
-        <svg
-            aria-hidden="true"
-            fill="none"
-            height="18"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            viewBox="0 0 24 24"
-            width="18"
-        >
-            <path d="M3 3l18 18" />
-            <path d="M10.6 6.4A10.7 10.7 0 0 1 12 6c6.5 0 10 6 10 6a17.5 17.5 0 0 1-4.1 4.7" />
-            <path d="M6.7 6.7C4 8.4 2 12 2 12s3.5 6 10 6c1.7 0 3.2-.4 4.5-1" />
-            <path d="M14.1 14.1A3 3 0 0 1 9.9 9.9" />
-        </svg>
-    );
 }

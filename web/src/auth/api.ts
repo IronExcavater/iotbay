@@ -1,4 +1,4 @@
-import { getJson, postJson } from '../services/http';
+import { getJson, patchJson, postJson } from '../services/http';
 
 export interface User {
     id: string;
@@ -19,6 +19,37 @@ export interface RegisterInput extends LoginInput {
     lastName: string;
 }
 
+export interface EmailDownload {
+    filename: string;
+    html: string;
+}
+
+export interface RegisterResult {
+    download?: EmailDownload;
+    verification: {
+        email: string;
+    };
+}
+
+export interface ForgotPasswordInput {
+    email: string;
+}
+
+interface ForgotPasswordResponse {
+    download?: EmailDownload;
+}
+
+export interface ResetPasswordInput {
+    password: string;
+    token: string;
+}
+
+export interface UpdateProfileInput {
+    email: string;
+    firstName: string;
+    lastName: string;
+}
+
 interface UserResponse {
     user: User;
 }
@@ -34,11 +65,22 @@ export const authApi = {
         ).user;
     },
 
-    async register(input: RegisterInput, signal?: AbortSignal): Promise<User> {
+    register(
+        input: RegisterInput,
+        signal?: AbortSignal
+    ): Promise<RegisterResult> {
+        return postJson<RegisterResult, RegisterInput>(
+            '/api/register',
+            input,
+            signal
+        );
+    },
+
+    async verifyEmail(token: string, signal?: AbortSignal): Promise<User> {
         return (
-            await postJson<UserResponse, RegisterInput>(
-                '/api/register',
-                input,
+            await postJson<UserResponse, { token: string }>(
+                '/api/verify-email',
+                { token },
                 signal
             )
         ).user;
@@ -46,6 +88,40 @@ export const authApi = {
 
     async me(signal?: AbortSignal): Promise<User> {
         return (await getJson<UserResponse>('/api/me', signal)).user;
+    },
+
+    async updateMe(
+        input: UpdateProfileInput,
+        signal?: AbortSignal
+    ): Promise<User> {
+        return (
+            await patchJson<UserResponse, UpdateProfileInput>(
+                '/api/me',
+                input,
+                signal
+            )
+        ).user;
+    },
+
+    forgotPassword(
+        input: ForgotPasswordInput,
+        signal?: AbortSignal
+    ): Promise<ForgotPasswordResponse | undefined> {
+        return postJson<
+            ForgotPasswordResponse | undefined,
+            ForgotPasswordInput
+        >('/api/forgot-password', input, signal);
+    },
+
+    resetPassword(
+        input: ResetPasswordInput,
+        signal?: AbortSignal
+    ): Promise<{ ok: boolean }> {
+        return postJson<{ ok: boolean }, ResetPasswordInput>(
+            '/api/reset-password',
+            input,
+            signal
+        );
     },
 
     logout(signal?: AbortSignal): Promise<void> {

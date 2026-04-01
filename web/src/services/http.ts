@@ -1,4 +1,4 @@
-type HttpMethod = 'GET' | 'POST';
+type HttpMethod = 'GET' | 'PATCH' | 'POST';
 
 interface RequestOptions<TBody> {
     body?: TBody;
@@ -30,6 +30,18 @@ export function postJson<TResponse, TBody = undefined>(
     return requestJson<TResponse>(path, {
         body,
         method: 'POST',
+        signal,
+    });
+}
+
+export function patchJson<TResponse, TBody>(
+    path: string,
+    body: TBody,
+    signal?: AbortSignal
+) {
+    return requestJson<TResponse>(path, {
+        body,
+        method: 'PATCH',
         signal,
     });
 }

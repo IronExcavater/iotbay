@@ -7,14 +7,19 @@ import {
 } from 'react';
 
 import { BackendError } from '../services/http';
-import { authApi, type LoginInput, type RegisterInput, type User } from './api';
+import {
+    authApi,
+    type LoginInput,
+    type UpdateProfileInput,
+    type User,
+} from './api';
 
 interface AuthContextValue {
     isAuthenticated: boolean;
     isLoading: boolean;
     login: (input: LoginInput) => Promise<User>;
     logout: () => Promise<void>;
-    register: (input: RegisterInput) => Promise<User>;
+    updateMe: (input: UpdateProfileInput) => Promise<User>;
     user: User | null;
 }
 
@@ -75,8 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setUser(null);
             }
         },
-        async register(input) {
-            const nextUser = await authApi.register(input);
+        async updateMe(input) {
+            const nextUser = await authApi.updateMe(input);
             setUser(nextUser);
             return nextUser;
         },
