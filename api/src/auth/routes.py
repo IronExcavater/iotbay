@@ -1,12 +1,12 @@
 from http import HTTPStatus
 
 from flask import Blueprint, Response, make_response
+from src.auth.password_policy import validate_password
 from src.auth.requests import LoginRequest, RegisterRequest
 from src.auth.security import (
     hash_password,
     hash_session_token,
     new_session_token,
-    validate_password,
     verify_password,
 )
 from src.auth.session import (
@@ -26,7 +26,11 @@ auth_bp = Blueprint("auth", __name__)
 
 class AuthenticationError(ApiError):
     def __init__(self) -> None:
-        super().__init__("email or password is incorrect", HTTPStatus.UNAUTHORIZED)
+        super().__init__(
+            "email or password is incorrect",
+            HTTPStatus.UNAUTHORIZED,
+            code="INVALID_CREDENTIALS",
+        )
 
 
 def _session_max_age() -> int:
@@ -82,7 +86,12 @@ def _start_session(user: User) -> str:
 @auth_bp.post("/register")
 def register() -> tuple[Response, int]:
     data = parse_request(RegisterRequest)
-    password = validate_password(data.password)
+    password = validate_password(
+        data.password,
+        email=data.email,
+        first_name=data.first_name,
+        last_name=data.last_name,
+    )
 
     user = _user_repository().create_user(
         email=data.email,

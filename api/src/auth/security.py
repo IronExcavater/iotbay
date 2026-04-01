@@ -2,17 +2,7 @@ import hashlib
 import hmac
 import secrets
 
-from src.common.web import ValidationError
-
 PASSWORD_HASH_ITERATIONS = 600_000
-PASSWORD_MIN_LENGTH = 8
-
-
-def validate_password(password: str) -> str:
-    value = password.strip()
-    if len(value) < PASSWORD_MIN_LENGTH:
-        raise ValidationError("password must be at least 8 characters")
-    return value
 
 
 def hash_password(password: str) -> str:

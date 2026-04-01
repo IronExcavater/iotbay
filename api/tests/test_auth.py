@@ -52,7 +52,10 @@ class AuthRouteTestCase(unittest.TestCase):
 
         self.assertEqual(first.status_code, 201)
         self.assertEqual(second.status_code, 409)
-        self.assertEqual(second.get_json(), {"error": "email already exists"})
+        self.assertEqual(
+            second.get_json(),
+            {"code": "EMAIL_EXISTS", "error": "email already exists"},
+        )
 
     def test_login_sets_session_cookie(self) -> None:
         session = create_test_session(self.client)
@@ -92,7 +95,76 @@ class AuthRouteTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertEqual(
             response.get_json(),
-            {"error": "email or password is incorrect"},
+            {
+                "code": "INVALID_CREDENTIALS",
+                "error": "email or password is incorrect",
+            },
+        )
+
+    def test_register_rejects_password_with_personal_info(self) -> None:
+        response = self.client.post(
+            "/api/register",
+            json=_register_payload(password="AlexCustomer7"),
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.get_json(),
+            {
+                "code": "PASSWORD_HAS_PERSONAL_INFO",
+                "error": "password must not contain personal information",
+            },
+        )
+
+    def test_register_rejects_password_with_dotted_email_term(self) -> None:
+        response = self.client.post(
+            "/api/register",
+            json=_register_payload(
+                email="alex.nguyen@example.com",
+                password="Nguyen8$Secure",
+            ),
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.get_json(),
+            {
+                "code": "PASSWORD_HAS_PERSONAL_INFO",
+                "error": "password must not contain personal information",
+            },
+        )
+
+    def test_register_rejects_password_with_hyphenated_name_term(self) -> None:
+        response = self.client.post(
+            "/api/register",
+            json=_register_payload(
+                first_name="Mary-Jane",
+                password="Jane8$Secure",
+            ),
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.get_json(),
+            {
+                "code": "PASSWORD_HAS_PERSONAL_INFO",
+                "error": "password must not contain personal information",
+            },
+        )
+
+    def test_register_rejects_password_with_common_pattern(self) -> None:
+        response = self.client.post(
+            "/api/register",
+            json=_register_payload(password="abcd1234!"),
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.get_json(),
+            {
+                "code": "PASSWORD_HAS_COMMON_PATTERN",
+                "error": "password contains a common pattern",
+            },
         )
 
     def test_me_requires_authentication(self) -> None:
