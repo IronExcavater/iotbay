@@ -41,6 +41,10 @@ def _user_payload(user: User) -> dict[str, object]:
     return {"user": user.to_dict()}
 
 
+def _user_repository() -> UserRepository:
+    return app_extension("user_repository", UserRepository)
+
+
 def _set_session_cookie(response: Response, session_token: str) -> None:
     response.set_cookie(
         session_cookie_name(),
@@ -66,7 +70,7 @@ def _clear_session_cookie(response: Response) -> None:
 def _start_session(user: User) -> str:
     session_token = new_session_token()
     now = UtcTime.now()
-    app_extension("user_repository", UserRepository).create_session(
+    _user_repository().create_session(
         user_id=user.user_id,
         session_token_hash=hash_session_token(session_token),
         created_at=now.iso,
@@ -75,12 +79,12 @@ def _start_session(user: User) -> str:
     return session_token
 
 
-@auth_bp.post("/auth/register")
+@auth_bp.post("/register")
 def register() -> tuple[Response, int]:
     data = parse_request(RegisterRequest)
     password = validate_password(data.password)
 
-    user = app_extension("user_repository", UserRepository).create_user(
+    user = _user_repository().create_user(
         email=data.email,
         password_hash=hash_password(password),
         first_name=data.first_name,
@@ -94,12 +98,10 @@ def register() -> tuple[Response, int]:
     return response, HTTPStatus.CREATED
 
 
-@auth_bp.post("/auth/login")
+@auth_bp.post("/login")
 def login() -> tuple[Response, int]:
     data = parse_request(LoginRequest)
-    user = app_extension("user_repository", UserRepository).find_user_by_email(
-        email=data.email
-    )
+    user = _user_repository().find_user_by_email(email=data.email)
     if user is None:
         raise AuthenticationError()
 
@@ -111,18 +113,18 @@ def login() -> tuple[Response, int]:
     return response, HTTPStatus.OK
 
 
-@auth_bp.get("/auth/me")
+@auth_bp.get("/me")
 @login_required
 def me() -> tuple[dict[str, object], int]:
     return _user_payload(current_authenticated_user()), HTTPStatus.OK
 
 
-@auth_bp.post("/auth/logout")
+@auth_bp.post("/logout")
 @login_required
 def logout() -> tuple[Response, int]:
     session_token = request_session_token()
     if session_token is not None:
-        app_extension("user_repository", UserRepository).delete_session_by_token_hash(
+        _user_repository().delete_session_by_token_hash(
             session_token_hash=hash_session_token(session_token)
         )
 

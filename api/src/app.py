@@ -31,5 +31,4 @@ def create_app(config_path: str | None = None) -> Flask:
 
     for blueprint in (health_bp, products_bp, auth_bp):
         app.register_blueprint(blueprint, url_prefix="/api")
-
     return app

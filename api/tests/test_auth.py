@@ -28,7 +28,7 @@ class AuthRouteTestCase(unittest.TestCase):
         self.client, _ = create_test_app_client(temp_dir)
 
     def test_register_creates_customer_and_starts_session(self) -> None:
-        response = self.client.post("/api/auth/register", json=_register_payload())
+        response = self.client.post("/api/register", json=_register_payload())
 
         self.assertEqual(response.status_code, 201)
         payload = response.get_json()
@@ -37,7 +37,7 @@ class AuthRouteTestCase(unittest.TestCase):
         self.assertEqual(payload["user"]["userType"], "customer")
         self.assertEqual(payload["user"]["status"], "active")
 
-        me_response = self.client.get("/api/auth/me")
+        me_response = self.client.get("/api/me")
         self.assertEqual(me_response.status_code, 200)
         self.assertEqual(
             me_response.get_json()["user"]["email"],
@@ -47,8 +47,8 @@ class AuthRouteTestCase(unittest.TestCase):
     def test_register_duplicate_email_returns_conflict(self) -> None:
         payload = _register_payload()
 
-        first = self.client.post("/api/auth/register", json=payload)
-        second = self.client.post("/api/auth/register", json=payload)
+        first = self.client.post("/api/register", json=payload)
+        second = self.client.post("/api/register", json=payload)
 
         self.assertEqual(first.status_code, 201)
         self.assertEqual(second.status_code, 409)
@@ -56,11 +56,11 @@ class AuthRouteTestCase(unittest.TestCase):
 
     def test_login_sets_session_cookie(self) -> None:
         session = create_test_session(self.client)
-        logout_response = self.client.post("/api/auth/logout")
+        logout_response = self.client.post("/api/logout")
         self.assertEqual(logout_response.status_code, 204)
 
         response = self.client.post(
-            "/api/auth/login",
+            "/api/login",
             json={
                 "email": session.email,
                 "password": session.password,
@@ -73,16 +73,16 @@ class AuthRouteTestCase(unittest.TestCase):
             "alex.customer@example.com",
         )
 
-        me_response = self.client.get("/api/auth/me")
+        me_response = self.client.get("/api/me")
         self.assertEqual(me_response.status_code, 200)
 
     def test_login_invalid_password_returns_unauthorized(self) -> None:
         session = create_test_session(self.client)
-        logout_response = self.client.post("/api/auth/logout")
+        logout_response = self.client.post("/api/logout")
         self.assertEqual(logout_response.status_code, 204)
 
         response = self.client.post(
-            "/api/auth/login",
+            "/api/login",
             json={
                 "email": session.email,
                 "password": "wrong-password",
@@ -96,7 +96,7 @@ class AuthRouteTestCase(unittest.TestCase):
         )
 
     def test_me_requires_authentication(self) -> None:
-        response = self.client.get("/api/auth/me")
+        response = self.client.get("/api/me")
 
         self.assertEqual(response.status_code, 401)
         self.assertEqual(
@@ -107,10 +107,10 @@ class AuthRouteTestCase(unittest.TestCase):
     def test_logout_clears_session(self) -> None:
         create_test_session(self.client)
 
-        logout_response = self.client.post("/api/auth/logout")
+        logout_response = self.client.post("/api/logout")
         self.assertEqual(logout_response.status_code, 204)
 
-        me_response = self.client.get("/api/auth/me")
+        me_response = self.client.get("/api/me")
         self.assertEqual(me_response.status_code, 401)
 
 
