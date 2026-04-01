@@ -1,4 +1,4 @@
-import { getJson, getResponseField, postJson } from '../services/http';
+import { getJson, postJson } from '../services/http';
 
 export interface User {
     id: string;
@@ -25,26 +25,27 @@ interface UserResponse {
 
 export const authApi = {
     async login(input: LoginInput, signal?: AbortSignal): Promise<User> {
-        const payload = await postJson<UserResponse, LoginInput>(
-            '/api/login',
-            input,
-            signal
-        );
-        return getResponseField<User>(payload, 'user');
+        return (
+            await postJson<UserResponse, LoginInput>(
+                '/api/login',
+                input,
+                signal
+            )
+        ).user;
     },
 
     async register(input: RegisterInput, signal?: AbortSignal): Promise<User> {
-        const payload = await postJson<UserResponse, RegisterInput>(
-            '/api/register',
-            input,
-            signal
-        );
-        return getResponseField<User>(payload, 'user');
+        return (
+            await postJson<UserResponse, RegisterInput>(
+                '/api/register',
+                input,
+                signal
+            )
+        ).user;
     },
 
     async me(signal?: AbortSignal): Promise<User> {
-        const payload = await getJson<UserResponse>('/api/me', signal);
-        return getResponseField<User>(payload, 'user');
+        return (await getJson<UserResponse>('/api/me', signal)).user;
     },
 
     logout(signal?: AbortSignal): Promise<void> {

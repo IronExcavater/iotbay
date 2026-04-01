@@ -15,13 +15,6 @@ interface FormValues {
     password: string;
 }
 
-interface FormErrors {
-    email?: string;
-    firstName?: string;
-    lastName?: string;
-    password?: string;
-}
-
 const DEFAULT_VALUES: FormValues = {
     email: '',
     firstName: '',
@@ -34,7 +27,6 @@ export default function AuthPage() {
     const [searchParams] = useSearchParams();
     const { isAuthenticated, isLoading, login, register } = useAuth();
     const [values, setValues] = useState<FormValues>(DEFAULT_VALUES);
-    const [errors, setErrors] = useState<FormErrors>({});
     const [serverError, setServerError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -50,24 +42,26 @@ export default function AuthPage() {
 
     const isSignUp = mode === 'signup';
     const passwordRules = getPasswordRules(values.password);
+    const passwordError = getPasswordError(isSignUp, values.password);
     const title = isSignUp ? 'Sign up' : 'Sign in';
     const submitLabel = isSignUp ? 'Create account' : 'Sign in';
     const passwordAutoComplete = isSignUp ? 'new-password' : 'current-password';
 
     function setFieldValue(name: keyof FormValues, value: string) {
         setValues((current) => ({ ...current, [name]: value }));
-        setErrors((current) => ({ ...current, [name]: undefined }));
         setServerError(null);
     }
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-
-        const nextErrors = validate(values, mode);
-        setErrors(nextErrors);
         setServerError(null);
+        const form = event.currentTarget;
 
-        if (Object.keys(nextErrors).length > 0) {
+        if (!form.reportValidity()) {
+            return;
+        }
+
+        if (passwordError) {
             return;
         }
 
@@ -117,13 +111,9 @@ export default function AuthPage() {
                                         event.target.value
                                     );
                                 }}
+                                required
                                 value={values.firstName}
                             />
-                            {errors.firstName ? (
-                                <span className="text-red-700">
-                                    {errors.firstName}
-                                </span>
-                            ) : null}
                         </label>
 
                         <label className="grid gap-1 text-sm">
@@ -137,13 +127,9 @@ export default function AuthPage() {
                                         event.target.value
                                     );
                                 }}
+                                required
                                 value={values.lastName}
                             />
-                            {errors.lastName ? (
-                                <span className="text-red-700">
-                                    {errors.lastName}
-                                </span>
-                            ) : null}
                         </label>
                     </div>
                 ) : null}
@@ -156,12 +142,10 @@ export default function AuthPage() {
                         onChange={(event) => {
                             setFieldValue('email', event.target.value);
                         }}
+                        required
                         type="email"
                         value={values.email}
                     />
-                    {errors.email ? (
-                        <span className="text-red-700">{errors.email}</span>
-                    ) : null}
                 </label>
 
                 <label className="grid gap-1 text-sm">
@@ -172,6 +156,7 @@ export default function AuthPage() {
                         onChange={(event) => {
                             setFieldValue('password', event.target.value);
                         }}
+                        required
                         type="password"
                         value={values.password}
                     />
@@ -189,8 +174,8 @@ export default function AuthPage() {
                             ))}
                         </ul>
                     ) : null}
-                    {!isSignUp && errors.password ? (
-                        <span className="text-red-700">{errors.password}</span>
+                    {passwordError ? (
+                        <span className="text-red-700">{passwordError}</span>
                     ) : null}
                 </label>
 
@@ -210,42 +195,14 @@ function parseMode(value: string | null): AuthMode {
     return value === 'signup' ? 'signup' : 'signin';
 }
 
-function validate(values: FormValues, mode: AuthMode): FormErrors {
-    const errors: FormErrors = {};
-    const email = values.email.trim();
-    const password = values.password.trim();
-
-    if (!email) {
-        errors.email = 'Enter your email address.';
-    } else if (!isValidEmail(email)) {
-        errors.email = 'Enter a valid email address.';
+function getPasswordError(isSignUp: boolean, password: string) {
+    if (!isSignUp || !password) {
+        return undefined;
     }
 
-    if (!password) {
-        errors.password = 'Enter your password.';
-    } else if (
-        mode === 'signup' &&
-        getPasswordRules(password).some((rule) => !rule.met)
-    ) {
-        errors.password = 'Password requirements are not met.';
-    }
-
-    if (mode === 'signup') {
-        if (!values.firstName.trim()) {
-            errors.firstName = 'Enter your first name.';
-        }
-
-        if (!values.lastName.trim()) {
-            errors.lastName = 'Enter your last name.';
-        }
-    }
-
-    return errors;
-}
-
-function isValidEmail(value: string) {
-    const [localPart, domain] = value.split('@');
-    return Boolean(localPart && domain && domain.includes('.'));
+    return getPasswordRules(password).every((rule) => rule.met)
+        ? undefined
+        : 'Password requirements are not met.';
 }
 
 function toRegisterInput(values: FormValues): RegisterInput {

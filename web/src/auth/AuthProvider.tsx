@@ -25,29 +25,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
 
     useEffect(() => {
-        const abortController = new AbortController();
+        let isActive = true;
 
-        async function loadCurrentUser() {
+        async function loadSession() {
             try {
-                setUser(await authApi.me(abortController.signal));
-            } catch (error) {
-                if (error instanceof BackendError && error.status === 401) {
-                    setUser(null);
-                    return;
+                const currentUser = await authApi.me();
+                if (isActive) {
+                    setUser(currentUser);
                 }
-
-                if (!abortController.signal.aborted) {
+            } catch (error) {
+                if (
+                    isActive &&
+                    error instanceof BackendError &&
+                    error.status === 401
+                ) {
+                    setUser(null);
+                } else if (isActive) {
                     setUser(null);
                 }
             } finally {
-                if (!abortController.signal.aborted) {
+                if (isActive) {
                     setIsLoading(false);
                 }
             }
         }
 
-        void loadCurrentUser();
-        return () => abortController.abort();
+        void loadSession();
+        return () => {
+            isActive = false;
+        };
     }, []);
 
     const value: AuthContextValue = {
