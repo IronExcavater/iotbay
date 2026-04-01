@@ -8,7 +8,7 @@ from src.users.models import Address, User, UserSession
 
 class DuplicateEmailError(ApiError):
     def __init__(self) -> None:
-        super().__init__("email already exists", 409)
+        super().__init__("email already exists", 409, code="EMAIL_EXISTS")
 
 
 class UserRepository(Repository):
