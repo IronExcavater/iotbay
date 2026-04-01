@@ -1,4 +1,4 @@
-import { getJson, getResponseField, postJson } from '../services/http';
+import { getJson, postJson } from '../services/http';
 
 export interface Product {
     id: string;
@@ -20,11 +20,7 @@ interface ProductsResponse {
 
 export const productApi = {
     async list(signal?: AbortSignal): Promise<Product[]> {
-        const payload = await getJson<ProductsResponse>(
-            '/api/products',
-            signal
-        );
-        return getResponseField<Product[]>(payload, 'items');
+        return (await getJson<ProductsResponse>('/api/products', signal)).items;
     },
 
     create(input: CreateProductInput, signal?: AbortSignal): Promise<Product> {

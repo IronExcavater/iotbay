@@ -1,5 +1,4 @@
 type HttpMethod = 'GET' | 'POST';
-type JsonObject = Record<string, unknown>;
 
 interface RequestOptions<TBody> {
     body?: TBody;
@@ -28,27 +27,16 @@ export function postJson<TResponse, TBody = undefined>(
     body?: TBody,
     signal?: AbortSignal
 ) {
-    return requestJson<TResponse, TBody>(path, {
+    return requestJson<TResponse>(path, {
         body,
         method: 'POST',
         signal,
     });
 }
 
-export function getResponseField<TValue>(
-    payload: object,
-    field: string
-): TValue {
-    if (!(field in payload)) {
-        throw new Error(`Expected response field "${field}" to exist`);
-    }
-
-    return (payload as JsonObject)[field] as TValue;
-}
-
-async function requestJson<TResponse, TBody = undefined>(
+async function requestJson<TResponse>(
     path: string,
-    options: RequestOptions<TBody> = {}
+    options: RequestOptions<unknown> = {}
 ): Promise<TResponse> {
     const response = await fetch(path, buildRequestInit(options));
     const payload = await readPayload(response);
@@ -86,7 +74,7 @@ async function readPayload(response: Response): Promise<unknown> {
 }
 
 function toBackendError(response: Response, payload: unknown) {
-    if (isRecord(payload) && typeof payload.error === 'string') {
+    if (hasError(payload)) {
         return new BackendError(
             payload.error,
             response.status,
@@ -100,6 +88,13 @@ function toBackendError(response: Response, payload: unknown) {
     );
 }
 
-function isRecord(value: unknown): value is JsonObject {
-    return typeof value === 'object' && value !== null;
+function hasError(
+    payload: unknown
+): payload is { code?: string; error: string } {
+    return (
+        typeof payload === 'object' &&
+        payload !== null &&
+        'error' in payload &&
+        typeof payload.error === 'string'
+    );
 }
