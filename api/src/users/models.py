@@ -14,6 +14,9 @@ USER_STATUS_UNVERIFIED = "unverified"
 USER_STATUS_ACTIVE = "active"
 USER_STATUS_DISABLED = "disabled"
 
+USER_TOKEN_PURPOSE_EMAIL_VERIFICATION = "email_verification"
+USER_TOKEN_PURPOSE_PASSWORD_RESET = "password_reset"
+
 
 @dataclass(slots=True, frozen=True)
 class Address(SqliteRowModel, BlobUuidModel):
@@ -48,6 +51,14 @@ class User(SqliteRowModel, BlobUuidModel, ApiModel):
     address_id: bytes | None = None
     user_id: bytes = field(default_factory=new_id_bytes)
 
+    @property
+    def is_active(self) -> bool:
+        return self.status == USER_STATUS_ACTIVE
+
+    @property
+    def needs_email_verification(self) -> bool:
+        return self.status == USER_STATUS_UNVERIFIED
+
 
 @dataclass(slots=True, frozen=True)
 class UserSession(SqliteRowModel, BlobUuidModel):
@@ -56,3 +67,13 @@ class UserSession(SqliteRowModel, BlobUuidModel):
     created_at: str
     expires_at: str
     session_id: bytes = field(default_factory=new_id_bytes)
+
+
+@dataclass(slots=True, frozen=True)
+class UserToken(SqliteRowModel, BlobUuidModel):
+    user_id: bytes
+    purpose: str
+    token_hash: str
+    created_at: str
+    expires_at: str
+    user_token_id: bytes = field(default_factory=new_id_bytes)

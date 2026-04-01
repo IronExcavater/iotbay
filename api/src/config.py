@@ -18,7 +18,6 @@ class EmailConfig(BaseSettings):
         frozen=True,
     )
 
-    email_output_directory: Path = ROOT_DIR / "data" / "email-output"
     sender: str = ""
     smtp_host: str = ""
     smtp_password: str = ""
@@ -77,11 +76,8 @@ def load_app_config(config_path: str | Path | None = None) -> AppConfig:
 
 def load_email_config() -> EmailConfig:
     config = EmailConfig()
-    output_directory = config.email_output_directory.expanduser()
-    if not output_directory.is_absolute():
-        output_directory = (ROOT_DIR / output_directory).resolve()
-
-    return config.model_copy(update={"email_output_directory": output_directory})
+    sender = config.sender.strip() or config.smtp_username.strip()
+    return config.model_copy(update={"sender": sender})
 
 
 def load_api_access_config() -> ApiAccessConfig:
