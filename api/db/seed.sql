@@ -1,3 +1,8 @@
 BEGIN TRANSACTION;
+DELETE FROM entity_audit_log;
 DELETE FROM products;
+DELETE FROM staff;
+DELETE FROM customers;
+DELETE FROM addresses;
+DELETE FROM users;
 COMMIT;
