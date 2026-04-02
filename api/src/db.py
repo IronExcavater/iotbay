@@ -24,9 +24,15 @@ SEED_TABLES = (
     SeedTable(name="users", order_by="email ASC"),
     SeedTable(
         name="addresses",
-        order_by="country ASC, state ASC, suburb ASC, address_line_one ASC",
+        order_by="formatted_address ASC",
+    ),
+    SeedTable(name="customers", order_by="user_id ASC"),
+    SeedTable(
+        name="staff",
+        order_by="permission ASC, designation ASC, user_id ASC",
     ),
     SeedTable(name="products", order_by="code ASC"),
+    SeedTable(name="entity_audit_log", order_by="entity_type ASC, entity_id ASC"),
 )
 
 MIGRATION_SLUG_PATTERN = re.compile(r"[^a-z0-9]+")
@@ -85,10 +91,10 @@ def seed_save(database_path: str) -> None:
 
     with connect(database_path) as db:
         lines = ["BEGIN TRANSACTION;"]
-        for table in SEED_TABLES:
+        for table in reversed(SEED_TABLES):
             lines.append(f"DELETE FROM {table.name};")
 
-        for table in reversed(SEED_TABLES):
+        for table in SEED_TABLES:
             lines.extend(
                 _table_snapshot_lines(
                     db,
