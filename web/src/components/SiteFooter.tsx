@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { getJson } from '../services/http';
+import { textButtonClassName } from './form/Button';
 
 const DEFAULT_CONTACT_EMAIL = 'support@iotbay.com';
 const GITHUB_REPOSITORY_URL =
@@ -38,14 +39,14 @@ export default function SiteFooter() {
                         <h2 className="font-semibold text-slate-900">
                             Sitemap
                         </h2>
-                        <Link className="hover:text-slate-900" to="/">
+                        <Link className={textButtonClassName} to="/">
                             Home
                         </Link>
-                        <Link className="hover:text-slate-900" to="/account">
+                        <Link className={textButtonClassName} to="/account">
                             Account
                         </Link>
                         <Link
-                            className="hover:text-slate-900"
+                            className={textButtonClassName}
                             to="/auth?mode=signin&userType=staff&next=/admin"
                         >
                             Staff portal
@@ -59,7 +60,7 @@ export default function SiteFooter() {
                             Contact
                         </h2>
                         <a
-                            className="hover:text-slate-900"
+                            className={textButtonClassName}
                             href={`mailto:${contactEmail}`}
                         >
                             {contactEmail}
@@ -75,7 +76,7 @@ export default function SiteFooter() {
                         <p>ISD 2026</p>
                         <a
                             aria-label="IoTBay on GitHub"
-                            className="flex items-center gap-2 text-slate-600 hover:text-slate-900"
+                            className={textButtonClassName}
                             href={GITHUB_REPOSITORY_URL}
                             rel="noreferrer"
                             target="_blank"

@@ -5,7 +5,7 @@ export function Field({
     error,
     hint,
     label,
-    metaPlacement = 'below',
+    metaPlacement = 'inline',
     required = false,
 }: {
     children: ReactNode;
