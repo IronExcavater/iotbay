@@ -17,7 +17,7 @@ import { inputClassName } from '../components/form/Input';
 import { PasswordInput } from '../components/form/PasswordInput';
 import { useEnterSubmit } from '../components/form/useEnterSubmit';
 import { useToast } from '../components/toast/ToastProvider';
-import { downloadHtml } from '../services/download';
+import { downloadHtmlAndNotify } from '../services/download';
 import {
     backendErrorMessage,
     normalizeMessage,
@@ -105,11 +105,10 @@ export default function ResetPasswordPage() {
                     email: email.trim(),
                     userType: userType === 'staff' ? 'staff' : undefined,
                 });
-                if (downloadHtml(result?.download)) {
-                    showToast('Reset email downloaded');
-                } else {
-                    showToast('Reset link sent if it exists');
-                }
+                downloadHtmlAndNotify(result?.download, showToast, {
+                    downloadedMessage: 'Reset email downloaded',
+                    sentMessage: 'Reset link sent if it exists',
+                });
             }
         } catch (caughtError) {
             setError(toResetError(caughtError));

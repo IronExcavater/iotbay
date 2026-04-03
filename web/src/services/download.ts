@@ -27,3 +27,17 @@ export function downloadHtml(
     downloadFile(artifact.filename, artifact.html, 'text/html;charset=utf-8');
     return true;
 }
+
+export function downloadHtmlAndNotify(
+    artifact: { filename: string; html: string } | null | undefined,
+    showToast: (message: string) => void,
+    {
+        downloadedMessage,
+        sentMessage,
+    }: {
+        downloadedMessage: string;
+        sentMessage: string;
+    }
+) {
+    showToast(downloadHtml(artifact) ? downloadedMessage : sentMessage);
+}
