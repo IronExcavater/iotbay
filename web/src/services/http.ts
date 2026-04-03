@@ -1,4 +1,4 @@
-type HttpMethod = 'GET' | 'PATCH' | 'POST';
+type HttpMethod = 'DELETE' | 'GET' | 'PATCH' | 'POST';
 
 interface RequestOptions<TBody> {
     body?: TBody;
@@ -16,6 +16,33 @@ export class BackendError extends Error {
         this.name = 'BackendError';
         this.status = status;
     }
+}
+
+export function toErrorMessage(
+    error: unknown,
+    fallback = 'Something went wrong.'
+) {
+    if (error instanceof BackendError) {
+        return error.message;
+    }
+
+    if (error instanceof Error) {
+        return error.message;
+    }
+
+    return fallback;
+}
+
+export function normalizeMessage(
+    value: string,
+    fallback = 'Something went wrong'
+) {
+    const trimmed = value.trim().replace(/\.+$/, '');
+    if (!trimmed) {
+        return fallback;
+    }
+
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
 }
 
 export function getJson<TResponse>(path: string, signal?: AbortSignal) {
@@ -46,6 +73,13 @@ export function patchJson<TResponse, TBody>(
     });
 }
 
+export function deleteJson(path: string, signal?: AbortSignal) {
+    return requestJson<void>(path, {
+        method: 'DELETE',
+        signal,
+    });
+}
+
 async function requestJson<TResponse>(
     path: string,
     options: RequestOptions<unknown> = {}
@@ -54,7 +88,7 @@ async function requestJson<TResponse>(
     const payload = await readPayload(response);
 
     if (!response.ok) {
-        throw toBackendError(response, payload);
+        throw createBackendError(response, payload);
     }
 
     return payload as TResponse;
@@ -85,7 +119,7 @@ async function readPayload(response: Response): Promise<unknown> {
     return response.json().catch(() => null);
 }
 
-function toBackendError(response: Response, payload: unknown) {
+function createBackendError(response: Response, payload: unknown) {
     if (hasError(payload)) {
         return new BackendError(
             payload.error,

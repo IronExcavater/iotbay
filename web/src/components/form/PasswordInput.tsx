@@ -1,19 +1,25 @@
-import type { ChangeEventHandler } from 'react';
+import type { ChangeEventHandler, FocusEventHandler } from 'react';
+
+import { inputClassName } from './Input';
 
 export function PasswordInput({
     autoComplete,
     hasError = false,
     maxLength,
+    onBlur,
     onChange,
     onToggle,
+    placeholder,
     showPassword,
     value,
 }: {
     autoComplete?: string;
     hasError?: boolean;
     maxLength?: number;
+    onBlur?: FocusEventHandler<HTMLInputElement>;
     onChange: ChangeEventHandler<HTMLInputElement>;
     onToggle: () => void;
+    placeholder?: string;
     showPassword: boolean;
     value: string;
 }) {
@@ -23,13 +29,15 @@ export function PasswordInput({
                 autoComplete={autoComplete}
                 className={`${inputClassName(hasError)} pr-11`}
                 maxLength={maxLength}
+                onBlur={onBlur}
                 onChange={onChange}
+                placeholder={placeholder}
                 type={showPassword ? 'text' : 'password'}
                 value={value}
             />
             <button
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
-                className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-500 hover:text-slate-800"
+                className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-slate-500 hover:text-slate-800"
                 onClick={onToggle}
                 type="button"
             >
@@ -39,23 +47,18 @@ export function PasswordInput({
     );
 }
 
-export function inputClassName(hasError = false) {
-    return [
-        'w-full rounded border px-3 py-2',
-        hasError ? 'border-red-500' : 'border-slate-300',
-    ].join(' ');
-}
-
 function EyeIcon() {
     return (
         <svg
             aria-hidden="true"
             fill="none"
-            height="18"
+            height="20"
             stroke="currentColor"
-            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
             viewBox="0 0 24 24"
-            width="18"
+            width="20"
         >
             <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" />
             <circle cx="12" cy="12" r="3" />
@@ -68,11 +71,13 @@ function EyeOffIcon() {
         <svg
             aria-hidden="true"
             fill="none"
-            height="18"
+            height="20"
             stroke="currentColor"
-            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
             viewBox="0 0 24 24"
-            width="18"
+            width="20"
         >
             <path d="M3 3l18 18" />
             <path d="M10.6 6.4A10.7 10.7 0 0 1 12 6c6.5 0 10 6 10 6a17.5 17.5 0 0 1-4.1 4.7" />
