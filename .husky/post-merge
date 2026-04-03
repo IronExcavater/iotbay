@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+
+./scripts/sync-after-git-update.sh ORIG_HEAD HEAD

@@ -1,8 +1,13 @@
 # IOTBay Marketplace
 
-IOTBay is a two-workspace monorepo. The `web` workspace contains the React + Vite frontend, and the `api` workspace contains the Flask backend with a SQLite database.
+IOTBay is a monorepo with two workspaces:
 
-## Prerequisites
+- `web`: React + Vite frontend
+- `api`: Flask backend with a SQLite database
+
+## Quick Start
+
+### 1. Install Prerequisites
 
 - Install `Node.js` (includes `npm`): https://nodejs.org/en/download
 - Install `Python`: https://www.python.org/downloads/
@@ -17,48 +22,168 @@ python3 --version
 uv --version
 ```
 
-## Setup
+### 2. Create Your Local Environment File
 
-- Install JavaScript dependencies:
+Copy `.env.example` to `.env`:
+
+```bash
+cp .env.example .env
+```
+
+Then open `.env` and set the values you need:
+
+- `IOTBAY_API_KEY`: required for local API access
+- `IOTBAY_GOOGLE_MAPS_API_KEY`: optional, only needed for address suggestions
+- `IOTBAY_SMTP_*` and `IOTBAY_SENDER`: optional, only needed if you want real emails to send
+
+The app can still run locally without the optional email or address integrations.
+
+### 3. Run First-Time Setup
+
+Run these commands once after cloning the repository:
 
 ```bash
 npm install
-```
-
-- Initialise the API virtual environment and install Python dependencies:
-
-```bash
 npm run -w api venv
 npm run -w api deps
-```
-
-- Initialise the backend schema:
-
-```bash
 npm run -w api db:migrate
 ```
 
-## Development
+What these commands do:
 
-Run both services in separate terminal windows so frontend and backend logs stay isolated and each process can restart independently during development:
+- `npm install`: installs all JavaScript dependencies for the monorepo
+- `npm run -w api venv`: creates the backend virtual environment at `api/.venv`
+- `npm run -w api deps`: installs Python packages from `api/requirements.txt`
+- `npm run -w api db:migrate`: applies any unapplied database migrations
+
+If you are not sure whether your machine is set up correctly, just run all four commands again.
+
+### 4. Start The App
+
+Run the frontend and backend in separate terminals:
 
 ```bash
-# Terminal 1 (frontend)
-npm run -w web dev
-
-# Terminal 2 (backend)
+# Terminal 1
 npm run -w api dev
+
+# Terminal 2
+npm run -w web dev
 ```
 
-- Frontend runs on port `5173`: `http://localhost:5173`
-- Backend runs on port `5001`: `http://localhost:5001`
-- Backend routes are prefixed with `/api/` (example below)
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:5001`
+- API routes are prefixed with `/api`
+
+Quick API check:
 
 ```bash
 curl http://localhost:5001/api/health
 ```
 
-Before committing, run the top-level quality commands below; the indented hierarchy shows what each command executes:
+## Daily Use
+
+### After Pulling
+
+After `git pull`, the safest manual reset is:
+
+```bash
+npm install
+npm run -w api deps
+npm run -w api db:migrate
+```
+
+You do not need to run all three every single time. Use this rule:
+
+- if any `package.json` or `package-lock.json` changed, run `npm install`
+- if `api/requirements.txt` changed, run `npm run -w api deps`
+- if anything in `api/migrations/` changed, run `npm run -w api db:migrate`
+
+### Automatic Sync After Pull
+
+Husky now runs these automatically after merge-based pulls and rebases.
+
+It checks what changed and then runs only what is needed:
+
+- `package.json` or `package-lock.json`, it runs `npm install`
+- `api/requirements.txt`, it runs `npm run -w api venv` and `npm run -w api deps`
+- `api/migrations/*.sql`, it runs `npm run -w api venv` and `npm run -w api db:migrate`
+
+This is only a convenience. If something still looks wrong after pulling, run the three manual commands above.
+
+### Usual Workflow
+
+```bash
+git pull
+npm run -w api dev
+npm run -w web dev
+```
+
+If the pull changed dependencies or migrations and the hooks did not already handle it, run:
+
+```bash
+npm install
+npm run -w api deps
+npm run -w api db:migrate
+```
+
+## Optional Integrations
+
+### Email Sending
+
+Email sending is optional for local development.
+
+If you want registration emails and password reset emails to work, fill in the SMTP values in `.env`.
+
+For Gmail:
+
+- use your Gmail address for `IOTBAY_SENDER` and `IOTBAY_SMTP_USERNAME`
+- use an app password for `IOTBAY_SMTP_PASSWORD`, not your normal Gmail password
+- Google typically requires 2-Step Verification before app passwords are available
+
+Google account security:
+- https://myaccount.google.com/security
+
+For other providers such as Outlook, use that provider's SMTP host, port, username, and either its normal SMTP password flow or an app password if the provider requires one.
+
+### Address Suggestions
+
+Address suggestions are also optional for local development.
+
+If you want Google-backed address suggestions to work:
+
+- create a Google Maps Platform API key
+- enable billing on the Google Cloud project
+- enable `Places API (New)` for the project
+- make sure the key is allowed to use the Places API
+- put the key into `IOTBAY_GOOGLE_MAPS_API_KEY` in `.env`
+
+Official docs:
+
+- Places API (New): https://developers.google.com/maps/documentation/places/web-service/op-overview
+- Places API usage and billing: https://developers.google.com/maps/documentation/places/web-service/usage-and-billing
+- Google Maps Platform pricing: https://developers.google.com/maps/billing-and-pricing/pricing
+
+Google Maps pricing changes over time, so check the official pricing page instead of assuming an old free tier number still applies.
+
+## If You Get Stuck
+
+If you hit setup or runtime errors, run these steps in order:
+
+1. `npm install`
+2. `npm run -w api venv`
+3. `npm run -w api deps`
+4. `npm run -w api db:migrate`
+
+That fixes most local setup problems:
+
+- missing JavaScript packages
+- missing Python packages
+- stale API virtual environment
+- unapplied database migrations
+
+## Before Commit
+
+Before committing, run:
 
 ```text
 npm run -w web fix:all   # Frontend quality gate
@@ -75,11 +200,18 @@ npm run -w api fix:all      # Backend quality gate
 npm run -w api test            # Runs backend unit tests
 ```
 
-## Database
+## Database Changes
 
-A schema change means changing database structure, for example creating a table, adding or removing a column, changing a constraint, or adding an index; it does not mean changing row data.
+A schema change means changing database structure, for example:
 
-To start a schema change, create a migration file:
+- creating a table
+- adding or removing a column
+- changing a constraint
+- adding an index
+
+It does not mean changing row data.
+
+Create a migration file with:
 
 ```bash
 npm run -w api db:migrate:new -- <migration_name>
@@ -91,35 +223,37 @@ For example:
 npm run -w api db:migrate:new -- add_product_category
 ```
 
-The command creates a new SQL file at `api/migrations/<number>_<migration_name>.sql`; open that file and write the SQL statements for the change, then apply unapplied migrations:
+This creates a file at `api/migrations/<number>_<migration_name>.sql`.
+
+After writing the SQL, apply it with:
 
 ```bash
 npm run -w api db:migrate
 ```
 
-Load shared seed data from `api/db/seed.sql` with:
+Load shared seed data:
 
 ```bash
 npm run -w api db:seed:load
 ```
 
-When intentionally updating the shared dataset, dump local rows back into `api/db/seed.sql` with:
+Update the shared seed file from your local database:
 
 ```bash
 npm run -w api db:seed:dump
 ```
 
-If you need a custom local database file, set `IOTBAY_DATABASE_PATH` per command:
+## API Testing
 
-```bash
-IOTBAY_DATABASE_PATH=<path_to_sqlite_file> npm run -w api db:migrate
+Postman can be used to test the API with a GUI: https://www.postman.com/
+
+Create a Postman environment such as `IOTBay Local` with:
+
+```text
+baseUrl = http://localhost:5001
 ```
 
-## Postman
-
-Postman provides an gui interface to catalog, organise and query `http` requests for API testing and debugging: https://www.postman.com/
-
-Create a Postman environment (for example, `IOTBay Local`) with `baseUrl = http://localhost:5001`, then build requests with `{{baseUrl}}/api/...`; for example:
+Then build requests with `{{baseUrl}}/api/...`, for example:
 
 ```text
 GET {{baseUrl}}/api/health

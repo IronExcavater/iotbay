@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+
+if [ "${1:-}" != "rebase" ]; then
+    exit 0
+fi
+
+./scripts/sync-after-git-update.sh ORIG_HEAD HEAD
