@@ -6,6 +6,7 @@ import {
 } from 'libphonenumber-js';
 
 import { getBrowserAddressLocale } from '../addresses/browserLocale';
+import { backendErrorMessage } from '../services/http';
 import {
     DEFAULT_PHONE_COUNTRY,
     PHONE_NUMBER_MAX_LENGTH,
@@ -72,10 +73,15 @@ export function formatPhoneInput(value: string, country: CountryCode) {
 }
 
 export function validatePhoneNumber(value: string, country: CountryCode) {
-    return (
-        PHONE_VALIDATOR.tryValidate(value, { phoneCountry: country }).error
-            ?.message ?? null
-    );
+    const error = PHONE_VALIDATOR.tryValidate(value, {
+        phoneCountry: country,
+    }).error;
+    return error
+        ? backendErrorMessage(
+              error.code,
+              `${error.message.charAt(0).toUpperCase()}${error.message.slice(1)}`
+          )
+        : null;
 }
 
 export function normalizeComparablePhoneNumber(

@@ -595,7 +595,7 @@ function canonicaliseForPersonalInfo(value: string) {
 }
 
 function canonicaliseForPatternMatch(value: string) {
-    return value.toLowerCase().replace(/[^a-z0-9]/g, '');
+    return value.toLowerCase().replace(/\s+/g, '');
 }
 
 function splitTerms(value: string) {

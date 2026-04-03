@@ -1,7 +1,11 @@
 import type { CountryCode } from 'libphonenumber-js';
 
 import { toAddressInput, validateAddressValues } from '../addresses/form';
-import { BackendError, normalizeMessage } from '../services/http';
+import {
+    backendErrorMessage,
+    normalizeMessage,
+    resolveBackendError,
+} from '../services/http';
 import type { RegisterInput } from './api';
 import { PASSWORD_VALIDATOR } from './passwordRules';
 import { validatePhoneNumber } from './phone';
@@ -111,81 +115,86 @@ export function toRegisterInput(values: AuthFormValues): RegisterInput {
 }
 
 export function toAuthErrorState(error: unknown, isSignUp: boolean) {
-    if (!(error instanceof BackendError)) {
-        return {
-            fieldErrors: {},
-            formError: normalizeMessage('Something went wrong'),
-        };
-    }
-
-    switch (error.code) {
-        case 'EMAIL_EXISTS':
-            return {
-                fieldErrors: { email: 'Email already exists' },
+    return resolveBackendError<{
+        fieldErrors: AuthFieldErrors;
+        formError: string | null;
+    }>(
+        error,
+        {
+            ADDRESS_INVALID: (backendError) => ({
+                fieldErrors: {
+                    addressLineOne: backendErrorMessage(backendError.code),
+                },
                 formError: null,
-            };
-        case 'INVALID_CREDENTIALS':
-            return {
+            }),
+            ADDRESS_LOOKUP_UNAVAILABLE: (backendError) => ({
+                fieldErrors: {},
+                formError: backendErrorMessage(backendError.code),
+            }),
+            EMAIL_EXISTS: (backendError) => ({
+                fieldErrors: { email: backendErrorMessage(backendError.code) },
+                formError: null,
+            }),
+            EMAIL_NOT_VERIFIED: (backendError) => ({
+                fieldErrors: {},
+                formError: backendErrorMessage(backendError.code),
+            }),
+            INVALID_CREDENTIALS: (backendError) => ({
                 fieldErrors: isSignUp
                     ? {}
-                    : { password: 'Email or password is incorrect' },
-                formError: isSignUp ? 'Email or password is incorrect' : null,
-            };
-        case 'EMAIL_NOT_VERIFIED':
-            return {
+                    : { password: backendErrorMessage(backendError.code) },
+                formError: isSignUp
+                    ? backendErrorMessage(backendError.code)
+                    : null,
+            }),
+            PASSWORD_HAS_COMMON_PATTERN: (backendError) => ({
+                fieldErrors: {
+                    password: backendErrorMessage(backendError.code),
+                },
+                formError: null,
+            }),
+            PASSWORD_HAS_PERSONAL_INFO: (backendError) => ({
+                fieldErrors: {
+                    password: backendErrorMessage(backendError.code),
+                },
+                formError: null,
+            }),
+            PASSWORD_NEEDS_NUMBER_OR_SYMBOL: (backendError) => ({
+                fieldErrors: {
+                    password: backendErrorMessage(backendError.code),
+                },
+                formError: null,
+            }),
+            PASSWORD_TOO_SHORT: (backendError) => ({
+                fieldErrors: {
+                    password: backendErrorMessage(backendError.code),
+                },
+                formError: null,
+            }),
+            PHONE_COUNTRY_INVALID: (backendError) => ({
+                fieldErrors: {
+                    phoneNumber: backendErrorMessage(backendError.code),
+                },
+                formError: null,
+            }),
+            PHONE_NUMBER_INVALID: (backendError) => ({
+                fieldErrors: {
+                    phoneNumber: backendErrorMessage(backendError.code),
+                },
+                formError: null,
+            }),
+            STAFF_ACCOUNT_REQUIRED: (backendError) => ({
                 fieldErrors: {},
-                formError: 'Check your email to verify your account',
-            };
-        case 'STAFF_ACCOUNT_REQUIRED':
-            return {
+                formError: backendErrorMessage(backendError.code),
+            }),
+            STAFF_PERMISSION_REQUIRED: (backendError) => ({
                 fieldErrors: {},
-                formError: 'Staff account is required',
-            };
-        case 'STAFF_PERMISSION_REQUIRED':
-            return {
-                fieldErrors: {},
-                formError: 'Staff permission is required',
-            };
-        case 'ADDRESS_INVALID':
-            return {
-                fieldErrors: { addressLineOne: 'Choose a valid address' },
-                formError: null,
-            };
-        case 'ADDRESS_LOOKUP_UNAVAILABLE':
-            return {
-                fieldErrors: {},
-                formError: 'Address search is unavailable',
-            };
-        case 'PHONE_NUMBER_INVALID':
-        case 'PHONE_COUNTRY_INVALID':
-            return {
-                fieldErrors: { phoneNumber: 'Phone number is invalid' },
-                formError: null,
-            };
-        case 'PASSWORD_TOO_SHORT':
-            return {
-                fieldErrors: { password: 'Use at least 8 characters' },
-                formError: null,
-            };
-        case 'PASSWORD_NEEDS_NUMBER_OR_SYMBOL':
-            return {
-                fieldErrors: { password: 'Include a number or symbol' },
-                formError: null,
-            };
-        case 'PASSWORD_HAS_PERSONAL_INFO':
-            return {
-                fieldErrors: { password: 'Avoid personal information' },
-                formError: null,
-            };
-        case 'PASSWORD_HAS_COMMON_PATTERN':
-            return {
-                fieldErrors: { password: 'Avoid common patterns' },
-                formError: null,
-            };
-        default:
-            return {
-                fieldErrors: {},
-                formError: normalizeMessage(error.message),
-            };
-    }
+                formError: backendErrorMessage(backendError.code),
+            }),
+        },
+        (formError) => ({
+            fieldErrors: {},
+            formError,
+        })
+    );
 }
