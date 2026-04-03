@@ -197,15 +197,17 @@ export default function VerifyEmailPage() {
             </h1>
 
             <section className="grid gap-5 rounded border border-slate-200 bg-white p-5">
-                <p
-                    className={
-                        screen === 'error'
-                            ? 'text-sm text-red-700'
-                            : 'text-sm text-slate-600'
-                    }
-                >
-                    {message}
-                </p>
+                {screen !== 'pending' ? (
+                    <p
+                        className={
+                            screen === 'error'
+                                ? 'text-sm text-red-700'
+                                : 'text-sm text-slate-600'
+                        }
+                    >
+                        {message}
+                    </p>
+                ) : null}
                 {email ? (
                     <div className="grid gap-3 border-b border-slate-200 pb-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
                         <div className="grid gap-1">

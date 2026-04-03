@@ -20,7 +20,9 @@ type ToastContextValue = {
     showToast: (message: string, tone?: ToastTone) => void;
 };
 
-const ToastContext = createContext<ToastContextValue | null>(null);
+const ToastContext = createContext<ToastContextValue>({
+    showToast: () => {},
+});
 
 export function ToastProvider({ children }: PropsWithChildren) {
     const [toasts, setToasts] = useState<Toast[]>([]);
@@ -32,12 +34,12 @@ export function ToastProvider({ children }: PropsWithChildren) {
     const showToast = useCallback(
         (message: string, tone: ToastTone = 'success') => {
             setToasts((current) => [
-                ...current,
                 {
                     id: Date.now() + Math.random(),
                     message,
                     tone,
                 },
+                ...current,
             ]);
         },
         []
@@ -53,14 +55,13 @@ export function ToastProvider({ children }: PropsWithChildren) {
     return (
         <ToastContext.Provider value={value}>
             {children}
-            <div className="pointer-events-none fixed bottom-4 left-4 z-50 flex max-w-sm flex-col-reverse gap-2">
+            <div className="pointer-events-none fixed bottom-4 left-4 z-50 flex max-w-sm flex-col gap-2">
                 {toasts.map((toast) => (
                     <ToastItem
                         key={toast.id}
                         onDismiss={() => {
                             dismissToast(toast.id);
                         }}
-                        tone={toast.tone}
                     >
                         {toast.message}
                     </ToastItem>
@@ -71,20 +72,14 @@ export function ToastProvider({ children }: PropsWithChildren) {
 }
 
 export function useToast() {
-    const context = useContext(ToastContext);
-    if (!context) {
-        throw new Error('useToast must be used within ToastProvider');
-    }
-    return context;
+    return useContext(ToastContext);
 }
 
 function ToastItem({
     children,
     onDismiss,
-    tone,
 }: PropsWithChildren<{
     onDismiss: () => void;
-    tone: ToastTone;
 }>) {
     const [isVisible, setIsVisible] = useState(false);
     const [isLeaving, setIsLeaving] = useState(false);
@@ -96,6 +91,15 @@ function ToastItem({
         return () => cancelAnimationFrame(frame);
     }, []);
 
+    useEffect(() => {
+        const timeout = window.setTimeout(() => {
+            setIsLeaving(true);
+            window.setTimeout(onDismiss, 200);
+        }, 3500);
+
+        return () => window.clearTimeout(timeout);
+    }, [onDismiss]);
+
     function handleDismiss() {
         setIsLeaving(true);
         window.setTimeout(onDismiss, 200);
@@ -104,23 +108,41 @@ function ToastItem({
     return (
         <div
             className={[
-                'pointer-events-auto flex items-start gap-3 rounded border bg-white px-4 py-3 shadow-lg transition-all duration-200',
+                'pointer-events-auto flex items-start gap-3 rounded bg-slate-950 px-4 py-3 text-white shadow-lg transition-all duration-200',
                 isVisible && !isLeaving
                     ? 'translate-y-0 opacity-100'
                     : '-translate-y-2 opacity-0',
-                tone === 'error'
-                    ? 'border-red-200 text-red-900'
-                    : 'border-emerald-200 text-slate-900',
+                'ring-1 ring-white/10',
             ].join(' ')}
         >
             <p className="min-w-0 flex-1 text-sm">{children}</p>
             <button
-                className="cursor-pointer text-sm text-slate-500 transition-colors hover:text-slate-900"
+                aria-label="Dismiss notification"
+                className="cursor-pointer text-slate-400 transition-colors hover:text-white"
                 onClick={handleDismiss}
                 type="button"
             >
-                Dismiss
+                <DismissIcon />
             </button>
         </div>
+    );
+}
+
+function DismissIcon() {
+    return (
+        <svg
+            aria-hidden="true"
+            fill="none"
+            height="16"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+            width="16"
+        >
+            <path d="M6 6l12 12" />
+            <path d="M18 6 6 18" />
+        </svg>
     );
 }
