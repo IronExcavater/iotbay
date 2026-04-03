@@ -1,4 +1,4 @@
-import { getJson, postJson } from '../services/http';
+import { deleteJson, getJson, patchJson, postJson } from '../services/http';
 
 export interface Product {
     id: string;
@@ -6,6 +6,7 @@ export interface Product {
     code: string;
     priceCents: number;
     createdAt: string;
+    updatedAt: string;
 }
 
 export interface CreateProductInput {
@@ -25,9 +26,25 @@ export const productApi = {
 
     create(input: CreateProductInput, signal?: AbortSignal): Promise<Product> {
         return postJson<Product, CreateProductInput>(
-            '/api/products',
+            '/api/admin/products',
             input,
             signal
         );
+    },
+
+    update(
+        productId: string,
+        input: CreateProductInput,
+        signal?: AbortSignal
+    ): Promise<Product> {
+        return patchJson<Product, CreateProductInput>(
+            `/api/admin/products/${productId}`,
+            input,
+            signal
+        );
+    },
+
+    remove(productId: string, signal?: AbortSignal): Promise<void> {
+        return deleteJson(`/api/admin/products/${productId}`, signal);
     },
 };
