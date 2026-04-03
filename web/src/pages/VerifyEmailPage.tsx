@@ -15,7 +15,7 @@ import { inputClassName } from '../components/form/Input';
 import { PasswordInput } from '../components/form/PasswordInput';
 import { useEnterSubmit } from '../components/form/useEnterSubmit';
 import { useToast } from '../components/toast/ToastProvider';
-import { downloadHtml } from '../services/download';
+import { downloadHtmlAndNotify } from '../services/download';
 import {
     BackendError,
     backendErrorMessage,
@@ -136,11 +136,10 @@ export default function VerifyEmailPage() {
                 email,
                 userType: userType === 'staff' ? 'staff' : undefined,
             });
-            if (downloadHtml(result.download)) {
-                showToast('Verification email downloaded');
-            } else {
-                showToast('Verification email sent');
-            }
+            downloadHtmlAndNotify(result.download, showToast, {
+                downloadedMessage: 'Verification email downloaded',
+                sentMessage: 'Verification email sent',
+            });
         } catch (error) {
             setFormError(toVerificationError(error));
         } finally {
@@ -174,11 +173,10 @@ export default function VerifyEmailPage() {
                 password,
                 userType: userType === 'staff' ? 'staff' : undefined,
             });
-            if (downloadHtml(result.download)) {
-                showToast('Verification email downloaded');
-            } else {
-                showToast('Verification email sent');
-            }
+            downloadHtmlAndNotify(result.download, showToast, {
+                downloadedMessage: 'Verification email downloaded',
+                sentMessage: 'Verification email sent',
+            });
             setEmail(result.verification.email);
             setChangeEmail('');
             setPassword('');

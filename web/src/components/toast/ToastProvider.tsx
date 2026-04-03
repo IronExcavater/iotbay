@@ -8,16 +8,13 @@ import {
     type PropsWithChildren,
 } from 'react';
 
-type ToastTone = 'error' | 'success';
-
 type Toast = {
     id: number;
     message: string;
-    tone: ToastTone;
 };
 
 type ToastContextValue = {
-    showToast: (message: string, tone?: ToastTone) => void;
+    showToast: (message: string) => void;
 };
 
 const ToastContext = createContext<ToastContextValue>({
@@ -31,19 +28,15 @@ export function ToastProvider({ children }: PropsWithChildren) {
         setToasts((current) => current.filter((toast) => toast.id !== id));
     }, []);
 
-    const showToast = useCallback(
-        (message: string, tone: ToastTone = 'success') => {
-            setToasts((current) => [
-                {
-                    id: Date.now() + Math.random(),
-                    message,
-                    tone,
-                },
-                ...current,
-            ]);
-        },
-        []
-    );
+    const showToast = useCallback((message: string) => {
+        setToasts((current) => [
+            {
+                id: Date.now() + Math.random(),
+                message,
+            },
+            ...current,
+        ]);
+    }, []);
 
     const value = useMemo(
         () => ({
@@ -95,7 +88,7 @@ function ToastItem({
         const timeout = window.setTimeout(() => {
             setIsLeaving(true);
             window.setTimeout(onDismiss, 200);
-        }, 3500);
+        }, 5000);
 
         return () => window.clearTimeout(timeout);
     }, [onDismiss]);
