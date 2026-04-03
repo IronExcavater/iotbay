@@ -141,7 +141,7 @@ def _has_common_pattern(password: str) -> bool:
 
 
 def _canonicalise_for_pattern_match(value: str) -> str:
-    return "".join(character for character in value.lower() if character.isalnum())
+    return "".join(character for character in value.lower() if not character.isspace())
 
 
 def _has_repeated_characters(value: str) -> bool:

@@ -328,6 +328,21 @@ class AuthRouteTestCase(AppTestCase):
             },
         )
 
+    def test_register_rejects_symbol_keyboard_sequence_password(self) -> None:
+        response = self.client.post(
+            "/api/register",
+            json=_register_payload(password="~!@#Secure9"),
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.get_json(),
+            {
+                "code": "PASSWORD_HAS_COMMON_PATTERN",
+                "error": "password contains a common pattern",
+            },
+        )
+
     def test_register_does_not_treat_email_domain_as_personal_info(self) -> None:
         response = self.client.post(
             "/api/register",
