@@ -1,11 +1,13 @@
-import type { EmailDownload } from './api';
-
-export function downloadHtmlArtifact(download: EmailDownload) {
-    const blob = new Blob([download.html], { type: 'text/html;charset=utf-8' });
+export function downloadFile(
+    filename: string,
+    content: string,
+    mimeType: string
+) {
+    const blob = new Blob([content], { type: mimeType });
     const objectUrl = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = objectUrl;
-    link.download = download.filename;
+    link.download = filename;
     document.body.append(link);
     link.click();
     link.remove();
