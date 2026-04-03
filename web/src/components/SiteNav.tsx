@@ -49,7 +49,7 @@ export default function SiteNav() {
     }
 
     return (
-        <header className="border-b border-slate-200 bg-white">
+        <header className="sticky top-0 z-30 border-b border-slate-200/90 bg-white/95 backdrop-blur">
             <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
                 <Link
                     className="group relative -mx-2 rounded px-2 py-1 text-base font-semibold tracking-[0.2em] text-slate-950 uppercase transition-transform duration-200 ease-out outline-none hover:scale-[1.02] focus-visible:scale-[1.02] focus-visible:outline-none"

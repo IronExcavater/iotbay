@@ -34,10 +34,10 @@ export function AddressFields({
         countryCode ?? browserLocale.country,
         browserLocale.language
     );
+    const collapsedPlaceholder = buildCollapsedAddressPlaceholder(placeholders);
     const collapsedAddressValue = buildCollapsedAddressValue(values);
     const [searchValue, setSearchValue] = useState('');
     const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
-    const [selectedQuery, setSelectedQuery] = useState('');
     const [showDetails, setShowDetails] = useState(false);
     const [activeField, setActiveField] = useState<SearchFieldName | null>(
         null
@@ -53,7 +53,7 @@ export function AddressFields({
     }, [activeField, showDetails]);
 
     useEffect(() => {
-        if (!activeField || query.length < 3 || query === selectedQuery) {
+        if (!activeField || query.length < 3) {
             setSuggestions([]);
             return;
         }
@@ -106,7 +106,6 @@ export function AddressFields({
         countryCode,
         activeField,
         query,
-        selectedQuery,
     ]);
 
     async function handleSuggestionSelect(suggestion: AddressSuggestion) {
@@ -128,7 +127,6 @@ export function AddressFields({
                 state: address.state,
                 suburb: address.suburb,
             };
-            setSelectedQuery(buildSuggestionQuery(nextValues));
             onFieldChange('addressLineOne', nextValues.addressLineOne);
             onFieldChange('addressLineTwo', '');
             onFieldChange('suburb', nextValues.suburb);
@@ -136,19 +134,17 @@ export function AddressFields({
             onFieldChange('postcode', nextValues.postcode);
             onFieldChange('country', nextValues.country);
         } catch {
-            setSelectedQuery('');
+            setSuggestions([]);
         }
     }
 
     function handleFieldChange(name: AddressFieldName, value: string) {
-        setSelectedQuery('');
         onFieldChange(name, value);
     }
 
     function handleSearchFieldChange(value: string) {
         const sanitized = sanitizeAddressField(value, 'Address');
         setSearchValue(sanitized);
-        setSelectedQuery('');
         onFieldChange('addressLineOne', sanitized);
     }
 
@@ -250,7 +246,7 @@ export function AddressFields({
                                         return values.addressLineOne.trim();
                                     });
                                 }}
-                                placeholder={`12 Harbour Road, Sydney NSW 2000, ${placeholders.country}, Apartment 4B`}
+                                placeholder={collapsedPlaceholder}
                                 value={
                                     activeField === 'search'
                                         ? searchValue
@@ -598,6 +594,15 @@ function buildCollapsedAddressValue(values: AddressFormValues) {
     ]
         .filter(Boolean)
         .join(', ');
+}
+
+function buildCollapsedAddressPlaceholder(placeholders: AddressPlaceholders) {
+    return [
+        '12 Harbour Road',
+        `${placeholders.suburb} ${placeholders.state} ${placeholders.postcode}`,
+        placeholders.country,
+        'Apartment 4B',
+    ].join(', ');
 }
 
 function hasStructuredAddress(values: AddressFormValues) {

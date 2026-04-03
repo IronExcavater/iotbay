@@ -2,6 +2,9 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 type ButtonVariant = 'danger' | 'primary' | 'secondary' | 'text';
 
+export const textButtonClassName =
+    'inline-flex w-fit items-center gap-2 text-sm text-slate-600 underline-offset-4 outline-none transition-colors hover:text-slate-900 hover:underline focus-visible:text-slate-900 focus-visible:underline focus-visible:outline-none';
+
 export function Button({
     children,
     className = '',
@@ -38,7 +41,7 @@ const variantClassName: Record<ButtonVariant, string> = {
     primary:
         'bg-slate-900 px-4 py-2 text-white hover:bg-slate-700 disabled:bg-slate-400',
     secondary: 'border border-slate-300 px-3 py-2 hover:bg-slate-100',
-    text: 'inline-flex w-fit items-center gap-2 text-slate-600 hover:text-slate-900',
+    text: textButtonClassName,
 };
 
 function ButtonSpinner() {
