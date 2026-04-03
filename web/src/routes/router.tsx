@@ -1,7 +1,8 @@
 import { createBrowserRouter } from 'react-router-dom';
 
-import AppFrame from '../layouts/AppFrame';
+import SiteLayout from '../layouts/SiteLayout';
 import AccountPage from '../pages/AccountPage';
+import AdminPage from '../pages/AdminPage';
 import AuthPage from '../pages/AuthPage';
 import ErrorPage from '../pages/ErrorPage';
 import HomePage from '../pages/HomePage';
@@ -12,7 +13,7 @@ import VerifyEmailPage from '../pages/VerifyEmailPage';
 export const router = createBrowserRouter([
     {
         path: '/',
-        element: <AppFrame />,
+        element: <SiteLayout />,
         errorElement: <ErrorPage />,
         children: [
             {
@@ -34,6 +35,10 @@ export const router = createBrowserRouter([
             {
                 path: 'account',
                 element: <AccountPage />,
+            },
+            {
+                path: 'admin',
+                element: <AdminPage />,
             },
             {
                 path: '*',
