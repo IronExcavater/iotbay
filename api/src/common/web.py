@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from http import HTTPStatus
 from typing import TypeVar
 
@@ -53,44 +52,10 @@ def parse_request(model: type[TRequestModel]) -> TRequestModel:
         raise ValidationError(_request_validation_message(error)) from error
 
 
-@dataclass(slots=True, frozen=True)
-class RequestData:
-    data: dict[str, object]
-
-    @classmethod
-    def from_request(cls) -> "RequestData":
-        data = request.get_json(silent=True)
-        if not isinstance(data, dict):
-            raise ValidationError("request body must be a JSON object")
-
-        return cls(data)
-
-    def string(self, key: str, *, message: str) -> str:
-        value = self.data.get(key)
-        if not isinstance(value, str):
-            raise ValidationError(message)
-
-        value = value.strip()
-        if not value:
-            raise ValidationError(message)
-
-        return value
-
-    def email(self, key: str = "email", *, message: str) -> str:
-        email = self.string(key, message=message)
-        local_part, separator, domain = email.partition("@")
-
-        is_valid = local_part and separator and "." in domain and domain.strip(".")
-        if not is_valid:
-            raise ValidationError("email must be valid")
-
-        return email
-
-    def integer(self, key: str, *, message: str) -> int:
-        value = self.data.get(key)
-        if isinstance(value, bool) or not isinstance(value, int):
-            raise ValidationError(message)
-        return value
+def request_locale() -> str:
+    locale = request.accept_languages.best or ""
+    normalized = locale.replace("-", "_").strip()
+    return normalized or "en_AU"
 
 
 def _request_validation_message(error: PydanticValidationError) -> str:

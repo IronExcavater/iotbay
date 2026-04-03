@@ -1,4 +1,7 @@
 Flask
 pydantic
 pydantic-settings
+Babel
+certifi
+phonenumbers
 ruff

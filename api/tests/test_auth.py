@@ -1,7 +1,5 @@
 import re
-import tempfile
 import unittest
-from pathlib import Path
 from unittest.mock import patch
 
 from src.auth.security import hash_password
@@ -10,10 +8,11 @@ from src.users.models import (
     USER_STATUS_ACTIVE,
     USER_STATUS_UNVERIFIED,
     USER_TYPE_CUSTOMER,
+    USER_TYPE_STAFF,
 )
 from src.users.repository import UserRepository
-from tests.helpers.test_app import create_test_app_client
-from tests.helpers.test_session import create_test_session
+from tests.helpers.test_case import AppTestCase
+from tests.helpers.test_session import create_staff_test_session, create_test_session
 from werkzeug.test import TestResponse
 
 
@@ -25,10 +24,15 @@ def _register_payload(
     last_name: str = "Nguyen",
 ) -> dict[str, str]:
     return {
+        "addressLineOne": "12 Harbour Road",
+        "country": "Australia",
         "email": email,
         "password": password,
         "firstName": first_name,
         "lastName": last_name,
+        "postcode": "2000",
+        "state": "NSW",
+        "suburb": "Sydney",
     }
 
 
@@ -40,11 +44,30 @@ def _download_token(response: TestResponse) -> str:
     return token_match.group(1)
 
 
-class AuthRouteTestCase(unittest.TestCase):
-    def setUp(self) -> None:
-        super().setUp()
-        temp_dir = Path(self.enterContext(tempfile.TemporaryDirectory()))
-        self.client, _ = create_test_app_client(temp_dir)
+def _assert_user_payload(
+    payload: dict[str, object],
+    *,
+    email: str,
+    first_name: str,
+    last_name: str,
+    status: str,
+    user_type: str,
+) -> None:
+    assert payload["email"] == email
+    assert payload["firstName"] == first_name
+    assert payload["lastName"] == last_name
+    assert payload["status"] == status
+    assert payload["userType"] == user_type
+    assert isinstance(payload["id"], str)
+
+
+class AuthRouteTestCase(AppTestCase):
+    def environment_overrides(self) -> dict[str, str]:
+        return {
+            "IOTBAY_SMTP_HOST": "",
+            "IOTBAY_SMTP_PASSWORD": "",
+            "IOTBAY_SMTP_USERNAME": "",
+        }
 
     def test_register_creates_unverified_customer_and_returns_verification_download(
         self,
@@ -141,6 +164,46 @@ class AuthRouteTestCase(unittest.TestCase):
             },
         )
 
+    def test_staff_login_rejects_customer_user(self) -> None:
+        session = create_test_session(self.client)
+        self.client.post("/api/logout")
+
+        response = self.client.post(
+            "/api/login",
+            json={
+                "email": session.email,
+                "password": session.password,
+                "userType": USER_TYPE_STAFF,
+            },
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.get_json(),
+            {
+                "code": "STAFF_ACCOUNT_REQUIRED",
+                "error": "staff account is required",
+            },
+        )
+
+    def test_staff_login_accepts_staff_user(self) -> None:
+        session = create_staff_test_session(self.client)
+        self.client.post("/api/logout")
+
+        response = self.client.post(
+            "/api/login",
+            json={
+                "email": session.email,
+                "password": session.password,
+                "userType": USER_TYPE_STAFF,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertIsNotNone(payload)
+        self.assertEqual(payload["user"]["userType"], USER_TYPE_STAFF)
+
     def test_login_rejects_unverified_user(self) -> None:
         register_response = self.client.post("/api/register", json=_register_payload())
 
@@ -172,16 +235,13 @@ class AuthRouteTestCase(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(
+        _assert_user_payload(
             response.get_json()["user"],
-            {
-                "email": "alex.customer@example.com",
-                "firstName": "Alex",
-                "id": response.get_json()["user"]["id"],
-                "lastName": "Nguyen",
-                "status": "active",
-                "userType": "customer",
-            },
+            email="alex.customer@example.com",
+            first_name="Alex",
+            last_name="Nguyen",
+            status="active",
+            user_type="customer",
         )
 
         me_response = self.client.get("/api/me")
@@ -253,6 +313,32 @@ class AuthRouteTestCase(unittest.TestCase):
             },
         )
 
+    def test_register_rejects_numeric_sequence_password(self) -> None:
+        response = self.client.post(
+            "/api/register",
+            json=_register_payload(password="12345678"),
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.get_json(),
+            {
+                "code": "PASSWORD_HAS_COMMON_PATTERN",
+                "error": "password contains a common pattern",
+            },
+        )
+
+    def test_register_does_not_treat_email_domain_as_personal_info(self) -> None:
+        response = self.client.post(
+            "/api/register",
+            json=_register_payload(
+                email="alex@harbour.com",
+                password="Harbour9$Wave",
+            ),
+        )
+
+        self.assertEqual(response.status_code, 202)
+
     def test_register_normalizes_email_to_lowercase(self) -> None:
         response = self.client.post(
             "/api/register",
@@ -283,6 +369,119 @@ class AuthRouteTestCase(unittest.TestCase):
                 "error": "firstName must be 100 characters or fewer",
             },
         )
+
+    def test_register_allows_missing_address(self) -> None:
+        response = self.client.post(
+            "/api/register",
+            json={
+                "email": "alex.customer@example.com",
+                "password": "CedarGrove42",
+                "firstName": "Alex",
+                "lastName": "Nguyen",
+            },
+        )
+
+        self.assertEqual(response.status_code, 202)
+
+    def test_register_rejects_unicode_email(self) -> None:
+        response = self.client.post(
+            "/api/register",
+            json=_register_payload(email="alex😀@example.com"),
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.get_json(),
+            {"error": "email must use ASCII characters only"},
+        )
+
+    def test_register_rejects_unicode_name(self) -> None:
+        response = self.client.post(
+            "/api/register",
+            json=_register_payload(first_name="Alex😀"),
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.get_json(),
+            {"error": "firstName must use ASCII characters only"},
+        )
+
+    def test_register_rejects_unicode_password(self) -> None:
+        response = self.client.post(
+            "/api/register",
+            json=_register_payload(password="Cedar😀42"),
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.get_json(),
+            {"error": "password must use ASCII characters only"},
+        )
+
+    def test_register_saves_optional_customer_profile_fields(self) -> None:
+        response = self.client.post(
+            "/api/register",
+            json={
+                **_register_payload(),
+                "addressLineTwo": "Unit 3",
+                "phoneCountry": "AU",
+                "phoneNumber": "0412 345 678",
+            },
+        )
+
+        self.assertEqual(response.status_code, 202)
+        verify_response = self.client.post(
+            "/api/verify-email",
+            json={"token": _download_token(response)},
+        )
+        payload = verify_response.get_json()
+        self.assertIsNotNone(payload)
+        self.assertEqual(payload["user"]["phoneNumber"], "+61412345678")
+        self.assertEqual(
+            payload["user"]["addressLabel"],
+            "12 Harbour Road, Sydney NSW 2000, Australia",
+        )
+        self.assertEqual(payload["user"]["addressLineOne"], "12 Harbour Road")
+        self.assertEqual(payload["user"]["addressLineTwo"], "Unit 3")
+
+    def test_register_accepts_phone_without_leading_zero(self) -> None:
+        response = self.client.post(
+            "/api/register",
+            json={
+                **_register_payload(),
+                "phoneCountry": "AU",
+                "phoneNumber": "412345678",
+            },
+        )
+
+        self.assertEqual(response.status_code, 202)
+        verify_response = self.client.post(
+            "/api/verify-email",
+            json={"token": _download_token(response)},
+        )
+        payload = verify_response.get_json()
+        self.assertIsNotNone(payload)
+        self.assertEqual(payload["user"]["phoneNumber"], "+61412345678")
+
+    def test_register_accepts_phone_with_country_code_without_plus(self) -> None:
+        response = self.client.post(
+            "/api/register",
+            json={
+                **_register_payload(),
+                "phoneCountry": "AU",
+                "phoneNumber": "61412345678",
+            },
+        )
+
+        self.assertEqual(response.status_code, 202)
+        verify_response = self.client.post(
+            "/api/verify-email",
+            json={"token": _download_token(response)},
+        )
+        payload = verify_response.get_json()
+        self.assertIsNotNone(payload)
+        self.assertEqual(payload["user"]["phoneNumber"], "+61412345678")
 
     def test_forgot_password_returns_download_when_smtp_is_not_configured(self) -> None:
         session = create_test_session(self.client)
@@ -344,6 +543,46 @@ class AuthRouteTestCase(unittest.TestCase):
         self.assertTrue(payload["download"]["filename"].endswith(".html"))
         self.assertIn("Reset your IOTBay password", payload["download"]["html"])
 
+    def test_staff_forgot_password_returns_staff_reset_link(self) -> None:
+        session = create_staff_test_session(self.client)
+
+        with patch.dict(
+            "os.environ",
+            {
+                "IOTBAY_SMTP_HOST": "",
+                "IOTBAY_SMTP_PASSWORD": "",
+                "IOTBAY_SMTP_PORT": "587",
+                "IOTBAY_SMTP_USE_TLS": "1",
+                "IOTBAY_SMTP_USERNAME": "",
+            },
+        ):
+            response = self.client.post(
+                "/api/forgot-password",
+                json={"email": session.email, "userType": USER_TYPE_STAFF},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertIsNotNone(payload)
+        self.assertIn("userType=staff", payload["download"]["html"])
+
+        reset_response = self.client.post(
+            "/api/reset-password",
+            json={"token": _download_token(response), "password": "HarbourReset9$"},
+        )
+        self.assertEqual(reset_response.status_code, 200)
+
+        self.client.post("/api/logout")
+        login_response = self.client.post(
+            "/api/login",
+            json={
+                "email": session.email,
+                "password": "HarbourReset9$",
+                "userType": USER_TYPE_STAFF,
+            },
+        )
+        self.assertEqual(login_response.status_code, 200)
+
     def test_verify_email_invalid_token_returns_bad_request(self) -> None:
         response = self.client.post(
             "/api/verify-email",
@@ -360,38 +599,221 @@ class AuthRouteTestCase(unittest.TestCase):
         )
 
     def test_update_me_updates_profile(self) -> None:
+        session = create_test_session(self.client)
+
+        response = self.client.patch(
+            "/api/me",
+            json={
+                "currentPassword": session.password,
+                "email": session.email,
+                "firstName": "Alexa",
+                "lastName": "Nguyen",
+                "phoneCountry": "AU",
+                "phoneNumber": "0412 345 678",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        _assert_user_payload(
+            response.get_json()["user"],
+            email=session.email,
+            first_name="Alexa",
+            last_name="Nguyen",
+            status="active",
+            user_type="customer",
+        )
+        self.assertEqual(response.get_json()["user"]["phoneNumber"], "+61412345678")
+
+    def test_register_rejects_invalid_phone_number(self) -> None:
+        response = self.client.post(
+            "/api/register",
+            json={
+                **_register_payload(),
+                "phoneCountry": "AU",
+                "phoneNumber": "123",
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.get_json(),
+            {
+                "code": "PHONE_NUMBER_INVALID",
+                "error": "phone number is invalid",
+            },
+        )
+
+    def test_update_me_updates_staff_profile(self) -> None:
+        session = create_staff_test_session(self.client)
+
+        response = self.client.patch(
+            "/api/me",
+            json={
+                "currentPassword": session.password,
+                "designation": "Operations Lead",
+                "email": "taylor.staff@example.com",
+                "firstName": "Taylor",
+                "lastName": "Morgan",
+                "permission": "superadmin",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertIsNotNone(payload)
+        self.assertEqual(payload["user"]["designation"], "Operations Lead")
+        self.assertEqual(payload["user"]["permission"], "superadmin")
+
+    def test_update_me_email_change_requires_current_password(self) -> None:
         create_test_session(self.client)
 
         response = self.client.patch(
             "/api/me",
             json={
-                "email": "alex.updated@example.com",
+                "email": "alex.verified@example.com",
+                "firstName": "Alex",
+                "lastName": "Nguyen",
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.get_json(),
+            {
+                "code": "CURRENT_PASSWORD_REQUIRED",
+                "error": "current password is required to save changes",
+            },
+        )
+
+    def test_update_me_name_change_requires_current_password(self) -> None:
+        session = create_test_session(self.client)
+
+        response = self.client.patch(
+            "/api/me",
+            json={
+                "email": session.email,
                 "firstName": "Alexa",
                 "lastName": "Nguyen",
             },
         )
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 400)
         self.assertEqual(
-            response.get_json()["user"],
+            response.get_json(),
             {
-                "email": "alex.updated@example.com",
-                "firstName": "Alexa",
-                "id": response.get_json()["user"]["id"],
-                "lastName": "Nguyen",
-                "status": "active",
-                "userType": "customer",
+                "code": "CURRENT_PASSWORD_REQUIRED",
+                "error": "current password is required to save changes",
             },
+        )
+
+    def test_update_me_email_change_rejects_incorrect_current_password(self) -> None:
+        create_test_session(self.client)
+
+        response = self.client.patch(
+            "/api/me",
+            json={
+                "currentPassword": "wrong-password",
+                "email": "alex.verified@example.com",
+                "firstName": "Alex",
+                "lastName": "Nguyen",
+            },
+        )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(
+            response.get_json(),
+            {
+                "code": "CURRENT_PASSWORD_INCORRECT",
+                "error": "current password is incorrect",
+            },
+        )
+
+    def test_update_me_email_change_requires_reverification(self) -> None:
+        session = create_test_session(self.client)
+
+        response = self.client.patch(
+            "/api/me",
+            json={
+                "currentPassword": session.password,
+                "email": "alex.verified@example.com",
+                "firstName": "Alex",
+                "lastName": "Nguyen",
+            },
+        )
+
+        self.assertEqual(response.status_code, 202)
+        payload = response.get_json()
+        self.assertIsNotNone(payload)
+        self.assertEqual(
+            payload["verification"]["email"],
+            "alex.verified@example.com",
+        )
+
+        me_response = self.client.get("/api/me")
+        self.assertEqual(me_response.status_code, 401)
+
+        verify_response = self.client.post(
+            "/api/verify-email",
+            json={"token": _download_token(response)},
+        )
+        self.assertEqual(verify_response.status_code, 200)
+        self.assertEqual(
+            verify_response.get_json()["user"]["email"],
+            "alex.verified@example.com",
+        )
+
+    def test_resend_verification_returns_download_for_unverified_user(self) -> None:
+        response = self.client.post("/api/register", json=_register_payload())
+
+        resend_response = self.client.post(
+            "/api/resend-verification",
+            json={"email": "alex.customer@example.com"},
+        )
+
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(resend_response.status_code, 200)
+        payload = resend_response.get_json()
+        self.assertIsNotNone(payload)
+        self.assertIn("download", payload)
+
+    def test_change_pending_email_reissues_verification(self) -> None:
+        self.client.post("/api/register", json=_register_payload())
+
+        response = self.client.post(
+            "/api/change-pending-email",
+            json={
+                "currentEmail": "alex.customer@example.com",
+                "email": "alex.updated@example.com",
+                "password": "CedarGrove42",
+            },
+        )
+
+        self.assertEqual(response.status_code, 202)
+        payload = response.get_json()
+        self.assertIsNotNone(payload)
+        self.assertEqual(
+            payload["verification"]["email"],
+            "alex.updated@example.com",
+        )
+
+        verify_response = self.client.post(
+            "/api/verify-email",
+            json={"token": _download_token(response)},
+        )
+        self.assertEqual(verify_response.status_code, 200)
+        self.assertEqual(
+            verify_response.get_json()["user"]["email"],
+            "alex.updated@example.com",
         )
 
     def test_update_me_duplicate_email_returns_conflict(self) -> None:
-        create_test_session(self.client)
+        session = create_test_session(self.client)
         repository = extension_from(
             self.client.application,
             "user_repository",
             UserRepository,
         )
-        repository.create_user(
+        repository.insert_user(
             email="other.customer@example.com",
             password_hash=hash_password("OtherSecure9$"),
             first_name="Other",
@@ -403,6 +825,7 @@ class AuthRouteTestCase(unittest.TestCase):
         response = self.client.patch(
             "/api/me",
             json={
+                "currentPassword": session.password,
                 "email": "other.customer@example.com",
                 "firstName": "Alex",
                 "lastName": "Nguyen",
@@ -430,7 +853,7 @@ class AuthRouteTestCase(unittest.TestCase):
             "user_repository",
             UserRepository,
         )
-        user = repository.create_user(
+        user = repository.insert_user(
             email="alex.customer@example.com",
             password_hash=hash_password("OldPassword9$"),
             first_name="Old",
@@ -449,7 +872,7 @@ class AuthRouteTestCase(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 202)
-        updated_user = repository.find_user_by_id(user_id=user.user_id)
+        updated_user = repository.select_user_by_id(user_id=user.user_id)
         self.assertIsNotNone(updated_user)
         assert updated_user is not None
         self.assertEqual(updated_user.first_name, "Alex")

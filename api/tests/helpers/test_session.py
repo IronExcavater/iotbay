@@ -4,7 +4,12 @@ from flask.testing import FlaskClient
 from src.auth.security import hash_password, hash_session_token, new_session_token
 from src.common.app import extension_from
 from src.common.clock import UtcTime
-from src.users.models import USER_STATUS_ACTIVE, USER_TYPE_CUSTOMER, User
+from src.users.models import (
+    USER_STATUS_ACTIVE,
+    USER_TYPE_CUSTOMER,
+    USER_TYPE_STAFF,
+    User,
+)
 from src.users.repository import UserRepository
 
 
@@ -23,20 +28,21 @@ def create_test_session(
     password: str = "CedarGrove42",
     first_name: str = "Alex",
     last_name: str = "Nguyen",
+    user_type: str = USER_TYPE_CUSTOMER,
 ) -> TestSession:
     repository = extension_from(client.application, "user_repository", UserRepository)
-    user = repository.create_user(
+    user = repository.insert_user(
         email=email,
         password_hash=hash_password(password),
         first_name=first_name,
         last_name=last_name,
-        user_type=USER_TYPE_CUSTOMER,
+        user_type=user_type,
         status=USER_STATUS_ACTIVE,
     )
 
     session_token = new_session_token()
     now = UtcTime.now()
-    repository.create_session(
+    repository.insert_user_session(
         user_id=user.user_id,
         session_token_hash=hash_session_token(session_token),
         created_at=now.iso,
@@ -55,4 +61,22 @@ def create_test_session(
         password=password,
         session_token=session_token,
         user=user,
+    )
+
+
+def create_staff_test_session(
+    client: FlaskClient,
+    *,
+    email: str = "taylor.staff@example.com",
+    password: str = "Harbour84!",
+    first_name: str = "Taylor",
+    last_name: str = "Morgan",
+) -> TestSession:
+    return create_test_session(
+        client,
+        email=email,
+        password=password,
+        first_name=first_name,
+        last_name=last_name,
+        user_type=USER_TYPE_STAFF,
     )
