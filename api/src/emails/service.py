@@ -8,7 +8,7 @@ from typing import Protocol
 
 from src.common.web import ApiError
 from src.config import EmailConfig
-from src.emails import (
+from src.emails.templates import (
     RenderedEmail,
     render_password_reset_email,
     render_registration_verification_email,
@@ -44,11 +44,13 @@ class EmailService:
         email: str,
         reset_url: str,
         expires_at: str,
+        locale: str,
     ) -> DeliveredEmailArtifact:
         rendered_email = render_password_reset_email(
             email=email,
             reset_url=reset_url,
             expires_at=expires_at,
+            locale=locale,
         )
         return self._deliver(rendered_email)
 
@@ -58,11 +60,13 @@ class EmailService:
         email: str,
         verification_url: str,
         expires_at: str,
+        locale: str,
     ) -> DeliveredEmailArtifact:
         rendered_email = render_registration_verification_email(
             email=email,
             verification_url=verification_url,
             expires_at=expires_at,
+            locale=locale,
         )
         return self._deliver(rendered_email)
 

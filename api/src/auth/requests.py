@@ -1,10 +1,106 @@
-from pydantic import BaseModel, ConfigDict, field_validator
-from pydantic.alias_generators import to_camel
+from typing import Annotated
 
-EMAIL_MAX_LENGTH = 320
-NAME_MAX_LENGTH = 100
-PASSWORD_MAX_LENGTH = 200
-TOKEN_MAX_LENGTH = 512
+from pydantic import AfterValidator, BaseModel, ConfigDict, model_validator
+from pydantic.alias_generators import to_camel
+from src.addresses.models import (
+    ADDRESS_LINE_ONE_VALIDATOR,
+    ADDRESS_LINE_TWO_VALIDATOR,
+    COUNTRY_VALIDATOR,
+    POSTCODE_VALIDATOR,
+    STATE_VALIDATOR,
+    SUBURB_VALIDATOR,
+    validate_address_fields,
+)
+from src.common.validation import (
+    TOKEN_MAX_LENGTH,
+    StringValidator,
+    TokenValidator,
+)
+from src.users.models import (
+    CURRENT_PASSWORD_VALIDATOR,
+    DESIGNATION_VALIDATOR,
+    EMAIL_VALIDATOR,
+    FIRST_NAME_VALIDATOR,
+    LAST_NAME_VALIDATOR,
+    PASSWORD_INPUT_VALIDATOR,
+    PERMISSION_VALIDATOR,
+    PHONE_COUNTRY_VALIDATOR,
+    PHONE_NUMBER_VALIDATOR,
+    USER_TYPE_VALIDATOR,
+)
+
+TOKEN_VALIDATOR = TokenValidator(
+    field_name="token",
+    required=True,
+    max_length=TOKEN_MAX_LENGTH,
+    ascii_only=True,
+    printable_ascii_only=True,
+)
+
+
+def _optional_request_validator(validator: StringValidator):
+    def validate(value: str) -> str:
+        return value if not value else validator.validate_request(value)
+
+    return validate
+
+
+EmailValue = Annotated[str, AfterValidator(EMAIL_VALIDATOR.validate_request)]
+FirstNameValue = Annotated[str, AfterValidator(FIRST_NAME_VALIDATOR.validate_request)]
+LastNameValue = Annotated[str, AfterValidator(LAST_NAME_VALIDATOR.validate_request)]
+PasswordValue = Annotated[
+    str,
+    AfterValidator(PASSWORD_INPUT_VALIDATOR.validate_request),
+]
+CurrentPasswordValue = Annotated[
+    str,
+    AfterValidator(_optional_request_validator(CURRENT_PASSWORD_VALIDATOR)),
+]
+TokenValue = Annotated[str, AfterValidator(TOKEN_VALIDATOR.validate_request)]
+UserTypeValue = Annotated[
+    str,
+    AfterValidator(_optional_request_validator(USER_TYPE_VALIDATOR)),
+]
+PhoneNumberValue = Annotated[
+    str,
+    AfterValidator(_optional_request_validator(PHONE_NUMBER_VALIDATOR)),
+]
+PhoneCountryValue = Annotated[
+    str,
+    AfterValidator(_optional_request_validator(PHONE_COUNTRY_VALIDATOR)),
+]
+AddressLineOneValue = Annotated[
+    str,
+    AfterValidator(_optional_request_validator(ADDRESS_LINE_ONE_VALIDATOR)),
+]
+AddressLineTwoValue = Annotated[
+    str,
+    AfterValidator(_optional_request_validator(ADDRESS_LINE_TWO_VALIDATOR)),
+]
+SuburbValue = Annotated[
+    str,
+    AfterValidator(_optional_request_validator(SUBURB_VALIDATOR)),
+]
+StateValue = Annotated[
+    str,
+    AfterValidator(_optional_request_validator(STATE_VALIDATOR)),
+]
+PostcodeValue = Annotated[
+    str,
+    AfterValidator(_optional_request_validator(POSTCODE_VALIDATOR)),
+]
+CountryValue = Annotated[
+    str,
+    AfterValidator(_optional_request_validator(COUNTRY_VALIDATOR)),
+]
+DesignationValue = Annotated[
+    str,
+    AfterValidator(_optional_request_validator(DESIGNATION_VALIDATOR)),
+]
+PermissionValue = Annotated[
+    str,
+    AfterValidator(_optional_request_validator(PERMISSION_VALIDATOR)),
+]
 
 
 class AuthRequest(BaseModel):
@@ -15,137 +111,62 @@ class AuthRequest(BaseModel):
     )
 
 
-def _validate_email(value: str) -> str:
-    if len(value) > EMAIL_MAX_LENGTH:
-        raise ValueError("email must be 320 characters or fewer")
+class ProfileRequest(AuthRequest):
+    first_name: FirstNameValue
+    last_name: LastNameValue
+    phone_number: PhoneNumberValue = ""
+    phone_country: PhoneCountryValue = ""
+    address_line_one: AddressLineOneValue = ""
+    address_line_two: AddressLineTwoValue = ""
+    suburb: SuburbValue = ""
+    state: StateValue = ""
+    postcode: PostcodeValue = ""
+    country: CountryValue = ""
 
-    local_part, separator, domain = value.partition("@")
-    is_valid = local_part and separator and "." in domain and domain.strip(".")
-    if not is_valid:
-        raise ValueError("email must be valid")
-    return value.lower()
-
-
-def _require_value(value: str, message: str) -> str:
-    if not value:
-        raise ValueError(message)
-    return value
-
-
-def _validate_name(value: str, *, field_name: str) -> str:
-    value = _require_value(value, f"{field_name} is required")
-    if len(value) > NAME_MAX_LENGTH:
-        raise ValueError(f"{field_name} must be 100 characters or fewer")
-    return value
+    @model_validator(mode="after")
+    def validate_address_fields(self) -> "ProfileRequest":
+        return validate_address_fields(self)
 
 
-def _validate_password(value: str) -> str:
-    value = _require_value(value, "password is required")
-    # Bound the raw password input so request validation stays cheap and
-    # attackers cannot send arbitrarily large payloads into hashing.
-    if len(value) > PASSWORD_MAX_LENGTH:
-        raise ValueError("password must be 200 characters or fewer")
-    return value
-
-
-def _validate_token(value: str) -> str:
-    value = _require_value(value, "token is required")
-    if len(value) > TOKEN_MAX_LENGTH:
-        raise ValueError("token is too long")
-    return value
-
-
-class RegisterRequest(AuthRequest):
-    email: str
-    password: str
-    first_name: str
-    last_name: str
-
-    @field_validator("email")
-    @classmethod
-    def validate_email(cls, value: str) -> str:
-        return _validate_email(value)
-
-    @field_validator("password")
-    @classmethod
-    def require_password(cls, value: str) -> str:
-        return _validate_password(value)
-
-    @field_validator("first_name")
-    @classmethod
-    def require_first_name(cls, value: str) -> str:
-        return _validate_name(value, field_name="firstName")
-
-    @field_validator("last_name")
-    @classmethod
-    def require_last_name(cls, value: str) -> str:
-        return _validate_name(value, field_name="lastName")
+class RegisterRequest(ProfileRequest):
+    email: EmailValue
+    password: PasswordValue
 
 
 class LoginRequest(AuthRequest):
-    email: str
-    password: str
-
-    @field_validator("email")
-    @classmethod
-    def validate_email(cls, value: str) -> str:
-        return _validate_email(value)
-
-    @field_validator("password")
-    @classmethod
-    def require_password(cls, value: str) -> str:
-        return _validate_password(value)
+    email: EmailValue
+    password: PasswordValue
+    user_type: UserTypeValue = ""
 
 
 class ForgotPasswordRequest(AuthRequest):
-    email: str
+    email: EmailValue
+    user_type: UserTypeValue = ""
 
-    @field_validator("email")
-    @classmethod
-    def validate_email(cls, value: str) -> str:
-        return _validate_email(value)
+
+class ResendVerificationRequest(AuthRequest):
+    email: EmailValue
+    user_type: UserTypeValue = ""
 
 
 class ResetPasswordRequest(AuthRequest):
-    password: str
-    token: str
-
-    @field_validator("password")
-    @classmethod
-    def require_password(cls, value: str) -> str:
-        return _validate_password(value)
-
-    @field_validator("token")
-    @classmethod
-    def require_token(cls, value: str) -> str:
-        return _validate_token(value)
+    password: PasswordValue
+    token: TokenValue
 
 
 class VerifyEmailRequest(AuthRequest):
-    token: str
-
-    @field_validator("token")
-    @classmethod
-    def require_token(cls, value: str) -> str:
-        return _validate_token(value)
+    token: TokenValue
 
 
-class UpdateProfileRequest(AuthRequest):
-    email: str
-    first_name: str
-    last_name: str
+class ChangePendingEmailRequest(AuthRequest):
+    current_email: EmailValue
+    email: EmailValue
+    password: PasswordValue
+    user_type: UserTypeValue = ""
 
-    @field_validator("email")
-    @classmethod
-    def validate_email(cls, value: str) -> str:
-        return _validate_email(value)
 
-    @field_validator("first_name")
-    @classmethod
-    def require_first_name(cls, value: str) -> str:
-        return _validate_name(value, field_name="firstName")
-
-    @field_validator("last_name")
-    @classmethod
-    def require_last_name(cls, value: str) -> str:
-        return _validate_name(value, field_name="lastName")
+class UpdateProfileRequest(ProfileRequest):
+    email: EmailValue
+    current_password: CurrentPasswordValue = ""
+    designation: DesignationValue = ""
+    permission: PermissionValue = ""

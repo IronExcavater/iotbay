@@ -6,6 +6,7 @@ from flask import g, request
 from src.auth.security import hash_session_token
 from src.common.app import app_extension, app_str
 from src.common.clock import UtcTime
+from src.common.text import stripped_or_none
 from src.common.web import ApiError
 from src.users.models import User
 from src.users.repository import UserRepository
@@ -14,7 +15,7 @@ from src.users.repository import UserRepository
 def login_required(view: Callable) -> Callable:
     @wraps(view)
     def wrapped(*args, **kwargs):
-        g.authenticated_user = authenticated_user()
+        current_authenticated_user()
         return view(*args, **kwargs)
 
     return wrapped
@@ -22,30 +23,38 @@ def login_required(view: Callable) -> Callable:
 
 def current_authenticated_user() -> User:
     user = getattr(g, "authenticated_user", None)
-    if not isinstance(user, User):
-        raise RuntimeError("authenticated user is not available")
+    if isinstance(user, User):
+        return user
+
+    user = _load_authenticated_user()
+    g.authenticated_user = user
+    return user
+
+
+def current_authenticated_staff_user(*required_permissions: str) -> User:
+    user = current_authenticated_user()
+    if not user.is_staff:
+        raise _staff_account_required()
+    if required_permissions and user.permission not in required_permissions:
+        raise _staff_permission_required()
     return user
 
 
 def request_session_token() -> str | None:
-    value = request.cookies.get(session_cookie_name())
-    if value is None:
-        return None
-
-    value = value.strip()
-    return value or None
+    return stripped_or_none(request.cookies.get(session_cookie_name()))
 
 
 def session_cookie_name() -> str:
     return app_str("AUTH_SESSION_COOKIE_NAME")
 
 
-def authenticated_user() -> User:
+def _load_authenticated_user() -> User:
     session_token = request_session_token()
     if session_token is None:
         raise _authentication_required()
 
-    user = _user_repository().find_user_by_session_token_hash(
+    repository = app_extension("user_repository", UserRepository)
+    user = repository.select_user_by_session_token_hash(
         session_token_hash=hash_session_token(session_token),
         now_iso=UtcTime.now().iso,
     )
@@ -55,9 +64,33 @@ def authenticated_user() -> User:
     return user
 
 
+def staff_permission_required(*required_permissions: str) -> Callable:
+    def decorator(view: Callable) -> Callable:
+        @wraps(view)
+        def wrapped(*args, **kwargs):
+            current_authenticated_staff_user(*required_permissions)
+            return view(*args, **kwargs)
+
+        return wrapped
+
+    return decorator
+
+
 def _authentication_required() -> ApiError:
     return ApiError("authentication is required", HTTPStatus.UNAUTHORIZED)
 
 
-def _user_repository() -> UserRepository:
-    return app_extension("user_repository", UserRepository)
+def _staff_account_required() -> ApiError:
+    return ApiError(
+        "staff account is required",
+        HTTPStatus.FORBIDDEN,
+        code="STAFF_ACCOUNT_REQUIRED",
+    )
+
+
+def _staff_permission_required() -> ApiError:
+    return ApiError(
+        "staff permission is required",
+        HTTPStatus.FORBIDDEN,
+        code="STAFF_PERMISSION_REQUIRED",
+    )

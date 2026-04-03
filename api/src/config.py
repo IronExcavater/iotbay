@@ -6,18 +6,21 @@ from pydantic.alias_generators import to_camel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
+WORKSPACE_DIR = ROOT_DIR.parent
 DEFAULT_CONFIG_PATH = ROOT_DIR / "config" / "app.json"
-DEFAULT_ENV_PATH = ROOT_DIR / ".env"
+WORKSPACE_ENV_PATH = WORKSPACE_DIR / ".env"
 
 
-class EmailConfig(BaseSettings):
+class EnvConfig(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="IOTBAY_",
-        env_file=str(DEFAULT_ENV_PATH),
+        env_file=str(WORKSPACE_ENV_PATH),
         extra="ignore",
         frozen=True,
     )
 
+
+class EmailConfig(EnvConfig):
     sender: str = ""
     smtp_host: str = ""
     smtp_password: str = ""
@@ -26,15 +29,12 @@ class EmailConfig(BaseSettings):
     smtp_username: str = ""
 
 
-class ApiAccessConfig(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_prefix="IOTBAY_",
-        env_file=str(DEFAULT_ENV_PATH),
-        extra="ignore",
-        frozen=True,
-    )
-
+class ApiAccessConfig(EnvConfig):
     api_key: str = ""
+
+
+class AddressConfig(EnvConfig):
+    google_maps_api_key: str = ""
 
 
 class AppConfig(BaseModel):
@@ -82,3 +82,7 @@ def load_email_config() -> EmailConfig:
 
 def load_api_access_config() -> ApiAccessConfig:
     return ApiAccessConfig()
+
+
+def load_address_config() -> AddressConfig:
+    return AddressConfig()

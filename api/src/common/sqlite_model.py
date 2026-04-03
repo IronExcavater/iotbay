@@ -18,15 +18,14 @@ class SqliteRowModel:
         if not is_dataclass(cls):
             raise TypeError(f"{cls.__name__} must be a dataclass")
 
-        instance = object.__new__(cls)
         row_keys = set(row.keys())
         dataclass_type = cast(Any, cls)
-
-        for model_field in fields(dataclass_type):
-            if model_field.name in row_keys:
-                object.__setattr__(instance, model_field.name, row[model_field.name])
-
-        return instance
+        values = {
+            model_field.name: row[model_field.name]
+            for model_field in fields(dataclass_type)
+            if model_field.name in row_keys
+        }
+        return cls(**values)
 
 
 class BlobUuidModel:
