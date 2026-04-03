@@ -1,41 +1,69 @@
-import { useState, type FormEvent } from 'react';
-import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import {
+    Link,
+    Navigate,
+    useLocation,
+    useNavigate,
+    useSearchParams,
+} from 'react-router-dom';
 
-import { authApi, type RegisterInput } from '../auth/api';
+import { AddressFields } from '../addresses/AddressFields';
+import { setAddressField } from '../addresses/form';
+import { authApi } from '../auth/api';
 import { useAuth } from '../auth/AuthProvider';
-import { downloadHtmlArtifact } from '../auth/downloadHtmlArtifact';
+import {
+    parseAuthMode,
+    toAuthErrorState,
+    toRegisterInput,
+    type AuthFieldErrors as FieldErrors,
+    type AuthFormValues as FormValues,
+    validateAuthForm,
+} from '../auth/form';
 import {
     EMAIL_MAX_LENGTH,
     NAME_MAX_LENGTH,
     PASSWORD_MAX_LENGTH,
 } from '../auth/limits';
-import { PasswordInput, inputClassName } from '../auth/PasswordInput';
 import { PasswordRuleList } from '../auth/PasswordRuleList';
 import { getPasswordRules } from '../auth/passwordRules';
-import { BackendError } from '../services/http';
-
-type AuthMode = 'signin' | 'signup';
-
-interface FormValues {
-    confirmPassword: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    password: string;
-}
-
-type FieldName = keyof FormValues;
-type FieldErrors = Partial<Record<FieldName, string>>;
+import { getBrowserPhoneCountry, validatePhoneNumber } from '../auth/phone';
+import {
+    sanitizeEmail,
+    sanitizeFirstName,
+    sanitizeLastName,
+    sanitizePasswordInput,
+    validateEmail,
+    validateFirstNameOnBlur,
+    validateLastNameOnBlur,
+} from '../auth/validation';
+import { Button } from '../components/form/Button';
+import { Field } from '../components/form/Field';
+import { FormNotice } from '../components/form/FormNotice';
+import { inputClassName } from '../components/form/Input';
+import { PasswordInput } from '../components/form/PasswordInput';
+import { PhoneField } from '../components/form/PhoneField';
+import { useEnterSubmit } from '../components/form/useEnterSubmit';
+import { downloadFile } from '../services/download';
 
 const DEFAULT_VALUES: FormValues = {
+    addressLineOne: '',
+    addressLineTwo: '',
+    country: '',
     confirmPassword: '',
     email: '',
     firstName: '',
     lastName: '',
     password: '',
+    phoneCountry: getBrowserPhoneCountry(),
+    phoneNumber: '',
+    postcode: '',
+    state: '',
+    suburb: '',
 };
 
 export default function AuthPage() {
+    const formRef = useRef<HTMLFormElement | null>(null);
+    const location = useLocation();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { isAuthenticated, isLoading, login } = useAuth();
@@ -47,73 +75,107 @@ export default function AuthPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    const mode = parseMode(searchParams.get('mode'));
-    const isSignUp = mode === 'signup';
+    const mode = parseAuthMode(searchParams.get('mode'));
+    const prefilledEmail = searchParams.get('email')?.trim() ?? '';
+    const nextPath = searchParams.get('next')?.trim() || '/';
+    const userType = searchParams.get('userType')?.trim() || '';
+    const isStaffSignIn = userType === 'staff';
+    const isSignUp = mode === 'signup' && !isStaffSignIn;
+    const forgotPasswordPath = `/reset-password?email=${encodeURIComponent(values.email.trim())}${isStaffSignIn ? '&userType=staff' : ''}`;
     const passwordRules = getPasswordRules(values.password, {
         email: values.email,
         firstName: values.firstName,
         lastName: values.lastName,
     });
-    const title = isSignUp ? 'Sign up' : 'Sign in';
+    const title = isStaffSignIn
+        ? 'Staff sign in'
+        : isSignUp
+          ? 'Sign up'
+          : 'Sign in';
     const submitLabel = isSignUp ? 'Create account' : 'Sign in';
+    const enterSubmit = useEnterSubmit({
+        canSubmit: () =>
+            !isSubmitting &&
+            Object.values(
+                validateAuthForm(values, {
+                    isSignUp,
+                    passwordRulesMet: passwordRules.every((rule) => rule.met),
+                })
+            ).every((error) => !error),
+        formRef,
+    });
 
-    if (isLoading) {
-        return <p className="py-8 text-slate-500">Checking session</p>;
-    }
-
-    if (isAuthenticated) {
-        return <Navigate replace to="/" />;
-    }
-
-    function setFieldValue(name: FieldName, value: string) {
-        setValues((current) => ({ ...current, [name]: value }));
-        setFieldErrors((current) => ({ ...current, [name]: undefined }));
+    useEffect(() => {
+        // Reset transient auth-page state whenever the auth route mode changes,
+        // while still carrying a query-provided email through related flows.
+        setFieldErrors({});
         setFormError(null);
-        setSuccessMessage(null);
+        setSuccessMessage(
+            typeof location.state?.successMessage === 'string'
+                ? location.state.successMessage
+                : null
+        );
+        setValues((current) => ({
+            ...DEFAULT_VALUES,
+            email: prefilledEmail || current.email,
+        }));
+        setShowPassword(false);
+        setShowConfirmPassword(false);
+    }, [location.search, location.state, prefilledEmail]);
+
+    if (!isLoading && isAuthenticated) {
+        return <Navigate replace to={nextPath} />;
+    }
+
+    function setFieldError(name: keyof FieldErrors, error?: string | null) {
+        setFieldErrors((current) => ({
+            ...current,
+            [name]: error || undefined,
+        }));
     }
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        const form = event.currentTarget;
-        if (!form.reportValidity()) {
-            return;
-        }
-
-        const nextFieldErrors = validatePasswordFields(
-            values,
+        const nextFieldErrors = validateAuthForm(values, {
             isSignUp,
-            passwordRules
-        );
+            passwordRulesMet: passwordRules.every((rule) => rule.met),
+        });
         setFieldErrors(nextFieldErrors);
-        setFormError(null);
         setSuccessMessage(null);
 
-        if (Object.keys(nextFieldErrors).length > 0) {
+        if (Object.values(nextFieldErrors).some(Boolean)) {
+            setFormError('Check the highlighted fields');
             return;
         }
 
+        setFormError(null);
         setIsSubmitting(true);
         try {
             if (isSignUp) {
                 const result = await authApi.register(toRegisterInput(values));
                 setFieldErrors({});
+                setFormError(null);
                 if (result.download) {
-                    downloadHtmlArtifact(result.download);
-                    setSuccessMessage('Verification email downloaded');
-                } else {
-                    setSuccessMessage(
-                        'Check your email to verify your account'
+                    downloadFile(
+                        result.download.filename,
+                        result.download.html,
+                        'text/html;charset=utf-8'
                     );
                 }
+                setSuccessMessage(null);
                 setValues(DEFAULT_VALUES);
                 setShowPassword(false);
                 setShowConfirmPassword(false);
+                navigate(
+                    `/verify-email?email=${encodeURIComponent(result.verification.email)}&context=signup${result.download ? '&downloaded=1' : ''}`
+                );
             } else {
                 await login({
                     email: values.email.trim(),
                     password: values.password,
+                    userType: isStaffSignIn ? 'staff' : undefined,
                 });
-                navigate('/');
+                navigate(nextPath);
             }
         } catch (error) {
             const nextErrorState = toAuthErrorState(error, isSignUp);
@@ -133,255 +195,308 @@ export default function AuthPage() {
             <form
                 className="grid gap-4 rounded border border-slate-200 bg-white p-5"
                 noValidate
+                onKeyDown={enterSubmit.onKeyDown}
                 onSubmit={handleSubmit}
+                ref={formRef}
             >
                 {successMessage ? (
-                    <p className="text-sm text-emerald-700">{successMessage}</p>
+                    <FormNotice tone="success">{successMessage}</FormNotice>
                 ) : null}
                 {formError ? (
-                    <p className="text-sm text-red-700">{formError}</p>
+                    <FormNotice tone="error">{formError}</FormNotice>
                 ) : null}
 
                 {isSignUp ? (
                     <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
-                        <label className="grid gap-1 text-sm">
-                            <span>First name</span>
+                        <Field
+                            error={fieldErrors.firstName}
+                            label="First name"
+                            required
+                        >
                             <input
                                 autoComplete="given-name"
                                 className={inputClassName(
                                     Boolean(fieldErrors.firstName)
                                 )}
                                 maxLength={NAME_MAX_LENGTH}
-                                required
-                                onChange={(event) => {
-                                    setFieldValue(
+                                onBlur={() => {
+                                    setFieldError(
                                         'firstName',
-                                        event.target.value
+                                        validateFirstNameOnBlur(
+                                            values.firstName
+                                        )
                                     );
                                 }}
+                                onChange={(event) => {
+                                    setValues((current) => ({
+                                        ...current,
+                                        firstName: sanitizeFirstName(
+                                            event.target.value
+                                        ),
+                                    }));
+                                    setSuccessMessage(null);
+                                }}
+                                placeholder="Jane"
                                 value={values.firstName}
                             />
-                            {fieldErrors.firstName ? (
-                                <span className="text-red-700">
-                                    {fieldErrors.firstName}
-                                </span>
-                            ) : null}
-                        </label>
+                        </Field>
 
-                        <label className="grid gap-1 text-sm">
-                            <span>Last name</span>
+                        <Field
+                            error={fieldErrors.lastName}
+                            label="Last name"
+                            required
+                        >
                             <input
                                 autoComplete="family-name"
                                 className={inputClassName(
                                     Boolean(fieldErrors.lastName)
                                 )}
                                 maxLength={NAME_MAX_LENGTH}
-                                required
-                                onChange={(event) => {
-                                    setFieldValue(
+                                onBlur={() => {
+                                    setFieldError(
                                         'lastName',
-                                        event.target.value
+                                        validateLastNameOnBlur(values.lastName)
                                     );
                                 }}
+                                onChange={(event) => {
+                                    setValues((current) => ({
+                                        ...current,
+                                        lastName: sanitizeLastName(
+                                            event.target.value
+                                        ),
+                                    }));
+                                    setSuccessMessage(null);
+                                }}
+                                placeholder="Doe"
                                 value={values.lastName}
                             />
-                            {fieldErrors.lastName ? (
-                                <span className="text-red-700">
-                                    {fieldErrors.lastName}
-                                </span>
-                            ) : null}
-                        </label>
+                        </Field>
                     </div>
                 ) : null}
 
-                <label className="grid gap-1 text-sm">
-                    <span>Email</span>
+                {isSignUp ? (
+                    <>
+                        <PhoneField
+                            country={values.phoneCountry}
+                            error={fieldErrors.phoneNumber}
+                            label="Phone number"
+                            onBlur={() => {
+                                setFieldError(
+                                    'phoneNumber',
+                                    values.phoneNumber.trim()
+                                        ? validatePhoneNumber(
+                                              values.phoneNumber,
+                                              values.phoneCountry
+                                          )
+                                        : null
+                                );
+                            }}
+                            onCountryChange={(country) => {
+                                setValues((current) => ({
+                                    ...current,
+                                    phoneCountry: country,
+                                }));
+                                setSuccessMessage(null);
+                            }}
+                            onNumberChange={(value) => {
+                                setValues((current) => ({
+                                    ...current,
+                                    phoneNumber: value,
+                                }));
+                                setSuccessMessage(null);
+                            }}
+                            value={values.phoneNumber}
+                        />
+
+                        <AddressFields
+                            countryCode={values.phoneCountry}
+                            errors={fieldErrors}
+                            onFieldChange={(name, value) => {
+                                setValues((current) =>
+                                    setAddressField(current, name, value)
+                                );
+                                setSuccessMessage(null);
+                            }}
+                            values={values}
+                        />
+                    </>
+                ) : null}
+
+                <Field error={fieldErrors.email} label="Email" required>
                     <input
                         autoComplete="email"
                         className={inputClassName(Boolean(fieldErrors.email))}
                         maxLength={EMAIL_MAX_LENGTH}
-                        onChange={(event) => {
-                            setFieldValue('email', event.target.value);
+                        onBlur={() => {
+                            setFieldError('email', validateEmail(values.email));
                         }}
-                        required
+                        onChange={(event) => {
+                            setValues((current) => ({
+                                ...current,
+                                email: sanitizeEmail(event.target.value),
+                            }));
+                            setSuccessMessage(null);
+                        }}
+                        placeholder="jane.doe@email.com"
                         type="email"
                         value={values.email}
                     />
-                    {fieldErrors.email ? (
-                        <span className="text-red-700">
-                            {fieldErrors.email}
-                        </span>
-                    ) : null}
-                </label>
+                </Field>
 
-                <label className="grid gap-1 text-sm">
-                    <span>Password</span>
+                <Field error={fieldErrors.password} label="Password" required>
                     <PasswordInput
                         autoComplete={
                             isSignUp ? 'new-password' : 'current-password'
                         }
                         hasError={Boolean(fieldErrors.password)}
                         maxLength={PASSWORD_MAX_LENGTH}
+                        onBlur={() => {
+                            if (!isSignUp || !values.password) {
+                                return;
+                            }
+                            const passwordError = validateAuthForm(values, {
+                                isSignUp: true,
+                                passwordRulesMet: passwordRules.every(
+                                    (rule) => rule.met
+                                ),
+                            }).password;
+                            setFieldError('password', passwordError);
+                        }}
                         onChange={(event) => {
-                            setFieldValue('password', event.target.value);
+                            const nextPassword = sanitizePasswordInput(
+                                event.target.value
+                            );
+                            setValues((current) => ({
+                                ...current,
+                                password: nextPassword,
+                            }));
+                            setSuccessMessage(null);
+                            if (isSignUp && values.confirmPassword) {
+                                setFieldError(
+                                    'confirmPassword',
+                                    getConfirmPasswordError(
+                                        values.confirmPassword,
+                                        nextPassword
+                                    )
+                                );
+                            }
                         }}
                         onToggle={() => {
                             setShowPassword((current) => !current);
                         }}
+                        placeholder={
+                            isSignUp
+                                ? 'Choose a password'
+                                : 'Enter your password'
+                        }
                         showPassword={showPassword}
                         value={values.password}
                     />
                     {isSignUp ? (
                         <PasswordRuleList rules={passwordRules} />
                     ) : null}
-                    {fieldErrors.password ? (
-                        <span className="text-red-700">
-                            {fieldErrors.password}
-                        </span>
-                    ) : null}
-                </label>
+                </Field>
 
                 {isSignUp ? (
-                    <label className="grid gap-1 text-sm">
-                        <span>Confirm password</span>
+                    <Field
+                        error={fieldErrors.confirmPassword}
+                        label="Confirm password"
+                        required
+                    >
                         <PasswordInput
                             autoComplete="new-password"
                             hasError={Boolean(fieldErrors.confirmPassword)}
                             maxLength={PASSWORD_MAX_LENGTH}
-                            onChange={(event) => {
-                                setFieldValue(
+                            onBlur={() => {
+                                setFieldError(
                                     'confirmPassword',
-                                    event.target.value
+                                    getConfirmPasswordError(
+                                        values.confirmPassword,
+                                        values.password
+                                    )
+                                );
+                            }}
+                            onChange={(event) => {
+                                const nextConfirmPassword =
+                                    sanitizePasswordInput(event.target.value);
+                                setValues((current) => ({
+                                    ...current,
+                                    confirmPassword: nextConfirmPassword,
+                                }));
+                                setSuccessMessage(null);
+                                setFieldError(
+                                    'confirmPassword',
+                                    getConfirmPasswordError(
+                                        nextConfirmPassword,
+                                        values.password
+                                    )
                                 );
                             }}
                             onToggle={() => {
                                 setShowConfirmPassword((current) => !current);
                             }}
+                            placeholder="Re-enter your password"
                             showPassword={showConfirmPassword}
                             value={values.confirmPassword}
                         />
-                        {fieldErrors.confirmPassword ? (
-                            <span className="text-red-700">
-                                {fieldErrors.confirmPassword}
-                            </span>
-                        ) : null}
-                    </label>
+                    </Field>
                 ) : null}
 
                 {!isSignUp ? (
                     <Link
                         className="text-sm text-slate-600 underline"
-                        to="/reset-password"
+                        to={forgotPasswordPath}
                     >
                         Forgot password
                     </Link>
                 ) : null}
 
-                <button
-                    className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+                <Button
                     disabled={isSubmitting}
-                    type="submit"
+                    loading={isSubmitting}
+                    onClick={() => {
+                        formRef.current?.requestSubmit();
+                    }}
+                    type="button"
+                    variant="primary"
                 >
-                    {isSubmitting ? 'Working...' : submitLabel}
-                </button>
+                    {submitLabel}
+                </Button>
+
+                {isStaffSignIn ? (
+                    <p className="text-sm text-slate-600">
+                        Not staff?{' '}
+                        <Link className="underline" to="/auth?mode=signin">
+                            Sign in here
+                        </Link>
+                    </p>
+                ) : isSignUp ? (
+                    <p className="text-sm text-slate-600">
+                        Have an account?{' '}
+                        <Link className="underline" to="/auth?mode=signin">
+                            Sign in
+                        </Link>
+                    </p>
+                ) : (
+                    <p className="text-sm text-slate-600">
+                        Don&apos;t have an account?{' '}
+                        <Link className="underline" to="/auth?mode=signup">
+                            Sign up
+                        </Link>
+                    </p>
+                )}
             </form>
         </section>
     );
 }
 
-function parseMode(value: string | null): AuthMode {
-    return value === 'signup' ? 'signup' : 'signin';
-}
-
-function validatePasswordFields(
-    values: FormValues,
-    isSignUp: boolean,
-    passwordRules: ReturnType<typeof getPasswordRules>
-) {
-    const fieldErrors: FieldErrors = {};
-
-    if (!values.password) {
-        fieldErrors.password = 'Password is required';
-    } else if (isSignUp && passwordRules.some((rule) => !rule.met)) {
-        fieldErrors.password = 'Password requirements are not met';
+function getConfirmPasswordError(
+    confirmPassword: string,
+    password: string
+): string | undefined {
+    if (!confirmPassword) {
+        return 'Confirm password is required';
     }
 
-    if (isSignUp) {
-        if (!values.confirmPassword) {
-            fieldErrors.confirmPassword = 'Confirm password is required';
-        } else if (values.confirmPassword !== values.password) {
-            fieldErrors.confirmPassword = 'Passwords do not match';
-        }
-    }
-
-    return fieldErrors;
-}
-
-function toRegisterInput(values: FormValues): RegisterInput {
-    return {
-        email: values.email.trim(),
-        firstName: values.firstName.trim(),
-        lastName: values.lastName.trim(),
-        password: values.password,
-    };
-}
-
-function toAuthErrorState(error: unknown, isSignUp: boolean) {
-    if (!(error instanceof BackendError)) {
-        return {
-            fieldErrors: {},
-            formError: formatMessage('Something went wrong'),
-        };
-    }
-
-    switch (error.code) {
-        case 'EMAIL_EXISTS':
-            return {
-                fieldErrors: { email: 'Email already exists' },
-                formError: null,
-            };
-        case 'INVALID_CREDENTIALS':
-            return {
-                fieldErrors: isSignUp
-                    ? {}
-                    : { password: 'Email or password is incorrect' },
-                formError: isSignUp ? 'Email or password is incorrect' : null,
-            };
-        case 'EMAIL_NOT_VERIFIED':
-            return {
-                fieldErrors: {},
-                formError: 'Check your email to verify your account',
-            };
-        case 'PASSWORD_TOO_SHORT':
-            return {
-                fieldErrors: { password: 'Use at least 8 characters' },
-                formError: null,
-            };
-        case 'PASSWORD_NEEDS_NUMBER_OR_SYMBOL':
-            return {
-                fieldErrors: { password: 'Include a number or symbol' },
-                formError: null,
-            };
-        case 'PASSWORD_HAS_PERSONAL_INFO':
-            return {
-                fieldErrors: { password: 'Avoid personal information' },
-                formError: null,
-            };
-        case 'PASSWORD_HAS_COMMON_PATTERN':
-            return {
-                fieldErrors: { password: 'Avoid common patterns' },
-                formError: null,
-            };
-        default:
-            return { fieldErrors: {}, formError: formatMessage(error.message) };
-    }
-}
-
-function formatMessage(message: string) {
-    const trimmed = message.trim().replace(/\.+$/, '');
-    if (!trimmed) {
-        return 'Something went wrong';
-    }
-
-    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+    return confirmPassword !== password ? 'Passwords do not match' : undefined;
 }

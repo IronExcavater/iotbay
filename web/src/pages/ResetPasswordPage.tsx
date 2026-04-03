@@ -1,21 +1,35 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { authApi } from '../auth/api';
-import { downloadHtmlArtifact } from '../auth/downloadHtmlArtifact';
 import { EMAIL_MAX_LENGTH, PASSWORD_MAX_LENGTH } from '../auth/limits';
-import { PasswordInput, inputClassName } from '../auth/PasswordInput';
 import { PasswordRuleList } from '../auth/PasswordRuleList';
-import { getPasswordRules } from '../auth/passwordRules';
-import { BackendError } from '../services/http';
+import { getPasswordRules, PASSWORD_VALIDATOR } from '../auth/passwordRules';
+import {
+    sanitizeEmail,
+    sanitizePasswordInput,
+    validateEmail,
+} from '../auth/validation';
+import { Button } from '../components/form/Button';
+import { Field } from '../components/form/Field';
+import { FormNotice } from '../components/form/FormNotice';
+import { inputClassName } from '../components/form/Input';
+import { PasswordInput } from '../components/form/PasswordInput';
+import { useEnterSubmit } from '../components/form/useEnterSubmit';
+import { downloadFile } from '../services/download';
+import { BackendError, normalizeMessage } from '../services/http';
 
 export default function ResetPasswordPage() {
+    const formRef = useRef<HTMLFormElement | null>(null);
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const initialEmail = searchParams.get('email')?.trim() ?? '';
     const token = searchParams.get('token')?.trim() ?? '';
+    const userType = searchParams.get('userType')?.trim() ?? '';
     const hasToken = token.length > 0;
+    const signInPath = authSignInPath(initialEmail, userType);
 
-    const [email, setEmail] = useState('');
+    const [email, setEmail] = useState(initialEmail);
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
@@ -25,6 +39,18 @@ export default function ResetPasswordPage() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const passwordRules = getPasswordRules(password);
+    const enterSubmit = useEnterSubmit({
+        canSubmit: () =>
+            !isSubmitting &&
+            canSubmitResetForm({
+                confirmPassword,
+                email,
+                hasToken,
+                password,
+                passwordRulesMet: passwordRules.every((rule) => rule.met),
+            }),
+        formRef,
+    });
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -34,6 +60,12 @@ export default function ResetPasswordPage() {
         if (hasToken) {
             if (!password) {
                 setError('Password is required');
+                return;
+            }
+            const passwordError =
+                PASSWORD_VALIDATOR.tryValidate(password).error?.message;
+            if (passwordError) {
+                setError(normalizeMessage(passwordError));
                 return;
             }
             if (passwordRules.some((rule) => !rule.met)) {
@@ -48,9 +80,12 @@ export default function ResetPasswordPage() {
                 setError('Passwords do not match');
                 return;
             }
-        } else if (!email.trim()) {
-            setError('Email is required');
-            return;
+        } else {
+            const emailError = validateEmail(email);
+            if (emailError) {
+                setError(emailError);
+                return;
+            }
         }
 
         setIsSubmitting(true);
@@ -58,13 +93,18 @@ export default function ResetPasswordPage() {
             if (hasToken) {
                 await authApi.resetPassword({ password, token });
                 setSuccess('Password reset successful');
-                navigate('/auth?mode=signin');
+                navigate(signInPath);
             } else {
                 const result = await authApi.forgotPassword({
                     email: email.trim(),
+                    userType: userType === 'staff' ? 'staff' : undefined,
                 });
                 if (result?.download) {
-                    downloadHtmlArtifact(result.download);
+                    downloadFile(
+                        result.download.filename,
+                        result.download.html,
+                        'text/html;charset=utf-8'
+                    );
                     setSuccess('Reset email downloaded');
                 } else {
                     setSuccess(
@@ -88,83 +128,105 @@ export default function ResetPasswordPage() {
             <form
                 className="grid gap-4 rounded border border-slate-200 bg-white p-5"
                 noValidate
+                onKeyDown={enterSubmit.onKeyDown}
                 onSubmit={handleSubmit}
+                ref={formRef}
             >
-                {error ? <p className="text-sm text-red-700">{error}</p> : null}
+                {error ? <FormNotice tone="error">{error}</FormNotice> : null}
                 {success ? (
-                    <p className="text-sm text-emerald-700">{success}</p>
+                    <FormNotice tone="success">{success}</FormNotice>
                 ) : null}
 
                 {hasToken ? (
                     <>
-                        <label className="grid gap-1 text-sm">
-                            <span>New password</span>
+                        <Field label="New password" required>
                             <PasswordInput
                                 hasError={Boolean(error)}
                                 maxLength={PASSWORD_MAX_LENGTH}
                                 onChange={(event) => {
-                                    setPassword(event.target.value);
-                                    setError(null);
+                                    const nextPassword = sanitizePasswordInput(
+                                        event.target.value
+                                    );
+                                    setPassword(nextPassword);
+                                    setError(
+                                        confirmPassword
+                                            ? getResetConfirmPasswordError(
+                                                  confirmPassword,
+                                                  nextPassword
+                                              )
+                                            : null
+                                    );
                                 }}
                                 onToggle={() => {
                                     setShowPassword((current) => !current);
                                 }}
+                                placeholder="Choose a new password"
                                 showPassword={showPassword}
                                 value={password}
                             />
                             <PasswordRuleList rules={passwordRules} />
-                        </label>
+                        </Field>
 
-                        <label className="grid gap-1 text-sm">
-                            <span>Confirm password</span>
+                        <Field label="Confirm password" required>
                             <PasswordInput
                                 hasError={Boolean(error)}
                                 maxLength={PASSWORD_MAX_LENGTH}
                                 onChange={(event) => {
-                                    setConfirmPassword(event.target.value);
-                                    setError(null);
+                                    const nextConfirmPassword =
+                                        sanitizePasswordInput(
+                                            event.target.value
+                                        );
+                                    setConfirmPassword(nextConfirmPassword);
+                                    setError(
+                                        getResetConfirmPasswordError(
+                                            nextConfirmPassword,
+                                            password
+                                        )
+                                    );
                                 }}
                                 onToggle={() => {
                                     setShowConfirmPassword(
                                         (current) => !current
                                     );
                                 }}
+                                placeholder="Re-enter your new password"
                                 showPassword={showConfirmPassword}
                                 value={confirmPassword}
                             />
-                        </label>
+                        </Field>
                     </>
                 ) : (
-                    <label className="grid gap-1 text-sm">
-                        <span>Email</span>
+                    <Field label="Email" required>
                         <input
                             className={inputClassName(Boolean(error))}
                             maxLength={EMAIL_MAX_LENGTH}
+                            onBlur={() => {
+                                const emailError = validateEmail(email);
+                                setError(emailError);
+                            }}
                             onChange={(event) => {
-                                setEmail(event.target.value);
+                                setEmail(sanitizeEmail(event.target.value));
                                 setError(null);
                             }}
+                            placeholder="jane.doe@email.com"
                             type="email"
                             value={email}
                         />
-                    </label>
+                    </Field>
                 )}
 
-                <button
-                    className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+                <Button
                     disabled={isSubmitting}
+                    loading={isSubmitting}
                     type="submit"
+                    variant="primary"
                 >
-                    {isSubmitting
-                        ? 'Working...'
-                        : hasToken
-                          ? 'Reset password'
-                          : 'Send reset link'}
-                </button>
+                    {hasToken ? 'Reset password' : 'Send reset link'}
+                </Button>
 
                 <Link
                     className="text-sm text-slate-600 underline"
-                    to="/auth?mode=signin"
+                    to={signInPath}
                 >
                     Back to sign in
                 </Link>
@@ -195,4 +257,51 @@ function toResetError(error: unknown) {
     }
 
     return error.message;
+}
+
+function authSignInPath(email: string, userType: string) {
+    const query = new URLSearchParams({ mode: 'signin' });
+    if (email) {
+        query.set('email', email);
+    }
+    if (userType === 'staff') {
+        query.set('userType', 'staff');
+        query.set('next', '/admin');
+    }
+    return `/auth?${query.toString()}`;
+}
+
+function canSubmitResetForm({
+    confirmPassword,
+    email,
+    hasToken,
+    password,
+    passwordRulesMet,
+}: {
+    confirmPassword: string;
+    email: string;
+    hasToken: boolean;
+    password: string;
+    passwordRulesMet: boolean;
+}) {
+    if (!hasToken) {
+        return !validateEmail(email);
+    }
+
+    if (!password || !confirmPassword || confirmPassword !== password) {
+        return false;
+    }
+
+    return !PASSWORD_VALIDATOR.tryValidate(password).error && passwordRulesMet;
+}
+
+function getResetConfirmPasswordError(
+    confirmPassword: string,
+    password: string
+) {
+    if (!confirmPassword) {
+        return null;
+    }
+
+    return confirmPassword !== password ? 'Passwords do not match' : null;
 }

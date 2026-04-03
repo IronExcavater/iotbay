@@ -11,6 +11,7 @@ import {
     authApi,
     type LoginInput,
     type UpdateProfileInput,
+    type VerificationResult,
     type User,
 } from './api';
 
@@ -19,7 +20,7 @@ interface AuthContextValue {
     isLoading: boolean;
     login: (input: LoginInput) => Promise<User>;
     logout: () => Promise<void>;
-    updateMe: (input: UpdateProfileInput) => Promise<User>;
+    updateMe: (input: UpdateProfileInput) => Promise<User | VerificationResult>;
     user: User | null;
 }
 
@@ -81,9 +82,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
         },
         async updateMe(input) {
-            const nextUser = await authApi.updateMe(input);
-            setUser(nextUser);
-            return nextUser;
+            const result = await authApi.updateMe(input);
+            if ('verification' in result) {
+                setUser(null);
+                return result;
+            }
+
+            setUser(result);
+            return result;
         },
         user,
     };
