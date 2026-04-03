@@ -13,3 +13,17 @@ export function downloadFile(
     link.remove();
     URL.revokeObjectURL(objectUrl);
 }
+
+export function downloadHtml(
+    artifact?: {
+        filename: string;
+        html: string;
+    } | null
+) {
+    if (!artifact) {
+        return false;
+    }
+
+    downloadFile(artifact.filename, artifact.html, 'text/html;charset=utf-8');
+    return true;
+}

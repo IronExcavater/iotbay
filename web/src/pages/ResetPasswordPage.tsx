@@ -10,19 +10,25 @@ import {
     sanitizePasswordInput,
     validateEmail,
 } from '../auth/validation';
-import { Button } from '../components/form/Button';
+import { Button, textButtonClassName } from '../components/form/Button';
 import { Field } from '../components/form/Field';
 import { FormNotice } from '../components/form/FormNotice';
 import { inputClassName } from '../components/form/Input';
 import { PasswordInput } from '../components/form/PasswordInput';
 import { useEnterSubmit } from '../components/form/useEnterSubmit';
-import { downloadFile } from '../services/download';
-import { BackendError, normalizeMessage } from '../services/http';
+import { useToast } from '../components/toast/ToastProvider';
+import { downloadHtml } from '../services/download';
+import {
+    backendErrorMessage,
+    normalizeMessage,
+    resolveBackendError,
+} from '../services/http';
 
 export default function ResetPasswordPage() {
     const formRef = useRef<HTMLFormElement | null>(null);
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const { showToast } = useToast();
     const initialEmail = searchParams.get('email')?.trim() ?? '';
     const token = searchParams.get('token')?.trim() ?? '';
     const userType = searchParams.get('userType')?.trim() ?? '';
@@ -33,7 +39,6 @@ export default function ResetPasswordPage() {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
-    const [success, setSuccess] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -55,7 +60,6 @@ export default function ResetPasswordPage() {
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         setError(null);
-        setSuccess(null);
 
         if (hasToken) {
             if (!password) {
@@ -92,24 +96,19 @@ export default function ResetPasswordPage() {
         try {
             if (hasToken) {
                 await authApi.resetPassword({ password, token });
-                setSuccess('Password reset successful');
-                navigate(signInPath);
+                navigate(signInPath, {
+                    replace: true,
+                    state: { successMessage: 'Password reset successful' },
+                });
             } else {
                 const result = await authApi.forgotPassword({
                     email: email.trim(),
                     userType: userType === 'staff' ? 'staff' : undefined,
                 });
-                if (result?.download) {
-                    downloadFile(
-                        result.download.filename,
-                        result.download.html,
-                        'text/html;charset=utf-8'
-                    );
-                    setSuccess('Reset email downloaded');
+                if (downloadHtml(result?.download)) {
+                    showToast('Reset email downloaded');
                 } else {
-                    setSuccess(
-                        'If the account exists, a reset link has been sent'
-                    );
+                    showToast('Reset link sent if it exists');
                 }
             }
         } catch (caughtError) {
@@ -133,9 +132,6 @@ export default function ResetPasswordPage() {
                 ref={formRef}
             >
                 {error ? <FormNotice tone="error">{error}</FormNotice> : null}
-                {success ? (
-                    <FormNotice tone="success">{success}</FormNotice>
-                ) : null}
 
                 {hasToken ? (
                     <>
@@ -224,10 +220,7 @@ export default function ResetPasswordPage() {
                     {hasToken ? 'Reset password' : 'Send reset link'}
                 </Button>
 
-                <Link
-                    className="text-sm text-slate-600 underline"
-                    to={signInPath}
-                >
+                <Link className={textButtonClassName} to={signInPath}>
                     Back to sign in
                 </Link>
             </form>
@@ -236,27 +229,22 @@ export default function ResetPasswordPage() {
 }
 
 function toResetError(error: unknown) {
-    if (!(error instanceof BackendError)) {
-        return 'Something went wrong';
-    }
-
-    if (error.code === 'INVALID_PASSWORD_RESET_TOKEN') {
-        return 'Reset link is invalid or expired';
-    }
-    if (error.code === 'PASSWORD_TOO_SHORT') {
-        return 'Use at least 8 characters';
-    }
-    if (error.code === 'PASSWORD_NEEDS_NUMBER_OR_SYMBOL') {
-        return 'Include a number or symbol';
-    }
-    if (error.code === 'PASSWORD_HAS_PERSONAL_INFO') {
-        return 'Avoid personal information';
-    }
-    if (error.code === 'PASSWORD_HAS_COMMON_PATTERN') {
-        return 'Avoid common patterns';
-    }
-
-    return error.message;
+    return resolveBackendError<string>(
+        error,
+        {
+            INVALID_PASSWORD_RESET_TOKEN: (backendError) =>
+                backendErrorMessage(backendError.code),
+            PASSWORD_HAS_COMMON_PATTERN: (backendError) =>
+                backendErrorMessage(backendError.code),
+            PASSWORD_HAS_PERSONAL_INFO: (backendError) =>
+                backendErrorMessage(backendError.code),
+            PASSWORD_NEEDS_NUMBER_OR_SYMBOL: (backendError) =>
+                backendErrorMessage(backendError.code),
+            PASSWORD_TOO_SHORT: (backendError) =>
+                backendErrorMessage(backendError.code),
+        },
+        (message) => message
+    );
 }
 
 function authSignInPath(email: string, userType: string) {
