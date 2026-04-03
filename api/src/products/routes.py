@@ -1,11 +1,31 @@
+import uuid
 from http import HTTPStatus
 
 from flask import Blueprint
+from src.auth.session import (
+    current_authenticated_staff_user,
+    staff_permission_required,
+)
 from src.common.app import app_extension
-from src.common.web import RequestData, ValidationError
+from src.common.web import ApiError, parse_request
 from src.products.repository import ProductRepository
+from src.products.requests import ProductMutationRequest
+from src.users.models import STAFF_PERMISSION_ADMIN, STAFF_PERMISSION_SUPERADMIN
 
 products_bp = Blueprint("products", __name__)
+PRODUCT_WRITE_PERMISSIONS = (
+    STAFF_PERMISSION_ADMIN,
+    STAFF_PERMISSION_SUPERADMIN,
+)
+
+
+class InvalidProductIdError(ApiError):
+    def __init__(self) -> None:
+        super().__init__(
+            "product id is invalid",
+            HTTPStatus.BAD_REQUEST,
+            code="PRODUCT_ID_INVALID",
+        )
 
 
 @products_bp.get("/products")
@@ -16,19 +36,52 @@ def list_products():
     return {"items": products}, HTTPStatus.OK
 
 
-@products_bp.post("/products")
+@products_bp.post("/admin/products")
+@staff_permission_required(*PRODUCT_WRITE_PERMISSIONS)
 def create_product():
     repository = app_extension("product_repository", ProductRepository)
+    data = parse_request(ProductMutationRequest)
 
-    data = RequestData.from_request()
-    price_cents = data.integer("priceCents", message="priceCents must be an integer")
-    if price_cents < 0:
-        raise ValidationError("priceCents must be >= 0")
-
-    product = repository.create_product(
-        name=data.string("name", message="name is required"),
-        code=data.string("code", message="code is required").upper(),
-        price_cents=price_cents,
+    product = repository.insert_product(
+        name=data.name,
+        code=data.code,
+        price_cents=data.price_cents,
+        actor_user_id=current_authenticated_staff_user(
+            *PRODUCT_WRITE_PERMISSIONS
+        ).user_id,
     )
 
     return product.to_dict(), HTTPStatus.CREATED
+
+
+@products_bp.patch("/admin/products/<product_id>")
+@staff_permission_required(*PRODUCT_WRITE_PERMISSIONS)
+def update_product(product_id: str):
+    repository = app_extension("product_repository", ProductRepository)
+    data = parse_request(ProductMutationRequest)
+
+    product = repository.update_product(
+        product_id=_parse_product_id(product_id),
+        name=data.name,
+        code=data.code,
+        price_cents=data.price_cents,
+        actor_user_id=current_authenticated_staff_user(
+            *PRODUCT_WRITE_PERMISSIONS
+        ).user_id,
+    )
+    return product.to_dict(), HTTPStatus.OK
+
+
+@products_bp.delete("/admin/products/<product_id>")
+@staff_permission_required(*PRODUCT_WRITE_PERMISSIONS)
+def delete_product(product_id: str):
+    repository = app_extension("product_repository", ProductRepository)
+    repository.delete_product(product_id=_parse_product_id(product_id))
+    return "", HTTPStatus.NO_CONTENT
+
+
+def _parse_product_id(value: str) -> bytes:
+    try:
+        return uuid.UUID(value).bytes
+    except ValueError as error:
+        raise InvalidProductIdError() from error
