@@ -17,8 +17,8 @@ import {
 } from '../formatting/money';
 import { productApi, type Product } from '../products/api';
 import {
-    BackendError,
-    normalizeMessage,
+    backendErrorMessage,
+    resolveBackendError,
     toErrorMessage,
 } from '../services/http';
 import { StringValidator } from '../validation/core';
@@ -463,33 +463,92 @@ function validateProductForm(values: ProductFormValues) {
 function toProductErrors(error: unknown) {
     const fieldErrors: ProductFieldErrors = {};
 
-    if (!(error instanceof BackendError)) {
-        return { fieldErrors, formError: 'Something went wrong' };
-    }
-
-    switch (error.code) {
-        case 'PRODUCT_NAME_REQUIRED':
-        case 'PRODUCT_NAME_TOO_LONG':
-            fieldErrors.name = normalizeMessage(error.message);
-            break;
-        case 'PRODUCT_CODE_REQUIRED':
-        case 'PRODUCT_CODE_TOO_LONG':
-        case 'PRODUCT_CODE_EXISTS':
-            fieldErrors.code = normalizeMessage(error.message);
-            break;
-        case 'PRODUCT_PRICE_INVALID':
-        case 'PRODUCT_PRICE_TOO_LARGE':
-            fieldErrors.price = normalizeMessage(error.message);
-            break;
-        case 'PRODUCT_NOT_FOUND':
-            return { fieldErrors, formError: 'Product was not found' };
-        case 'STAFF_ACCOUNT_REQUIRED':
-            return { fieldErrors, formError: 'Staff account is required' };
-        case 'STAFF_PERMISSION_REQUIRED':
-            return { fieldErrors, formError: 'Staff permission is required' };
-        default:
-            return { fieldErrors, formError: normalizeMessage(error.message) };
-    }
-
-    return { fieldErrors, formError: null };
+    return resolveBackendError<{
+        fieldErrors: ProductFieldErrors;
+        formError: string | null;
+    }>(
+        error,
+        {
+            PRODUCT_CODE_EXISTS: (backendError) => ({
+                fieldErrors: {
+                    ...fieldErrors,
+                    code: backendErrorMessage(backendError.code),
+                },
+                formError: null,
+            }),
+            PRODUCT_CODE_INVALID: (backendError) => ({
+                fieldErrors: {
+                    ...fieldErrors,
+                    code: backendErrorMessage(backendError.code),
+                },
+                formError: null,
+            }),
+            PRODUCT_CODE_REQUIRED: (backendError) => ({
+                fieldErrors: {
+                    ...fieldErrors,
+                    code: backendErrorMessage(backendError.code),
+                },
+                formError: null,
+            }),
+            PRODUCT_CODE_TOO_LONG: (backendError) => ({
+                fieldErrors: {
+                    ...fieldErrors,
+                    code: backendErrorMessage(backendError.code),
+                },
+                formError: null,
+            }),
+            PRODUCT_ID_INVALID: (backendError) => ({
+                fieldErrors,
+                formError: backendErrorMessage(backendError.code),
+            }),
+            PRODUCT_NAME_INVALID: (backendError) => ({
+                fieldErrors: {
+                    ...fieldErrors,
+                    name: backendErrorMessage(backendError.code),
+                },
+                formError: null,
+            }),
+            PRODUCT_NAME_REQUIRED: (backendError) => ({
+                fieldErrors: {
+                    ...fieldErrors,
+                    name: backendErrorMessage(backendError.code),
+                },
+                formError: null,
+            }),
+            PRODUCT_NAME_TOO_LONG: (backendError) => ({
+                fieldErrors: {
+                    ...fieldErrors,
+                    name: backendErrorMessage(backendError.code),
+                },
+                formError: null,
+            }),
+            PRODUCT_NOT_FOUND: (backendError) => ({
+                fieldErrors,
+                formError: backendErrorMessage(backendError.code),
+            }),
+            PRODUCT_PRICE_INVALID: (backendError) => ({
+                fieldErrors: {
+                    ...fieldErrors,
+                    price: backendErrorMessage(backendError.code),
+                },
+                formError: null,
+            }),
+            PRODUCT_PRICE_TOO_LARGE: (backendError) => ({
+                fieldErrors: {
+                    ...fieldErrors,
+                    price: backendErrorMessage(backendError.code),
+                },
+                formError: null,
+            }),
+            STAFF_ACCOUNT_REQUIRED: (backendError) => ({
+                fieldErrors,
+                formError: backendErrorMessage(backendError.code),
+            }),
+            STAFF_PERMISSION_REQUIRED: (backendError) => ({
+                fieldErrors,
+                formError: backendErrorMessage(backendError.code),
+            }),
+        },
+        (formError) => ({ fieldErrors, formError })
+    );
 }

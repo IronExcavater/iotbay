@@ -18,16 +18,84 @@ export class BackendError extends Error {
     }
 }
 
-export function toErrorMessage(
+type BackendErrorResolver<T> = (error: BackendError) => T;
+
+const BACKEND_ERROR_MESSAGES: Record<string, string> = {
+    ADDRESS_INVALID: 'Invalid address',
+    ADDRESS_LOOKUP_UNAVAILABLE: 'Address lookup unavailable',
+    CURRENT_PASSWORD_INCORRECT: 'Incorrect password',
+    CURRENT_PASSWORD_REQUIRED: 'Password required',
+    EMAIL_EXISTS: 'Email already used',
+    EMAIL_NOT_VERIFIED: 'Verify your email',
+    EMAIL_VERIFICATION_PENDING: 'Verification already pending',
+    INVALID_CREDENTIALS: 'Incorrect email or password',
+    INVALID_EMAIL_VERIFICATION_TOKEN: 'Invalid verification link',
+    INVALID_PASSWORD_RESET_TOKEN: 'Invalid reset link',
+    PASSWORD_HAS_COMMON_PATTERN: 'Avoid common patterns',
+    PASSWORD_HAS_PERSONAL_INFO: 'Avoid personal details',
+    PASSWORD_NEEDS_NUMBER_OR_SYMBOL: 'Add number or symbol',
+    PASSWORD_TOO_SHORT: 'Use 8+ characters',
+    PHONE_COUNTRY_INVALID: 'Invalid phone number',
+    PHONE_NUMBER_INVALID: 'Invalid phone number',
+    PRODUCT_CODE_EXISTS: 'Code already exists',
+    PRODUCT_CODE_INVALID: 'Invalid product code',
+    PRODUCT_CODE_REQUIRED: 'Code is required',
+    PRODUCT_CODE_TOO_LONG: 'Code is too long',
+    PRODUCT_ID_INVALID: 'Invalid product',
+    PRODUCT_NAME_INVALID: 'Invalid product name',
+    PRODUCT_NAME_REQUIRED: 'Name is required',
+    PRODUCT_NAME_TOO_LONG: 'Name is too long',
+    PRODUCT_NOT_FOUND: 'Product not found',
+    PRODUCT_PRICE_INVALID: 'Invalid price',
+    PRODUCT_PRICE_TOO_LARGE: 'Price is too large',
+    STAFF_ACCOUNT_REQUIRED: 'Staff account required',
+    STAFF_PERMISSION_REQUIRED: 'Admin access required',
+};
+
+export function backendErrorMessage(
+    code?: string,
+    fallback = 'Something went wrong'
+) {
+    return (code && BACKEND_ERROR_MESSAGES[code]) || fallback;
+}
+
+export function resolveBackendError<T>(
     error: unknown,
-    fallback = 'Something went wrong.'
+    handlers: Partial<Record<string, BackendErrorResolver<T>>>,
+    fallback: (message: string, error?: BackendError) => T
 ) {
     if (error instanceof BackendError) {
-        return error.message;
+        const handler = error.code ? handlers[error.code] : undefined;
+        if (handler) {
+            return handler(error);
+        }
+
+        return fallback(
+            backendErrorMessage(error.code, normalizeMessage(error.message)),
+            error
+        );
     }
 
     if (error instanceof Error) {
-        return error.message;
+        return fallback(normalizeMessage(error.message));
+    }
+
+    return fallback('Something went wrong');
+}
+
+export function toErrorMessage(
+    error: unknown,
+    fallback = 'Something went wrong'
+) {
+    if (error instanceof BackendError) {
+        return backendErrorMessage(
+            error.code,
+            normalizeMessage(error.message, fallback)
+        );
+    }
+
+    if (error instanceof Error) {
+        return normalizeMessage(error.message, fallback);
     }
 
     return fallback;
