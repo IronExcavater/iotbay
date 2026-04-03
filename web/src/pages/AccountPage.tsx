@@ -40,8 +40,9 @@ import { inputClassName } from '../components/form/Input';
 import { PasswordInput } from '../components/form/PasswordInput';
 import { PhoneField } from '../components/form/PhoneField';
 import { useEnterSubmit } from '../components/form/useEnterSubmit';
-import { downloadFile } from '../services/download';
-import { BackendError } from '../services/http';
+import { useToast } from '../components/toast/ToastProvider';
+import { downloadHtml } from '../services/download';
+import { backendErrorMessage, resolveBackendError } from '../services/http';
 
 interface ProfileValues {
     addressLineOne: string;
@@ -83,12 +84,12 @@ export default function AccountPage() {
     const formRef = useRef<HTMLFormElement | null>(null);
     const navigate = useNavigate();
     const { isAuthenticated, isLoading, updateMe, user } = useAuth();
+    const { showToast } = useToast();
     const [values, setValues] = useState<ProfileValues>(DEFAULT_VALUES);
     const [initialValues, setInitialValues] =
         useState<ProfileValues>(DEFAULT_VALUES);
     const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
     const [error, setError] = useState<string | null>(null);
-    const [success, setSuccess] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
 
@@ -154,7 +155,6 @@ export default function AccountPage() {
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         setError(null);
-        setSuccess(null);
 
         if (!hasChanges) {
             return;
@@ -188,13 +188,7 @@ export default function AccountPage() {
 
             setFieldErrors({});
             if ('verification' in result) {
-                if (result.download) {
-                    downloadFile(
-                        result.download.filename,
-                        result.download.html,
-                        'text/html;charset=utf-8'
-                    );
-                }
+                downloadHtml(result.download);
                 navigate(
                     `/verify-email?email=${encodeURIComponent(values.email.trim())}&context=account${isStaff ? '&userType=staff' : ''}${result.download ? '&downloaded=1' : ''}`
                 );
@@ -207,7 +201,7 @@ export default function AccountPage() {
             };
             setValues(nextValues);
             setInitialValues(nextValues);
-            setSuccess('Account updated');
+            showToast('Account updated');
         } catch (caughtError) {
             const nextErrorState = toAccountError(caughtError);
             setFieldErrors(nextErrorState.fieldErrors);
@@ -236,9 +230,6 @@ export default function AccountPage() {
                 >
                     {error ? (
                         <FormNotice tone="error">{error}</FormNotice>
-                    ) : null}
-                    {success ? (
-                        <FormNotice tone="success">{success}</FormNotice>
                     ) : null}
 
                     <section className="grid gap-4">
@@ -271,7 +262,6 @@ export default function AccountPage() {
                                                 event.target.value
                                             ),
                                         }));
-                                        setSuccess(null);
                                     }}
                                     placeholder="Jane"
                                     value={values.firstName}
@@ -303,7 +293,6 @@ export default function AccountPage() {
                                                 event.target.value
                                             ),
                                         }));
-                                        setSuccess(null);
                                     }}
                                     placeholder="Doe"
                                     value={values.lastName}
@@ -330,7 +319,6 @@ export default function AccountPage() {
                                             event.target.value
                                         ),
                                     }));
-                                    setSuccess(null);
                                 }}
                                 placeholder="jane.doe@email.com"
                                 type="email"
@@ -364,14 +352,12 @@ export default function AccountPage() {
                                         ...current,
                                         phoneCountry: country,
                                     }));
-                                    setSuccess(null);
                                 }}
                                 onNumberChange={(value) => {
                                     setValues((current) => ({
                                         ...current,
                                         phoneNumber: value,
                                     }));
-                                    setSuccess(null);
                                 }}
                                 value={values.phoneNumber}
                             />
@@ -383,7 +369,6 @@ export default function AccountPage() {
                                     setValues((current) =>
                                         setAddressField(current, name, value)
                                     );
-                                    setSuccess(null);
                                 }}
                                 values={values}
                             />
@@ -410,7 +395,6 @@ export default function AccountPage() {
                                                 ...current,
                                                 designation: event.target.value,
                                             }));
-                                            setSuccess(null);
                                         }}
                                         placeholder="Store manager"
                                         value={values.designation}
@@ -430,7 +414,6 @@ export default function AccountPage() {
                                                 ...current,
                                                 permission: event.target.value,
                                             }));
-                                            setSuccess(null);
                                         }}
                                         value={values.permission}
                                     >
@@ -447,7 +430,7 @@ export default function AccountPage() {
                         </section>
                     ) : null}
 
-                    <section className="grid min-h-24 gap-3 border-t border-slate-200 pt-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                    <section className="grid min-h-18 gap-3 border-t border-slate-200 pt-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
                         {hasChanges ? (
                             <Field
                                 error={fieldErrors.currentPassword}
@@ -485,7 +468,6 @@ export default function AccountPage() {
                                                     event.target.value
                                                 ),
                                         }));
-                                        setSuccess(null);
                                     }}
                                     onToggle={() => {
                                         setShowCurrentPassword(
@@ -498,7 +480,7 @@ export default function AccountPage() {
                                 />
                             </Field>
                         ) : (
-                            <div className="sm:min-h-17" />
+                            <div className="sm:min-h-18" />
                         )}
 
                         <div className="flex justify-end sm:self-end">
@@ -522,51 +504,53 @@ function toAccountError(error: unknown): {
     fieldErrors: FieldErrors;
     formError: string | null;
 } {
-    if (!(error instanceof BackendError)) {
-        return { fieldErrors: {}, formError: 'Something went wrong' };
-    }
-
-    if (error.code === 'EMAIL_EXISTS') {
-        return {
-            fieldErrors: { email: 'Email already exists' },
-            formError: null,
-        };
-    }
-    if (error.code === 'CURRENT_PASSWORD_REQUIRED') {
-        return {
-            fieldErrors: { currentPassword: 'Current password is required' },
-            formError: null,
-        };
-    }
-    if (error.code === 'CURRENT_PASSWORD_INCORRECT') {
-        return {
-            fieldErrors: { currentPassword: 'Current password is incorrect' },
-            formError: null,
-        };
-    }
-    if (error.code === 'ADDRESS_INVALID') {
-        return {
-            fieldErrors: { addressLineOne: 'Choose a valid address' },
-            formError: null,
-        };
-    }
-    if (error.code === 'ADDRESS_LOOKUP_UNAVAILABLE') {
-        return {
-            fieldErrors: {},
-            formError: 'Address search is unavailable',
-        };
-    }
-    if (
-        error.code === 'PHONE_NUMBER_INVALID' ||
-        error.code === 'PHONE_COUNTRY_INVALID'
-    ) {
-        return {
-            fieldErrors: { phoneNumber: 'Phone number is invalid' },
-            formError: null,
-        };
-    }
-
-    return { fieldErrors: {}, formError: error.message };
+    return resolveBackendError<{
+        fieldErrors: FieldErrors;
+        formError: string | null;
+    }>(
+        error,
+        {
+            ADDRESS_INVALID: (backendError) => ({
+                fieldErrors: {
+                    addressLineOne: backendErrorMessage(backendError.code),
+                },
+                formError: null,
+            }),
+            ADDRESS_LOOKUP_UNAVAILABLE: (backendError) => ({
+                fieldErrors: {},
+                formError: backendErrorMessage(backendError.code),
+            }),
+            CURRENT_PASSWORD_INCORRECT: (backendError) => ({
+                fieldErrors: {
+                    currentPassword: backendErrorMessage(backendError.code),
+                },
+                formError: null,
+            }),
+            CURRENT_PASSWORD_REQUIRED: (backendError) => ({
+                fieldErrors: {
+                    currentPassword: backendErrorMessage(backendError.code),
+                },
+                formError: null,
+            }),
+            EMAIL_EXISTS: (backendError) => ({
+                fieldErrors: { email: backendErrorMessage(backendError.code) },
+                formError: null,
+            }),
+            PHONE_COUNTRY_INVALID: (backendError) => ({
+                fieldErrors: {
+                    phoneNumber: backendErrorMessage(backendError.code),
+                },
+                formError: null,
+            }),
+            PHONE_NUMBER_INVALID: (backendError) => ({
+                fieldErrors: {
+                    phoneNumber: backendErrorMessage(backendError.code),
+                },
+                formError: null,
+            }),
+        },
+        (formError) => ({ fieldErrors: {}, formError })
+    );
 }
 
 function validateProfileForm(

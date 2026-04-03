@@ -36,14 +36,15 @@ import {
     validateFirstNameOnBlur,
     validateLastNameOnBlur,
 } from '../auth/validation';
-import { Button } from '../components/form/Button';
+import { Button, textButtonClassName } from '../components/form/Button';
 import { Field } from '../components/form/Field';
 import { FormNotice } from '../components/form/FormNotice';
 import { inputClassName } from '../components/form/Input';
 import { PasswordInput } from '../components/form/PasswordInput';
 import { PhoneField } from '../components/form/PhoneField';
 import { useEnterSubmit } from '../components/form/useEnterSubmit';
-import { downloadFile } from '../services/download';
+import { useToast } from '../components/toast/ToastProvider';
+import { downloadHtml } from '../services/download';
 
 const DEFAULT_VALUES: FormValues = {
     addressLineOne: '',
@@ -67,10 +68,10 @@ export default function AuthPage() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { isAuthenticated, isLoading, login } = useAuth();
+    const { showToast } = useToast();
     const [values, setValues] = useState<FormValues>(DEFAULT_VALUES);
     const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
     const [formError, setFormError] = useState<string | null>(null);
-    const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -110,18 +111,27 @@ export default function AuthPage() {
         // while still carrying a query-provided email through related flows.
         setFieldErrors({});
         setFormError(null);
-        setSuccessMessage(
-            typeof location.state?.successMessage === 'string'
-                ? location.state.successMessage
-                : null
-        );
         setValues((current) => ({
             ...DEFAULT_VALUES,
             email: prefilledEmail || current.email,
         }));
         setShowPassword(false);
         setShowConfirmPassword(false);
-    }, [location.search, location.state, prefilledEmail]);
+        if (typeof location.state?.successMessage === 'string') {
+            showToast(location.state.successMessage);
+            navigate(location.pathname + location.search, {
+                replace: true,
+                state: null,
+            });
+        }
+    }, [
+        location.pathname,
+        location.search,
+        location.state,
+        navigate,
+        prefilledEmail,
+        showToast,
+    ]);
 
     if (!isLoading && isAuthenticated) {
         return <Navigate replace to={nextPath} />;
@@ -141,7 +151,6 @@ export default function AuthPage() {
             passwordRulesMet: passwordRules.every((rule) => rule.met),
         });
         setFieldErrors(nextFieldErrors);
-        setSuccessMessage(null);
 
         if (Object.values(nextFieldErrors).some(Boolean)) {
             setFormError('Check the highlighted fields');
@@ -155,14 +164,7 @@ export default function AuthPage() {
                 const result = await authApi.register(toRegisterInput(values));
                 setFieldErrors({});
                 setFormError(null);
-                if (result.download) {
-                    downloadFile(
-                        result.download.filename,
-                        result.download.html,
-                        'text/html;charset=utf-8'
-                    );
-                }
-                setSuccessMessage(null);
+                downloadHtml(result.download);
                 setValues(DEFAULT_VALUES);
                 setShowPassword(false);
                 setShowConfirmPassword(false);
@@ -199,9 +201,6 @@ export default function AuthPage() {
                 onSubmit={handleSubmit}
                 ref={formRef}
             >
-                {successMessage ? (
-                    <FormNotice tone="success">{successMessage}</FormNotice>
-                ) : null}
                 {formError ? (
                     <FormNotice tone="error">{formError}</FormNotice>
                 ) : null}
@@ -234,7 +233,6 @@ export default function AuthPage() {
                                             event.target.value
                                         ),
                                     }));
-                                    setSuccessMessage(null);
                                 }}
                                 placeholder="Jane"
                                 value={values.firstName}
@@ -265,7 +263,6 @@ export default function AuthPage() {
                                             event.target.value
                                         ),
                                     }));
-                                    setSuccessMessage(null);
                                 }}
                                 placeholder="Doe"
                                 value={values.lastName}
@@ -296,14 +293,12 @@ export default function AuthPage() {
                                     ...current,
                                     phoneCountry: country,
                                 }));
-                                setSuccessMessage(null);
                             }}
                             onNumberChange={(value) => {
                                 setValues((current) => ({
                                     ...current,
                                     phoneNumber: value,
                                 }));
-                                setSuccessMessage(null);
                             }}
                             value={values.phoneNumber}
                         />
@@ -315,7 +310,6 @@ export default function AuthPage() {
                                 setValues((current) =>
                                     setAddressField(current, name, value)
                                 );
-                                setSuccessMessage(null);
                             }}
                             values={values}
                         />
@@ -335,7 +329,6 @@ export default function AuthPage() {
                                 ...current,
                                 email: sanitizeEmail(event.target.value),
                             }));
-                            setSuccessMessage(null);
                         }}
                         placeholder="jane.doe@email.com"
                         type="email"
@@ -370,7 +363,6 @@ export default function AuthPage() {
                                 ...current,
                                 password: nextPassword,
                             }));
-                            setSuccessMessage(null);
                             if (isSignUp && values.confirmPassword) {
                                 setFieldError(
                                     'confirmPassword',
@@ -423,7 +415,6 @@ export default function AuthPage() {
                                     ...current,
                                     confirmPassword: nextConfirmPassword,
                                 }));
-                                setSuccessMessage(null);
                                 setFieldError(
                                     'confirmPassword',
                                     getConfirmPasswordError(
@@ -444,7 +435,7 @@ export default function AuthPage() {
 
                 {!isSignUp ? (
                     <Link
-                        className="text-sm text-slate-600 underline"
+                        className={textButtonClassName}
                         to={forgotPasswordPath}
                     >
                         Forgot password
@@ -464,26 +455,26 @@ export default function AuthPage() {
                 </Button>
 
                 {isStaffSignIn ? (
-                    <p className="text-sm text-slate-600">
-                        Not staff?{' '}
-                        <Link className="underline" to="/auth?mode=signin">
-                            Sign in here
-                        </Link>
-                    </p>
+                    <Link
+                        className={textButtonClassName}
+                        to="/auth?mode=signin"
+                    >
+                        Not staff? Sign in here
+                    </Link>
                 ) : isSignUp ? (
-                    <p className="text-sm text-slate-600">
-                        Have an account?{' '}
-                        <Link className="underline" to="/auth?mode=signin">
-                            Sign in
-                        </Link>
-                    </p>
+                    <Link
+                        className={textButtonClassName}
+                        to="/auth?mode=signin"
+                    >
+                        Have an account? Sign in
+                    </Link>
                 ) : (
-                    <p className="text-sm text-slate-600">
-                        Don&apos;t have an account?{' '}
-                        <Link className="underline" to="/auth?mode=signup">
-                            Sign up
-                        </Link>
-                    </p>
+                    <Link
+                        className={textButtonClassName}
+                        to="/auth?mode=signup"
+                    >
+                        Don&apos;t have an account? Sign up
+                    </Link>
                 )}
             </form>
         </section>

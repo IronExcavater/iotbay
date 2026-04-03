@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { authApi } from '../auth/api';
 import { EMAIL_MAX_LENGTH, PASSWORD_MAX_LENGTH } from '../auth/limits';
@@ -14,14 +14,21 @@ import { FormNotice } from '../components/form/FormNotice';
 import { inputClassName } from '../components/form/Input';
 import { PasswordInput } from '../components/form/PasswordInput';
 import { useEnterSubmit } from '../components/form/useEnterSubmit';
-import { downloadFile } from '../services/download';
-import { BackendError } from '../services/http';
+import { useToast } from '../components/toast/ToastProvider';
+import { downloadHtml } from '../services/download';
+import {
+    BackendError,
+    backendErrorMessage,
+    resolveBackendError,
+} from '../services/http';
 
 type VerificationScreen = 'error' | 'pending' | 'verifying';
 
 export default function VerifyEmailPage() {
     const formRef = useRef<HTMLFormElement | null>(null);
+    const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const { showToast } = useToast();
     const [screen, setScreen] = useState<VerificationScreen>('pending');
     const [message, setMessage] = useState(
         'Check your email to verify your account'
@@ -32,26 +39,44 @@ export default function VerifyEmailPage() {
     const [isResending, setIsResending] = useState(false);
     const [isChangingEmail, setIsChangingEmail] = useState(false);
     const [formError, setFormError] = useState<string | null>(null);
-    const [successMessage, setSuccessMessage] = useState<string | null>(
-        searchParams.get('downloaded') === '1'
-            ? 'The verification email was downloaded because SMTP is unavailable'
-            : null
-    );
     const [showPassword, setShowPassword] = useState(false);
 
     const token = searchParams.get('token')?.trim() ?? '';
     const userType = searchParams.get('userType')?.trim() ?? '';
     const context = searchParams.get('context')?.trim() ?? 'signup';
     const hasToken = token.length > 0;
-    const signInPath = `/auth?mode=signin${email ? `&email=${encodeURIComponent(email)}` : ''}${userType === 'staff' ? '&userType=staff&next=/admin' : ''}`;
+    const hasChangedEmail =
+        Boolean(changeEmail) && changeEmail.trim() !== email.trim();
     const enterSubmit = useEnterSubmit({
         canSubmit: () =>
             Boolean(
-                email && changeEmail && password && !validateEmail(changeEmail)
+                email &&
+                hasChangedEmail &&
+                password &&
+                !validateEmail(changeEmail)
             ),
         enabled: !hasToken,
         formRef,
     });
+
+    useEffect(() => {
+        if (searchParams.get('downloaded') !== '1') {
+            return;
+        }
+
+        showToast('Verification email downloaded');
+
+        const nextParams = new URLSearchParams(searchParams);
+        nextParams.delete('downloaded');
+        navigate(
+            {
+                search: nextParams.toString()
+                    ? `?${nextParams.toString()}`
+                    : '',
+            },
+            { replace: true }
+        );
+    }, [navigate, searchParams, showToast]);
 
     useEffect(() => {
         if (!hasToken) {
@@ -105,22 +130,16 @@ export default function VerifyEmailPage() {
         }
 
         setFormError(null);
-        setSuccessMessage(null);
         setIsResending(true);
         try {
             const result = await authApi.resendVerification({
                 email,
                 userType: userType === 'staff' ? 'staff' : undefined,
             });
-            if (result.download) {
-                downloadFile(
-                    result.download.filename,
-                    result.download.html,
-                    'text/html;charset=utf-8'
-                );
-                setSuccessMessage('A new verification email was downloaded');
+            if (downloadHtml(result.download)) {
+                showToast('Verification email downloaded');
             } else {
-                setSuccessMessage('A new verification email has been sent');
+                showToast('Verification email sent');
             }
         } catch (error) {
             setFormError(toVerificationError(error));
@@ -147,7 +166,6 @@ export default function VerifyEmailPage() {
         }
 
         setFormError(null);
-        setSuccessMessage(null);
         setIsChangingEmail(true);
         try {
             const result = await authApi.changePendingEmail({
@@ -156,19 +174,10 @@ export default function VerifyEmailPage() {
                 password,
                 userType: userType === 'staff' ? 'staff' : undefined,
             });
-            if (result.download) {
-                downloadFile(
-                    result.download.filename,
-                    result.download.html,
-                    'text/html;charset=utf-8'
-                );
-                setSuccessMessage(
-                    'The verification email was downloaded for your new address'
-                );
+            if (downloadHtml(result.download)) {
+                showToast('Verification email downloaded');
             } else {
-                setSuccessMessage(
-                    'A new verification email has been sent to your new address'
-                );
+                showToast('Verification email sent');
             }
             setEmail(result.verification.email);
             setChangeEmail('');
@@ -187,23 +196,42 @@ export default function VerifyEmailPage() {
                 Verify email
             </h1>
 
-            <section className="grid gap-4 rounded border border-slate-200 bg-white p-5">
+            <section className="grid gap-5 rounded border border-slate-200 bg-white p-5">
                 <p
                     className={
-                        screen === 'error' ? 'text-red-700' : 'text-slate-700'
+                        screen === 'error'
+                            ? 'text-sm text-red-700'
+                            : 'text-sm text-slate-600'
                     }
                 >
                     {message}
                 </p>
-
                 {email ? (
-                    <p className="text-sm text-slate-600">
-                        Email: <strong>{email}</strong>
-                    </p>
-                ) : null}
-
-                {successMessage ? (
-                    <FormNotice tone="success">{successMessage}</FormNotice>
+                    <div className="grid gap-3 border-b border-slate-200 pb-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                        <div className="grid gap-1">
+                            <span className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
+                                Email
+                            </span>
+                            <strong className="text-base font-medium break-all text-slate-900">
+                                {email}
+                            </strong>
+                        </div>
+                        {!hasToken && screen !== 'error' ? (
+                            <div className="flex justify-start sm:justify-end sm:self-end">
+                                <Button
+                                    disabled={isResending}
+                                    loading={isResending}
+                                    onClick={() => {
+                                        void handleResend();
+                                    }}
+                                    type="button"
+                                    variant="secondary"
+                                >
+                                    Resend verification
+                                </Button>
+                            </div>
+                        ) : null}
+                    </div>
                 ) : null}
                 {formError ? (
                     <FormNotice tone="error">{formError}</FormNotice>
@@ -211,29 +239,20 @@ export default function VerifyEmailPage() {
 
                 {!hasToken && screen !== 'error' ? (
                     <>
-                        <div className="flex flex-wrap gap-3">
-                            <Button
-                                disabled={isResending}
-                                loading={isResending}
-                                onClick={() => {
-                                    void handleResend();
-                                }}
-                                type="button"
-                                variant="secondary"
-                            >
-                                Resend verification email
-                            </Button>
-                        </div>
-
                         <form
-                            className="grid gap-4 rounded border border-slate-200 bg-slate-50 p-4"
+                            className="grid gap-4 pt-1"
                             onKeyDown={enterSubmit.onKeyDown}
                             onSubmit={handleChangeEmail}
                             ref={formRef}
                         >
-                            <h2 className="text-sm font-semibold text-slate-900">
-                                Change email
-                            </h2>
+                            <div className="grid gap-1">
+                                <h2 className="text-base font-semibold text-slate-900">
+                                    Use a different email
+                                </h2>
+                                <p className="text-sm text-slate-600">
+                                    Send the verification link somewhere else.
+                                </p>
+                            </div>
                             <Field label="New email" required>
                                 <input
                                     className={inputClassName(
@@ -251,70 +270,72 @@ export default function VerifyEmailPage() {
                                     value={changeEmail}
                                 />
                             </Field>
-                            <Field
-                                hint="Use your account password to confirm the change"
-                                label="Password"
-                                required
-                            >
-                                <PasswordInput
-                                    hasError={Boolean(formError)}
-                                    maxLength={PASSWORD_MAX_LENGTH}
-                                    onChange={(event) => {
-                                        setPassword(
-                                            sanitizePasswordInput(
-                                                event.target.value
-                                            )
-                                        );
-                                        setFormError(null);
-                                    }}
-                                    onToggle={() => {
-                                        setShowPassword((current) => !current);
-                                    }}
-                                    placeholder="Enter your password"
-                                    showPassword={showPassword}
-                                    value={password}
-                                />
-                            </Field>
-                            <Button
-                                disabled={isChangingEmail}
-                                loading={isChangingEmail}
-                                type="submit"
-                                variant="primary"
-                            >
-                                Change email
-                            </Button>
+                            <section className="grid min-h-18 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                                {hasChangedEmail ? (
+                                    <Field
+                                        hint="Required to change it"
+                                        label="Password"
+                                        metaPlacement="inline"
+                                        required
+                                    >
+                                        <PasswordInput
+                                            hasError={Boolean(formError)}
+                                            maxLength={PASSWORD_MAX_LENGTH}
+                                            onChange={(event) => {
+                                                setPassword(
+                                                    sanitizePasswordInput(
+                                                        event.target.value
+                                                    )
+                                                );
+                                                setFormError(null);
+                                            }}
+                                            onToggle={() => {
+                                                setShowPassword(
+                                                    (current) => !current
+                                                );
+                                            }}
+                                            placeholder="Enter your password"
+                                            showPassword={showPassword}
+                                            value={password}
+                                        />
+                                    </Field>
+                                ) : (
+                                    <div />
+                                )}
+                                <div className="flex justify-end sm:self-end">
+                                    <Button
+                                        disabled={
+                                            isChangingEmail || !hasChangedEmail
+                                        }
+                                        loading={isChangingEmail}
+                                        type="submit"
+                                        variant="primary"
+                                    >
+                                        Change email
+                                    </Button>
+                                </div>
+                            </section>
                         </form>
                     </>
                 ) : null}
-
-                <Link
-                    className="text-sm text-slate-600 underline"
-                    to={signInPath}
-                >
-                    Back to sign in
-                </Link>
             </section>
         </section>
     );
 }
 
 function toVerificationError(error: unknown) {
-    if (!(error instanceof BackendError)) {
-        return 'Something went wrong';
-    }
-
-    if (error.code === 'EMAIL_EXISTS') {
-        return 'Email already exists';
-    }
-    if (error.code === 'INVALID_CREDENTIALS') {
-        return 'Email or password is incorrect';
-    }
-    if (error.code === 'EMAIL_VERIFICATION_PENDING') {
-        return 'This account no longer has a pending email change';
-    }
-    if (error.code === 'STAFF_ACCOUNT_REQUIRED') {
-        return 'Staff account is required';
-    }
-
-    return error.message;
+    return resolveBackendError<string>(
+        error,
+        {
+            EMAIL_EXISTS: (backendError) =>
+                backendErrorMessage(backendError.code),
+            EMAIL_VERIFICATION_PENDING: (backendError) =>
+                backendErrorMessage(backendError.code),
+            INVALID_CREDENTIALS: (backendError) =>
+                backendErrorMessage(backendError.code),
+            STAFF_ACCOUNT_REQUIRED: (backendError) =>
+                backendErrorMessage(backendError.code),
+        },
+        (message) => message
+    );
 }
