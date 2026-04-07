@@ -1,11 +1,14 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useRef, useState, type SubmitEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { authApi } from '../auth/api';
-import { EMAIL_MAX_LENGTH, PASSWORD_MAX_LENGTH } from '../auth/limits';
+import { buildSignInPath } from '../auth/redirects';
 import { PasswordRuleList } from '../auth/PasswordRuleList';
-import { getPasswordRules, PASSWORD_VALIDATOR } from '../auth/passwordRules';
 import {
+    EMAIL_MAX_LENGTH,
+    getPasswordRules,
+    PASSWORD_MAX_LENGTH,
+    PASSWORD_VALIDATOR,
     sanitizeEmail,
     sanitizePasswordInput,
     validateEmail,
@@ -33,7 +36,10 @@ export default function ResetPasswordPage() {
     const token = searchParams.get('token')?.trim() ?? '';
     const userType = searchParams.get('userType')?.trim() ?? '';
     const hasToken = token.length > 0;
-    const signInPath = authSignInPath(initialEmail, userType);
+    const signInPath = buildSignInPath({
+        email: initialEmail,
+        userType: userType === 'staff' ? 'staff' : undefined,
+    });
 
     const [email, setEmail] = useState(initialEmail);
     const [password, setPassword] = useState('');
@@ -57,7 +63,7 @@ export default function ResetPasswordPage() {
         formRef,
     });
 
-    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
         event.preventDefault();
         setError(null);
 
@@ -115,7 +121,7 @@ export default function ResetPasswordPage() {
         } finally {
             setIsSubmitting(false);
         }
-    }
+    };
 
     return (
         <section className="mx-auto grid max-w-xl gap-6">
@@ -136,8 +142,10 @@ export default function ResetPasswordPage() {
                     <>
                         <Field label="New password" required>
                             <PasswordInput
+                                autoComplete="new-password"
                                 hasError={Boolean(error)}
                                 maxLength={PASSWORD_MAX_LENGTH}
+                                name="newPassword"
                                 onChange={(event) => {
                                     const nextPassword = sanitizePasswordInput(
                                         event.target.value
@@ -164,8 +172,10 @@ export default function ResetPasswordPage() {
 
                         <Field label="Confirm password" required>
                             <PasswordInput
+                                autoComplete="new-password"
                                 hasError={Boolean(error)}
                                 maxLength={PASSWORD_MAX_LENGTH}
+                                name="confirmPassword"
                                 onChange={(event) => {
                                     const nextConfirmPassword =
                                         sanitizePasswordInput(
@@ -193,8 +203,10 @@ export default function ResetPasswordPage() {
                 ) : (
                     <Field label="Email" required>
                         <input
+                            autoComplete="email"
                             className={inputClassName(Boolean(error))}
                             maxLength={EMAIL_MAX_LENGTH}
+                            name="email"
                             onBlur={() => {
                                 const emailError = validateEmail(email);
                                 setError(emailError);
@@ -244,18 +256,6 @@ function toResetError(error: unknown) {
         },
         (message) => message
     );
-}
-
-function authSignInPath(email: string, userType: string) {
-    const query = new URLSearchParams({ mode: 'signin' });
-    if (email) {
-        query.set('email', email);
-    }
-    if (userType === 'staff') {
-        query.set('userType', 'staff');
-        query.set('next', '/admin');
-    }
-    return `/auth?${query.toString()}`;
 }
 
 function canSubmitResetForm({

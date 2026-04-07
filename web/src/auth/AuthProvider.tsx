@@ -10,15 +10,17 @@ import { BackendError } from '../services/http';
 import {
     authApi,
     type LoginInput,
+    type RegisterInput,
+    type RegisterResult,
     type UpdateProfileInput,
     type VerificationResult,
     type User,
 } from './api';
 
 interface AuthContextValue {
-    isAuthenticated: boolean;
     isLoading: boolean;
     login: (input: LoginInput) => Promise<User>;
+    register: (input: RegisterInput) => Promise<RegisterResult>;
     logout: () => Promise<void>;
     updateMe: (input: UpdateProfileInput) => Promise<User | VerificationResult>;
     user: User | null;
@@ -33,6 +35,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         let isActive = true;
 
+        // Session state lives in the backend cookie, so app boot always asks
+        // the API who the current user is instead of reading browser storage.
         async function loadSession() {
             try {
                 const currentUser = await authApi.me();
@@ -63,12 +67,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const value: AuthContextValue = {
-        isAuthenticated: user !== null,
         isLoading,
         async login(input) {
             const nextUser = await authApi.login(input);
             setUser(nextUser);
             return nextUser;
+        },
+        async register(input) {
+            return authApi.register(input);
         },
         async logout() {
             try {
@@ -84,6 +90,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         async updateMe(input) {
             const result = await authApi.updateMe(input);
             if ('verification' in result) {
+                // Changing email starts a new verification flow, so the old
+                // session is cleared until the new address is confirmed.
                 setUser(null);
                 return result;
             }

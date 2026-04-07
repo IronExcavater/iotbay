@@ -1,7 +1,5 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Navigate } from 'react-router-dom';
+import { useEffect, useRef, useState, type SubmitEvent } from 'react';
 
-import { useAuth } from '../auth/AuthProvider';
 import { Button } from '../components/form/Button';
 import { Field } from '../components/form/Field';
 import { FormNotice } from '../components/form/FormNotice';
@@ -21,7 +19,7 @@ import {
     resolveBackendError,
     toErrorMessage,
 } from '../services/http';
-import { StringValidator } from '../validation/core';
+import { StringValidator } from '../validation/strings';
 
 interface ProductFormValues {
     code: string;
@@ -56,9 +54,6 @@ const PRODUCT_CODE_VALIDATOR = new StringValidator({
 
 export default function AdminPage() {
     const formRef = useRef<HTMLFormElement | null>(null);
-    const { isAuthenticated, isLoading, logout, user } = useAuth();
-    const [isClearingNonStaffSession, setIsClearingNonStaffSession] =
-        useState(false);
     const [products, setProducts] = useState<Product[]>([]);
     const [isLoadingProducts, setIsLoadingProducts] = useState(true);
     const [productsError, setProductsError] = useState<string | null>(null);
@@ -103,44 +98,7 @@ export default function AdminPage() {
         return () => abortController.abort();
     }, []);
 
-    useEffect(() => {
-        if (
-            isLoading ||
-            !isAuthenticated ||
-            !user ||
-            user.userType !== 'staff' ||
-            !user.permission ||
-            isClearingNonStaffSession
-        ) {
-            return;
-        }
-
-        setIsClearingNonStaffSession(true);
-        void logout().finally(() => {
-            setIsClearingNonStaffSession(false);
-        });
-    }, [isAuthenticated, isClearingNonStaffSession, isLoading, logout, user]);
-
-    if (!isLoading && !isAuthenticated && !isClearingNonStaffSession) {
-        return (
-            <Navigate
-                replace
-                to="/auth?mode=signin&userType=staff&next=/admin"
-            />
-        );
-    }
-
-    if (
-        !isLoading &&
-        isAuthenticated &&
-        (user?.userType !== 'staff' || !user.permission)
-    ) {
-        return (
-            <p className="py-8 text-slate-500">Redirecting to staff sign in</p>
-        );
-    }
-
-    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
         event.preventDefault();
 
         const nextFieldErrors = validateProductForm(formValues);
@@ -187,7 +145,7 @@ export default function AdminPage() {
         } finally {
             setIsSubmitting(false);
         }
-    }
+    };
 
     async function handleDelete(product: Product) {
         if (!window.confirm(`Delete ${product.name}?`)) {

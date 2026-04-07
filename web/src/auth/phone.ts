@@ -11,7 +11,7 @@ import {
     DEFAULT_PHONE_COUNTRY,
     PHONE_NUMBER_MAX_LENGTH,
     PhoneValidator,
-} from '../validation/core';
+} from '../validation/phone';
 
 export { DEFAULT_PHONE_COUNTRY, PHONE_NUMBER_MAX_LENGTH };
 

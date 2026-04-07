@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type SubmitEvent } from 'react';
+import clsx from 'clsx';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { authApi } from '../auth/api';
-import { EMAIL_MAX_LENGTH, PASSWORD_MAX_LENGTH } from '../auth/limits';
 import {
+    EMAIL_MAX_LENGTH,
+    PASSWORD_MAX_LENGTH,
     sanitizeEmail,
     sanitizePasswordInput,
     validateEmail,
@@ -147,7 +149,9 @@ export default function VerifyEmailPage() {
         }
     }
 
-    async function handleChangeEmail(event: FormEvent<HTMLFormElement>) {
+    const handleChangeEmail = async (
+        event: SubmitEvent<HTMLFormElement>
+    ) => {
         event.preventDefault();
 
         const nextEmailError = validateEmail(changeEmail);
@@ -186,7 +190,7 @@ export default function VerifyEmailPage() {
         } finally {
             setIsChangingEmail(false);
         }
-    }
+    };
 
     return (
         <section className="mx-auto grid max-w-xl gap-6">
@@ -197,11 +201,12 @@ export default function VerifyEmailPage() {
             <section className="grid gap-5 rounded border border-slate-200 bg-white p-5">
                 {screen !== 'pending' ? (
                     <p
-                        className={
+                        className={clsx(
+                            'text-sm',
                             screen === 'error'
-                                ? 'text-sm text-red-700'
-                                : 'text-sm text-slate-600'
-                        }
+                                ? 'text-red-700'
+                                : 'text-slate-600'
+                        )}
                     >
                         {message}
                     </p>
@@ -255,10 +260,12 @@ export default function VerifyEmailPage() {
                             </div>
                             <Field label="New email" required>
                                 <input
+                                    autoComplete="email"
                                     className={inputClassName(
                                         Boolean(formError)
                                     )}
                                     maxLength={EMAIL_MAX_LENGTH}
+                                    name="email"
                                     onChange={(event) => {
                                         setChangeEmail(
                                             sanitizeEmail(event.target.value)
@@ -279,8 +286,10 @@ export default function VerifyEmailPage() {
                                         required
                                     >
                                         <PasswordInput
+                                            autoComplete="current-password"
                                             hasError={Boolean(formError)}
                                             maxLength={PASSWORD_MAX_LENGTH}
+                                            name="currentPassword"
                                             onChange={(event) => {
                                                 setPassword(
                                                     sanitizePasswordInput(

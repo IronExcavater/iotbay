@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type SubmitEvent } from 'react';
 import type { CountryCode } from 'libphonenumber-js';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 import { AddressFields } from '../addresses/AddressFields';
 import {
@@ -10,11 +10,6 @@ import {
 } from '../addresses/form';
 import { useAuth } from '../auth/AuthProvider';
 import {
-    EMAIL_MAX_LENGTH,
-    NAME_MAX_LENGTH,
-    STAFF_DESIGNATION_MAX_LENGTH,
-} from '../auth/limits';
-import {
     getBrowserPhoneCountry,
     inferPhoneCountry,
     normalizeComparablePhoneNumber,
@@ -22,10 +17,13 @@ import {
     validatePhoneNumber,
 } from '../auth/phone';
 import {
+    EMAIL_MAX_LENGTH,
+    NAME_MAX_LENGTH,
     sanitizeEmail,
     sanitizeFirstName,
     sanitizeLastName,
     sanitizePasswordInput,
+    STAFF_DESIGNATION_MAX_LENGTH,
     validateEmail,
     validateFirstName,
     validateFirstNameOnBlur,
@@ -83,7 +81,7 @@ const DEFAULT_VALUES: ProfileValues = {
 export default function AccountPage() {
     const formRef = useRef<HTMLFormElement | null>(null);
     const navigate = useNavigate();
-    const { isAuthenticated, isLoading, updateMe, user } = useAuth();
+    const { updateMe, user } = useAuth();
     const { showToast } = useToast();
     const [values, setValues] = useState<ProfileValues>(DEFAULT_VALUES);
     const [initialValues, setInitialValues] =
@@ -122,10 +120,6 @@ export default function AccountPage() {
         setInitialValues(nextValues);
     }, [user]);
 
-    if (!isLoading && !isAuthenticated) {
-        return <Navigate replace to="/auth?mode=signin" />;
-    }
-
     const emailChanged = Boolean(
         user && values.email.trim().toLowerCase() !== user.email
     );
@@ -152,7 +146,7 @@ export default function AccountPage() {
         }));
     }
 
-    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
         event.preventDefault();
         setError(null);
 
@@ -209,7 +203,7 @@ export default function AccountPage() {
         } finally {
             setIsSubmitting(false);
         }
-    }
+    };
 
     return (
         <section className="mx-auto grid max-w-3xl gap-6">
@@ -406,9 +400,11 @@ export default function AccountPage() {
                                     label="Permission"
                                 >
                                     <select
+                                        aria-label="Permission"
                                         className={inputClassName(
                                             Boolean(fieldErrors.permission)
                                         )}
+                                        title="Permission"
                                         onChange={(event) => {
                                             setValues((current) => ({
                                                 ...current,
@@ -448,6 +444,7 @@ export default function AccountPage() {
                                     hasError={Boolean(
                                         fieldErrors.currentPassword
                                     )}
+                                    name="currentPassword"
                                     onBlur={() => {
                                         if (!hasChanges) {
                                             return;

@@ -7,9 +7,9 @@ import {
     resolveBackendError,
 } from '../services/http';
 import type { RegisterInput } from './api';
-import { PASSWORD_VALIDATOR } from './passwordRules';
 import { validatePhoneNumber } from './phone';
 import {
+    PASSWORD_VALIDATOR,
     validateEmail,
     validateFirstName,
     validateLastName,
@@ -50,6 +50,8 @@ export function validateAuthForm(
         passwordRulesMet: boolean;
     }
 ) {
+    // Sign-in and sign-up share one screen, but sign-up needs the extra field
+    // set and stronger client-side validation before the request is sent.
     const fieldErrors: AuthFieldErrors = {};
     const emailError = validateEmail(values.email);
     if (emailError) {
@@ -115,6 +117,8 @@ export function toRegisterInput(values: AuthFormValues): RegisterInput {
 }
 
 export function toAuthErrorState(error: unknown, isSignUp: boolean) {
+    // Backend error codes map back into either field errors or form-level
+    // errors so each screen can stay declarative about how it renders them.
     return resolveBackendError<{
         fieldErrors: AuthFieldErrors;
         formError: string | null;

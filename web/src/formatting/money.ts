@@ -1,4 +1,4 @@
-import { MoneyValidator } from '../validation/core';
+import { MoneyValidator } from '../validation/numbers';
 
 export const PRODUCT_CODE_MAX_LENGTH = 32;
 export const PRODUCT_MAX_PRICE_CENTS = 100_000_000;
