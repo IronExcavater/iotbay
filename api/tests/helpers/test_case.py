@@ -15,10 +15,14 @@ class AppTestCase(unittest.TestCase):
 
     def setUp(self) -> None:
         super().setUp()
+        environment_overrides = {
+            "IOTBAY_API_KEY": "test-api-key",
+            **self.environment_overrides(),
+        }
         self.enterContext(
             patch.dict(
                 os.environ,
-                self.environment_overrides(),
+                environment_overrides,
             )
         )
         temp_dir = Path(self.enterContext(tempfile.TemporaryDirectory()))

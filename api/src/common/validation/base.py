@@ -17,6 +17,9 @@ class ValidationFailure(Exception):
 
 
 class Validator[T]:
+    # Request validation and domain validation share the same rule set, but the
+    # error shape differs depending on whether Pydantic or the API layer is
+    # responsible for surfacing the failure.
     def validate(self, value: T, **context: object) -> T:
         raise NotImplementedError
 

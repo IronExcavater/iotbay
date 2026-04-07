@@ -4,7 +4,7 @@ from src.addresses.routes import addresses_bp
 from src.addresses.service import AddressService
 from src.auth.routes import auth_bp
 from src.auth.service import AuthService
-from src.common.web import register_errors
+from src.common.web import register_api_access, register_errors
 from src.config import (
     load_address_config,
     load_api_access_config,
@@ -26,9 +26,6 @@ def create_app(config_path: str | None = None) -> Flask:
     email_config = load_email_config()
     migrate(config.database_path)
 
-    address_service = AddressService(GoogleMapsApi(address_config))
-    user_repository = UserRepository(config.database_path)
-
     app = Flask(__name__)
     app.config.from_mapping(
         API_ACCESS_KEY=api_access.api_key,
@@ -38,6 +35,9 @@ def create_app(config_path: str | None = None) -> Flask:
         VERIFICATION_CODE_LIFETIME_SECONDS=config.verification_code_lifetime_seconds,
         WEB_URL=config.web_url,
     )
+    
+    address_service = AddressService(GoogleMapsApi(address_config))
+    user_repository = UserRepository(config.database_path)
 
     app.extensions.update(
         address_service=address_service,
@@ -54,6 +54,7 @@ def create_app(config_path: str | None = None) -> Flask:
         user_repository=user_repository,
     )
 
+    register_api_access(app)
     register_errors(app)
 
     for blueprint in (health_bp, addresses_bp, products_bp, auth_bp):
