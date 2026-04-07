@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import clsx from 'clsx';
 
 export function Field({
     children,
@@ -24,11 +25,10 @@ export function Field({
     return (
         <label className="grid gap-1 text-sm">
             <span
-                className={
-                    metaPlacement === 'inline'
-                        ? 'flex items-baseline justify-between gap-4'
-                        : undefined
-                }
+                className={clsx(
+                    metaPlacement === 'inline' &&
+                        'flex items-baseline justify-between gap-4'
+                )}
             >
                 <span>
                     {label}
