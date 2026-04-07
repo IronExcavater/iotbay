@@ -1,4 +1,6 @@
-import type { PasswordRule } from './passwordRules';
+import clsx from 'clsx';
+
+import type { PasswordRule } from './validation';
 
 export function PasswordRuleList({ rules }: { rules: PasswordRule[] }) {
     return (
@@ -10,16 +12,16 @@ export function PasswordRuleList({ rules }: { rules: PasswordRule[] }) {
                 <li className="flex items-start gap-2" key={rule.label}>
                     <span
                         aria-hidden="true"
-                        className={[
+                        className={clsx(
                             'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[10px] leading-none',
                             rule.met
                                 ? 'border-emerald-600 bg-emerald-600 text-white'
-                                : 'border-slate-300 bg-white text-transparent',
-                        ].join(' ')}
+                                : 'border-slate-300 bg-white text-transparent'
+                        )}
                     >
-                        ✓
+                        {'\u2713'}
                     </span>
-                    <span className={rule.met ? 'text-slate-900' : undefined}>
+                    <span className={clsx(rule.met && 'text-slate-900')}>
                         <span className="sr-only">
                             {rule.met ? 'Met: ' : 'Needed: '}
                         </span>

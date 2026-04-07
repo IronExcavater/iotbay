@@ -1,13 +1,27 @@
 import {
     ADDRESS_MAX_LENGTH,
-    AddressValidator,
     EMAIL_MAX_LENGTH,
-    EmailValidator,
     NAME_MAX_LENGTH,
-    NameValidator,
     PASSWORD_MAX_LENGTH,
     StringValidator,
-} from '../validation/core';
+} from '../validation/strings';
+import {
+    PasswordValidator,
+    type PasswordRule,
+} from '../validation/passwords';
+import {
+    AddressValidator,
+    EmailValidator,
+    NameValidator,
+} from '../validation/textual';
+
+export {
+    EMAIL_MAX_LENGTH,
+    NAME_MAX_LENGTH,
+    PASSWORD_MAX_LENGTH,
+};
+
+export const STAFF_DESIGNATION_MAX_LENGTH = 100;
 
 const EMAIL_VALIDATOR = new EmailValidator({
     fieldName: 'Email',
@@ -37,6 +51,15 @@ const PASSWORD_INPUT_VALIDATOR = new StringValidator({
     asciiOnly: true,
     printableAsciiOnly: true,
 });
+export const PASSWORD_VALIDATOR = new PasswordValidator({
+    fieldName: 'password',
+    required: true,
+    maxLength: PASSWORD_MAX_LENGTH,
+    asciiOnly: true,
+    printableAsciiOnly: true,
+});
+
+export type { PasswordRule };
 
 export function validateRequired(
     value: string,
@@ -59,6 +82,21 @@ export function sanitizeLastName(value: string) {
 
 export function sanitizePasswordInput(value: string) {
     return PASSWORD_INPUT_VALIDATOR.formatInput(value);
+}
+
+export function getPasswordRules(
+    password: string,
+    context: {
+        email?: string;
+        firstName?: string;
+        lastName?: string;
+    } = {}
+): PasswordRule[] {
+    return PASSWORD_VALIDATOR.requirements(password, {
+        email: context.email,
+        firstName: context.firstName,
+        lastName: context.lastName,
+    });
 }
 
 export function validateEmail(value: string): string | null {

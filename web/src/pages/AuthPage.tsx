@@ -1,16 +1,16 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
-    Link,
-    Navigate,
-    useLocation,
-    useNavigate,
-    useSearchParams,
-} from 'react-router-dom';
+    useEffect,
+    useRef,
+    useState,
+    type ChangeEvent,
+    type SubmitEvent,
+} from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { AddressFields } from '../addresses/AddressFields';
-import { setAddressField } from '../addresses/form';
-import { authApi } from '../auth/api';
+import { setAddressField, type AddressFieldName } from '../addresses/form';
 import { useAuth } from '../auth/AuthProvider';
+import { resolvePostAuthPath } from '../auth/redirects';
 import {
     parseAuthMode,
     toAuthErrorState,
@@ -21,11 +21,11 @@ import {
 } from '../auth/form';
 import {
     EMAIL_MAX_LENGTH,
+    getPasswordRules,
     NAME_MAX_LENGTH,
     PASSWORD_MAX_LENGTH,
-} from '../auth/limits';
+} from '../auth/validation';
 import { PasswordRuleList } from '../auth/PasswordRuleList';
-import { getPasswordRules } from '../auth/passwordRules';
 import { getBrowserPhoneCountry, validatePhoneNumber } from '../auth/phone';
 import {
     sanitizeEmail,
@@ -46,73 +46,73 @@ import { useEnterSubmit } from '../components/form/useEnterSubmit';
 import { useToast } from '../components/toast/ToastProvider';
 import { downloadHtml } from '../services/download';
 
-const DEFAULT_VALUES: FormValues = {
-    addressLineOne: '',
-    addressLineTwo: '',
-    country: '',
-    confirmPassword: '',
-    email: '',
-    firstName: '',
-    lastName: '',
-    password: '',
-    phoneCountry: getBrowserPhoneCountry(),
-    phoneNumber: '',
-    postcode: '',
-    state: '',
-    suburb: '',
-};
+function createDefaultValues(): FormValues {
+    return {
+        addressLineOne: '',
+        addressLineTwo: '',
+        country: '',
+        confirmPassword: '',
+        email: '',
+        firstName: '',
+        lastName: '',
+        password: '',
+        phoneCountry: getBrowserPhoneCountry(),
+        phoneNumber: '',
+        postcode: '',
+        state: '',
+        suburb: '',
+    };
+}
 
 export default function AuthPage() {
     const formRef = useRef<HTMLFormElement | null>(null);
     const location = useLocation();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const { isAuthenticated, isLoading, login } = useAuth();
+    const { login, register } = useAuth();
     const { showToast } = useToast();
-    const [values, setValues] = useState<FormValues>(DEFAULT_VALUES);
+    const [values, setValues] = useState<FormValues>(() => createDefaultValues());
     const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
     const [formError, setFormError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    const mode = parseAuthMode(searchParams.get('mode'));
-    const prefilledEmail = searchParams.get('email')?.trim() ?? '';
-    const nextPath = searchParams.get('next')?.trim() || '/';
-    const userType = searchParams.get('userType')?.trim() || '';
-    const isStaffSignIn = userType === 'staff';
-    const isSignUp = mode === 'signup' && !isStaffSignIn;
-    const forgotPasswordPath = `/reset-password?email=${encodeURIComponent(values.email.trim())}${isStaffSignIn ? '&userType=staff' : ''}`;
+    const {
+        forgotPasswordPath,
+        isSignUp,
+        isStaffSignIn,
+        modeSwitchPath,
+        modeSwitchText,
+        nextPath,
+        prefilledEmail,
+        submitLabel,
+        title,
+    } = getAuthPageState(searchParams, values.email);
     const passwordRules = getPasswordRules(values.password, {
         email: values.email,
         firstName: values.firstName,
         lastName: values.lastName,
     });
-    const title = isStaffSignIn
-        ? 'Staff sign in'
-        : isSignUp
-          ? 'Sign up'
-          : 'Sign in';
-    const submitLabel = isSignUp ? 'Create account' : 'Sign in';
+    const passwordRulesMet = passwordRules.every((rule) => rule.met);
+    const validationOptions = {
+        isSignUp,
+        passwordRulesMet,
+    };
     const enterSubmit = useEnterSubmit({
         canSubmit: () =>
             !isSubmitting &&
-            Object.values(
-                validateAuthForm(values, {
-                    isSignUp,
-                    passwordRulesMet: passwordRules.every((rule) => rule.met),
-                })
-            ).every((error) => !error),
+            Object.values(getValidationErrors()).every((error) => !error),
         formRef,
     });
 
+    // Query params drive which auth flow is active. When that changes, reset
+    // transient form state but keep any email carried across related flows.
     useEffect(() => {
-        // Reset transient auth-page state whenever the auth route mode changes,
-        // while still carrying a query-provided email through related flows.
         setFieldErrors({});
         setFormError(null);
         setValues((current) => ({
-            ...DEFAULT_VALUES,
+            ...createDefaultValues(),
             email: prefilledEmail || current.email,
         }));
         setShowPassword(false);
@@ -133,8 +133,8 @@ export default function AuthPage() {
         showToast,
     ]);
 
-    if (!isLoading && isAuthenticated) {
-        return <Navigate replace to={nextPath} />;
+    function getValidationErrors(nextValues: FormValues = values) {
+        return validateAuthForm(nextValues, validationOptions);
     }
 
     function setFieldError(name: keyof FieldErrors, error?: string | null) {
@@ -144,12 +144,123 @@ export default function AuthPage() {
         }));
     }
 
-    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-        const nextFieldErrors = validateAuthForm(values, {
-            isSignUp,
-            passwordRulesMet: passwordRules.every((rule) => rule.met),
+    function updateValues(patch: Partial<FormValues>) {
+        setValues((current) => ({
+            ...current,
+            ...patch,
+        }));
+    }
+
+    function syncConfirmPasswordError(confirmPassword: string, password: string) {
+        setFieldError(
+            'confirmPassword',
+            getConfirmPasswordError(confirmPassword, password)
+        );
+    }
+
+    function handleFirstNameBlur() {
+        setFieldError('firstName', validateFirstNameOnBlur(values.firstName));
+    }
+
+    function handleFirstNameChange(event: ChangeEvent<HTMLInputElement>) {
+        updateValues({
+            firstName: sanitizeFirstName(event.target.value),
         });
+    }
+
+    function handleLastNameBlur() {
+        setFieldError('lastName', validateLastNameOnBlur(values.lastName));
+    }
+
+    function handleLastNameChange(event: ChangeEvent<HTMLInputElement>) {
+        updateValues({
+            lastName: sanitizeLastName(event.target.value),
+        });
+    }
+
+    function handlePhoneBlur() {
+        setFieldError(
+            'phoneNumber',
+            values.phoneNumber.trim()
+                ? validatePhoneNumber(values.phoneNumber, values.phoneCountry)
+                : null
+        );
+    }
+
+    function handlePhoneCountryChange(country: FormValues['phoneCountry']) {
+        updateValues({ phoneCountry: country });
+    }
+
+    function handlePhoneNumberChange(phoneNumber: string) {
+        updateValues({ phoneNumber });
+    }
+
+    function handleAddressFieldChange(name: AddressFieldName, value: string) {
+        setValues((current) => setAddressField(current, name, value));
+    }
+
+    function handleEmailBlur() {
+        setFieldError('email', validateEmail(values.email));
+    }
+
+    function handleEmailChange(event: ChangeEvent<HTMLInputElement>) {
+        updateValues({
+            email: sanitizeEmail(event.target.value),
+        });
+    }
+
+    function handlePasswordBlur() {
+        if (!isSignUp || !values.password) {
+            return;
+        }
+
+        setFieldError('password', getValidationErrors().password);
+    }
+
+    function handlePasswordChange(event: ChangeEvent<HTMLInputElement>) {
+        const nextPassword = sanitizePasswordInput(event.target.value);
+        updateValues({ password: nextPassword });
+
+        if (isSignUp && values.confirmPassword) {
+            syncConfirmPasswordError(values.confirmPassword, nextPassword);
+        }
+    }
+
+    function handleConfirmPasswordBlur() {
+        syncConfirmPasswordError(values.confirmPassword, values.password);
+    }
+
+    function handleConfirmPasswordChange(
+        event: ChangeEvent<HTMLInputElement>
+    ) {
+        const nextConfirmPassword = sanitizePasswordInput(event.target.value);
+        updateValues({ confirmPassword: nextConfirmPassword });
+        syncConfirmPasswordError(nextConfirmPassword, values.password);
+    }
+
+    function togglePasswordVisibility() {
+        setShowPassword((current) => !current);
+    }
+
+    function toggleConfirmPasswordVisibility() {
+        setShowConfirmPassword((current) => !current);
+    }
+
+    function submitForm() {
+        formRef.current?.requestSubmit();
+    }
+
+    function resetForm() {
+        setFieldErrors({});
+        setFormError(null);
+        setValues(createDefaultValues());
+        setShowPassword(false);
+        setShowConfirmPassword(false);
+    }
+
+    const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const nextFieldErrors = getValidationErrors();
         setFieldErrors(nextFieldErrors);
 
         if (Object.values(nextFieldErrors).some(Boolean)) {
@@ -161,23 +272,17 @@ export default function AuthPage() {
         setIsSubmitting(true);
         try {
             if (isSignUp) {
-                const result = await authApi.register(toRegisterInput(values));
-                setFieldErrors({});
-                setFormError(null);
+                const result = await register(toRegisterInput(values));
                 downloadHtml(result.download);
-                setValues(DEFAULT_VALUES);
-                setShowPassword(false);
-                setShowConfirmPassword(false);
-                navigate(
-                    `/verify-email?email=${encodeURIComponent(result.verification.email)}&context=signup${result.download ? '&downloaded=1' : ''}`
-                );
+                resetForm();
+                navigate(buildSignupVerificationPath(result));
             } else {
-                await login({
+                const authenticatedUser = await login({
                     email: values.email.trim(),
                     password: values.password,
                     userType: isStaffSignIn ? 'staff' : undefined,
                 });
-                navigate(nextPath);
+                navigate(resolvePostAuthPath(authenticatedUser, nextPath));
             }
         } catch (error) {
             const nextErrorState = toAuthErrorState(error, isSignUp);
@@ -186,7 +291,89 @@ export default function AuthPage() {
         } finally {
             setIsSubmitting(false);
         }
-    }
+    };
+
+    const signUpFields = isSignUp ? (
+        <>
+            <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
+                <Field
+                    error={fieldErrors.firstName}
+                    label="First name"
+                    required
+                >
+                    <input
+                        autoComplete="given-name"
+                        className={inputClassName(Boolean(fieldErrors.firstName))}
+                        maxLength={NAME_MAX_LENGTH}
+                        onBlur={handleFirstNameBlur}
+                        onChange={handleFirstNameChange}
+                        placeholder="Jane"
+                        value={values.firstName}
+                    />
+                </Field>
+
+                <Field
+                    error={fieldErrors.lastName}
+                    label="Last name"
+                    required
+                >
+                    <input
+                        autoComplete="family-name"
+                        className={inputClassName(Boolean(fieldErrors.lastName))}
+                        maxLength={NAME_MAX_LENGTH}
+                        onBlur={handleLastNameBlur}
+                        onChange={handleLastNameChange}
+                        placeholder="Doe"
+                        value={values.lastName}
+                    />
+                </Field>
+            </div>
+
+            <PhoneField
+                country={values.phoneCountry}
+                error={fieldErrors.phoneNumber}
+                label="Phone number"
+                onBlur={handlePhoneBlur}
+                onCountryChange={handlePhoneCountryChange}
+                onNumberChange={handlePhoneNumberChange}
+                value={values.phoneNumber}
+            />
+
+            <AddressFields
+                countryCode={values.phoneCountry}
+                errors={fieldErrors}
+                onFieldChange={handleAddressFieldChange}
+                values={values}
+            />
+        </>
+    ) : null;
+
+    const confirmPasswordField = isSignUp ? (
+        <Field
+            error={fieldErrors.confirmPassword}
+            label="Confirm password"
+            required
+        >
+            <PasswordInput
+                autoComplete="new-password"
+                hasError={Boolean(fieldErrors.confirmPassword)}
+                maxLength={PASSWORD_MAX_LENGTH}
+                name="confirmPassword"
+                onBlur={handleConfirmPasswordBlur}
+                onChange={handleConfirmPasswordChange}
+                onToggle={toggleConfirmPasswordVisibility}
+                placeholder="Re-enter your password"
+                showPassword={showConfirmPassword}
+                value={values.confirmPassword}
+            />
+        </Field>
+    ) : null;
+
+    const forgotPasswordLink = isSignUp ? null : (
+        <Link className={textButtonClassName} to={forgotPasswordPath}>
+            Forgot password
+        </Link>
+    );
 
     return (
         <section className="mx-auto grid max-w-xl gap-6">
@@ -205,131 +392,15 @@ export default function AuthPage() {
                     <FormNotice tone="error">{formError}</FormNotice>
                 ) : null}
 
-                {isSignUp ? (
-                    <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
-                        <Field
-                            error={fieldErrors.firstName}
-                            label="First name"
-                            required
-                        >
-                            <input
-                                autoComplete="given-name"
-                                className={inputClassName(
-                                    Boolean(fieldErrors.firstName)
-                                )}
-                                maxLength={NAME_MAX_LENGTH}
-                                onBlur={() => {
-                                    setFieldError(
-                                        'firstName',
-                                        validateFirstNameOnBlur(
-                                            values.firstName
-                                        )
-                                    );
-                                }}
-                                onChange={(event) => {
-                                    setValues((current) => ({
-                                        ...current,
-                                        firstName: sanitizeFirstName(
-                                            event.target.value
-                                        ),
-                                    }));
-                                }}
-                                placeholder="Jane"
-                                value={values.firstName}
-                            />
-                        </Field>
-
-                        <Field
-                            error={fieldErrors.lastName}
-                            label="Last name"
-                            required
-                        >
-                            <input
-                                autoComplete="family-name"
-                                className={inputClassName(
-                                    Boolean(fieldErrors.lastName)
-                                )}
-                                maxLength={NAME_MAX_LENGTH}
-                                onBlur={() => {
-                                    setFieldError(
-                                        'lastName',
-                                        validateLastNameOnBlur(values.lastName)
-                                    );
-                                }}
-                                onChange={(event) => {
-                                    setValues((current) => ({
-                                        ...current,
-                                        lastName: sanitizeLastName(
-                                            event.target.value
-                                        ),
-                                    }));
-                                }}
-                                placeholder="Doe"
-                                value={values.lastName}
-                            />
-                        </Field>
-                    </div>
-                ) : null}
-
-                {isSignUp ? (
-                    <>
-                        <PhoneField
-                            country={values.phoneCountry}
-                            error={fieldErrors.phoneNumber}
-                            label="Phone number"
-                            onBlur={() => {
-                                setFieldError(
-                                    'phoneNumber',
-                                    values.phoneNumber.trim()
-                                        ? validatePhoneNumber(
-                                              values.phoneNumber,
-                                              values.phoneCountry
-                                          )
-                                        : null
-                                );
-                            }}
-                            onCountryChange={(country) => {
-                                setValues((current) => ({
-                                    ...current,
-                                    phoneCountry: country,
-                                }));
-                            }}
-                            onNumberChange={(value) => {
-                                setValues((current) => ({
-                                    ...current,
-                                    phoneNumber: value,
-                                }));
-                            }}
-                            value={values.phoneNumber}
-                        />
-
-                        <AddressFields
-                            countryCode={values.phoneCountry}
-                            errors={fieldErrors}
-                            onFieldChange={(name, value) => {
-                                setValues((current) =>
-                                    setAddressField(current, name, value)
-                                );
-                            }}
-                            values={values}
-                        />
-                    </>
-                ) : null}
+                {signUpFields}
 
                 <Field error={fieldErrors.email} label="Email" required>
                     <input
                         autoComplete="email"
                         className={inputClassName(Boolean(fieldErrors.email))}
                         maxLength={EMAIL_MAX_LENGTH}
-                        onBlur={() => {
-                            setFieldError('email', validateEmail(values.email));
-                        }}
-                        onChange={(event) => {
-                            setValues((current) => ({
-                                ...current,
-                                email: sanitizeEmail(event.target.value),
-                            }));
-                        }}
+                        onBlur={handleEmailBlur}
+                        onChange={handleEmailChange}
                         placeholder="jane.doe@email.com"
                         type="email"
                         value={values.email}
@@ -343,39 +414,10 @@ export default function AuthPage() {
                         }
                         hasError={Boolean(fieldErrors.password)}
                         maxLength={PASSWORD_MAX_LENGTH}
-                        onBlur={() => {
-                            if (!isSignUp || !values.password) {
-                                return;
-                            }
-                            const passwordError = validateAuthForm(values, {
-                                isSignUp: true,
-                                passwordRulesMet: passwordRules.every(
-                                    (rule) => rule.met
-                                ),
-                            }).password;
-                            setFieldError('password', passwordError);
-                        }}
-                        onChange={(event) => {
-                            const nextPassword = sanitizePasswordInput(
-                                event.target.value
-                            );
-                            setValues((current) => ({
-                                ...current,
-                                password: nextPassword,
-                            }));
-                            if (isSignUp && values.confirmPassword) {
-                                setFieldError(
-                                    'confirmPassword',
-                                    getConfirmPasswordError(
-                                        values.confirmPassword,
-                                        nextPassword
-                                    )
-                                );
-                            }
-                        }}
-                        onToggle={() => {
-                            setShowPassword((current) => !current);
-                        }}
+                        name="password"
+                        onBlur={handlePasswordBlur}
+                        onChange={handlePasswordChange}
+                        onToggle={togglePasswordVisibility}
                         placeholder={
                             isSignUp
                                 ? 'Choose a password'
@@ -389,93 +431,23 @@ export default function AuthPage() {
                     ) : null}
                 </Field>
 
-                {isSignUp ? (
-                    <Field
-                        error={fieldErrors.confirmPassword}
-                        label="Confirm password"
-                        required
-                    >
-                        <PasswordInput
-                            autoComplete="new-password"
-                            hasError={Boolean(fieldErrors.confirmPassword)}
-                            maxLength={PASSWORD_MAX_LENGTH}
-                            onBlur={() => {
-                                setFieldError(
-                                    'confirmPassword',
-                                    getConfirmPasswordError(
-                                        values.confirmPassword,
-                                        values.password
-                                    )
-                                );
-                            }}
-                            onChange={(event) => {
-                                const nextConfirmPassword =
-                                    sanitizePasswordInput(event.target.value);
-                                setValues((current) => ({
-                                    ...current,
-                                    confirmPassword: nextConfirmPassword,
-                                }));
-                                setFieldError(
-                                    'confirmPassword',
-                                    getConfirmPasswordError(
-                                        nextConfirmPassword,
-                                        values.password
-                                    )
-                                );
-                            }}
-                            onToggle={() => {
-                                setShowConfirmPassword((current) => !current);
-                            }}
-                            placeholder="Re-enter your password"
-                            showPassword={showConfirmPassword}
-                            value={values.confirmPassword}
-                        />
-                    </Field>
-                ) : null}
+                {confirmPasswordField}
 
-                {!isSignUp ? (
-                    <Link
-                        className={textButtonClassName}
-                        to={forgotPasswordPath}
-                    >
-                        Forgot password
-                    </Link>
-                ) : null}
+                {forgotPasswordLink}
 
                 <Button
                     disabled={isSubmitting}
                     loading={isSubmitting}
-                    onClick={() => {
-                        formRef.current?.requestSubmit();
-                    }}
+                    onClick={submitForm}
                     type="button"
                     variant="primary"
                 >
                     {submitLabel}
                 </Button>
 
-                {isStaffSignIn ? (
-                    <Link
-                        className={textButtonClassName}
-                        to="/auth?mode=signin"
-                    >
-                        Not staff? Sign in here
-                    </Link>
-                ) : isSignUp ? (
-                    <Link
-                        className={textButtonClassName}
-                        to="/auth?mode=signin"
-                    >
-                        Have an account? Sign in
-                    </Link>
-                ) : (
-                    <Link
-                        className={textButtonClassName}
-                        to="/auth?mode=signup"
-                    >
-                        Don&apos;t have an account? Sign up
-                    </Link>
-                )}
+                <Link className={textButtonClassName} to={modeSwitchPath}>
+                    {modeSwitchText}
+                </Link>
             </form>
         </section>
     );
@@ -490,4 +462,76 @@ function getConfirmPasswordError(
     }
 
     return confirmPassword !== password ? 'Passwords do not match' : undefined;
+}
+
+function getAuthPageState(searchParams: URLSearchParams, email: string) {
+    // The auth screen serves customer sign-up, customer sign-in, and staff
+    // sign-in from one route, so this helper keeps the route-driven labels and
+    // links in one place.
+    const mode = parseAuthMode(searchParams.get('mode'));
+    const nextPath = searchParams.get('next')?.trim() || '/';
+    const prefilledEmail = searchParams.get('email')?.trim() ?? '';
+    const userType = searchParams.get('userType')?.trim() || '';
+    const isStaffSignIn = userType === 'staff';
+    const isSignUp = mode === 'signup' && !isStaffSignIn;
+    const forgotPasswordPath = buildForgotPasswordPath(email, isStaffSignIn);
+
+    let modeSwitchPath = '/auth?mode=signup';
+    let modeSwitchText = "Don't have an account? Sign up";
+    let submitLabel = 'Sign in';
+    let title = 'Sign in';
+
+    if (isStaffSignIn) {
+        modeSwitchPath = '/auth?mode=signin';
+        modeSwitchText = 'Not staff? Sign in here';
+        title = 'Staff sign in';
+    } else if (isSignUp) {
+        modeSwitchPath = '/auth?mode=signin';
+        modeSwitchText = 'Have an account? Sign in';
+        submitLabel = 'Create account';
+        title = 'Sign up';
+    }
+
+    return {
+        forgotPasswordPath,
+        isSignUp,
+        isStaffSignIn,
+        modeSwitchPath,
+        modeSwitchText,
+        nextPath,
+        prefilledEmail,
+        submitLabel,
+        title,
+    };
+}
+
+function buildForgotPasswordPath(email: string, isStaffSignIn: boolean) {
+    const query = new URLSearchParams();
+    const trimmedEmail = email.trim();
+
+    if (trimmedEmail) {
+        query.set('email', trimmedEmail);
+    }
+    if (isStaffSignIn) {
+        query.set('userType', 'staff');
+    }
+
+    const queryString = query.toString();
+    return queryString ? `/reset-password?${queryString}` : '/reset-password';
+}
+
+function buildSignupVerificationPath(result: {
+    download?: { filename: string; html: string };
+    verification: { email: string };
+}) {
+    // Local development may return the verification email as a downloadable
+    // HTML artifact, so carry that state forward to the verify screen.
+    const query = new URLSearchParams({
+        context: 'signup',
+        email: result.verification.email,
+    });
+    if (result.download) {
+        query.set('downloaded', '1');
+    }
+    return `/verify-email?${query.toString()}`;
 }
