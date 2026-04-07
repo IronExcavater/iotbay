@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { FiGithub } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 
 import { getJson } from '../services/http';
@@ -9,6 +10,8 @@ const GITHUB_REPOSITORY_URL =
     'https://github.com/isd-2026/project-assignment-iotbay-marketplace-workshop04-group3';
 
 export default function SiteFooter() {
+    // App metadata is optional at runtime, so the footer keeps a stable
+    // support address even when the app-info request fails.
     const [contactEmail, setContactEmail] = useState(DEFAULT_CONTACT_EMAIL);
 
     useEffect(() => {
@@ -22,9 +25,7 @@ export default function SiteFooter() {
                 if (payload.contactEmail) {
                     setContactEmail(payload.contactEmail);
                 }
-            } catch {
-                // Keep the default contact email when app info is unavailable.
-            }
+            } catch {}
         }
 
         void loadAppInfo();
@@ -79,28 +80,15 @@ export default function SiteFooter() {
                             className={textButtonClassName}
                             href={GITHUB_REPOSITORY_URL}
                             rel="noreferrer"
+                            title="View IoTBay on GitHub"
                             target="_blank"
                         >
-                            <GitHubIcon />
+                            <FiGithub aria-hidden="true" size={20} />
                             <span>IoTBay</span>
                         </a>
                     </div>
                 </section>
             </div>
         </footer>
-    );
-}
-
-function GitHubIcon() {
-    return (
-        <svg
-            aria-hidden="true"
-            fill="currentColor"
-            height="20"
-            viewBox="0 0 24 24"
-            width="20"
-        >
-            <path d="M12 .5C5.65.5.5 5.65.5 12A11.5 11.5 0 0 0 8.36 22.3c.58.1.79-.25.79-.56v-1.96c-3.1.68-3.75-1.5-3.75-1.5-.5-1.28-1.24-1.62-1.24-1.62-1.01-.7.08-.69.08-.69 1.12.08 1.7 1.15 1.7 1.15 1 .1 1.95.69 2.42 1.69.1-.72.39-1.21.7-1.49-2.47-.28-5.07-1.24-5.07-5.51 0-1.22.43-2.21 1.15-2.99-.12-.28-.5-1.41.11-2.95 0 0 .94-.3 3.08 1.14a10.67 10.67 0 0 1 5.6 0c2.13-1.45 3.07-1.14 3.07-1.14.62 1.54.24 2.67.12 2.95.72.78 1.15 1.77 1.15 2.99 0 4.28-2.61 5.22-5.1 5.49.4.35.76 1.03.76 2.08v3.08c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z" />
-        </svg>
     );
 }

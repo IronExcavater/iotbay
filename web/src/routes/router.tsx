@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom';
 
+import { ProtectedRoute } from '../auth/ProtectedRoute';
 import SiteLayout from '../layouts/SiteLayout';
 import AccountPage from '../pages/AccountPage';
 import AdminPage from '../pages/AdminPage';
@@ -21,24 +22,39 @@ export const router = createBrowserRouter([
                 element: <HomePage />,
             },
             {
-                path: 'auth',
-                element: <AuthPage />,
+                element: <ProtectedRoute access="guest" />,
+                children: [
+                    {
+                        path: 'auth',
+                        element: <AuthPage />,
+                    },
+                    {
+                        path: 'reset-password',
+                        element: <ResetPasswordPage />,
+                    },
+                    {
+                        path: 'verify-email',
+                        element: <VerifyEmailPage />,
+                    },
+                ],
             },
             {
-                path: 'reset-password',
-                element: <ResetPasswordPage />,
+                element: <ProtectedRoute />,
+                children: [
+                    {
+                        path: 'account',
+                        element: <AccountPage />,
+                    },
+                ],
             },
             {
-                path: 'verify-email',
-                element: <VerifyEmailPage />,
-            },
-            {
-                path: 'account',
-                element: <AccountPage />,
-            },
-            {
-                path: 'admin',
-                element: <AdminPage />,
+                element: <ProtectedRoute access="staff" />,
+                children: [
+                    {
+                        path: 'admin',
+                        element: <AdminPage />,
+                    },
+                ],
             },
             {
                 path: '*',

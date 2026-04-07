@@ -1,4 +1,11 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import {
+    Children,
+    isValidElement,
+    type ButtonHTMLAttributes,
+    type ReactNode,
+} from 'react';
+import clsx from 'clsx';
+import { FiLoader } from 'react-icons/fi';
 
 type ButtonVariant = 'danger' | 'primary' | 'secondary' | 'text';
 
@@ -9,6 +16,7 @@ export function Button({
     children,
     className = '',
     loading = false,
+    title,
     variant = 'primary',
     ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -16,17 +24,23 @@ export function Button({
     loading?: boolean;
     variant?: ButtonVariant;
 }) {
+    const resolvedTitle = title ?? getButtonText(children);
+
     return (
         <button
-            className={[
-                baseClassName,
+            className={clsx(
+                'relative cursor-pointer rounded text-sm font-medium disabled:cursor-not-allowed',
                 variantClassName[variant],
-                className,
-            ].join(' ')}
+                className
+            )}
+            title={resolvedTitle}
             {...props}
         >
             <span
-                className={`inline-flex flex-nowrap items-center justify-center gap-2 leading-none whitespace-nowrap ${loading ? 'opacity-0' : 'opacity-100'}`}
+                className={clsx(
+                    'inline-flex flex-nowrap items-center justify-center gap-2 leading-none whitespace-nowrap',
+                    loading ? 'opacity-0' : 'opacity-100'
+                )}
             >
                 {children}
             </span>
@@ -35,15 +49,15 @@ export function Button({
                     aria-hidden="true"
                     className="pointer-events-none absolute inset-0 inline-flex items-center justify-center"
                 >
-                    <ButtonSpinner />
+                    <FiLoader
+                        aria-hidden="true"
+                        className="block size-3.5 animate-spin"
+                    />
                 </span>
             ) : null}
         </button>
     );
 }
-
-const baseClassName =
-    'relative cursor-pointer rounded text-sm font-medium disabled:cursor-not-allowed';
 
 const variantClassName: Record<ButtonVariant, string> = {
     danger: 'border border-red-200 px-3 py-1.5 text-red-700 hover:bg-red-50',
@@ -53,29 +67,20 @@ const variantClassName: Record<ButtonVariant, string> = {
     text: textButtonClassName,
 };
 
-function ButtonSpinner() {
-    return (
-        <svg
-            aria-hidden="true"
-            className="block size-3.5 animate-spin"
-            fill="none"
-            viewBox="0 0 24 24"
-        >
-            <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-            />
-            <path
-                className="opacity-90"
-                d="M22 12a10 10 0 0 0-10-10"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeWidth="4"
-            />
-        </svg>
-    );
+function getButtonText(children: ReactNode): string | undefined {
+    const text = Children.toArray(children)
+        .map((child) => {
+            if (typeof child === 'string' || typeof child === 'number') {
+                return String(child);
+            }
+            if (isValidElement<{ children?: ReactNode }>(child)) {
+                return getButtonText(child.props.children) ?? '';
+            }
+            return '';
+        })
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    return text || undefined;
 }

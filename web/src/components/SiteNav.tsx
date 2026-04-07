@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
+import clsx from 'clsx';
+import { FiChevronDown, FiUser } from 'react-icons/fi';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthProvider';
 
 export default function SiteNav() {
     const navigate = useNavigate();
-    const { isAuthenticated, logout, user } = useAuth();
+    const { logout, user } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement | null>(null);
     const profileLabel = user
         ? `${user.firstName} ${user.lastName}`
         : 'Profile';
-    const showProfileMenu = isAuthenticated && user !== null;
+    const showProfileMenu = user !== null;
 
     useEffect(() => {
         if (!isMenuOpen) {
@@ -68,25 +70,39 @@ export default function SiteNav() {
                     {showProfileMenu ? (
                         <div className="relative" ref={menuRef}>
                             <button
-                                aria-expanded={isMenuOpen}
-                                aria-haspopup="menu"
+                                aria-label={
+                                    isMenuOpen
+                                        ? 'Close account menu'
+                                        : 'Open account menu'
+                                }
                                 className="flex items-center gap-2 rounded border border-slate-300 px-3 py-2 text-slate-700 hover:bg-slate-100"
                                 onClick={() => {
                                     setIsMenuOpen((current) => !current);
                                 }}
+                                title={
+                                    isMenuOpen
+                                        ? 'Close account menu'
+                                        : 'Open account menu'
+                                }
                                 type="button"
                             >
-                                <ProfileIcon />
+                                <FiUser aria-hidden="true" size={18} />
                                 <span className="hidden sm:inline">
                                     {profileLabel}
                                 </span>
-                                <ChevronIcon open={isMenuOpen} />
+                                <FiChevronDown
+                                    aria-hidden="true"
+                                    className={clsx(
+                                        'transition-transform duration-200 ease-out',
+                                        isMenuOpen && 'rotate-180'
+                                    )}
+                                    size={18}
+                                />
                             </button>
 
                             {isMenuOpen ? (
                                 <div
                                     className="absolute top-full right-0 z-10 mt-2 grid min-w-48 gap-1 rounded border border-slate-200 bg-white p-2 shadow-sm"
-                                    role="menu"
                                 >
                                     {user.userType === 'staff' ? (
                                         <Link
@@ -94,7 +110,6 @@ export default function SiteNav() {
                                             onClick={() => {
                                                 setIsMenuOpen(false);
                                             }}
-                                            role="menuitem"
                                             to="/admin"
                                         >
                                             Staff portal
@@ -105,7 +120,6 @@ export default function SiteNav() {
                                         onClick={() => {
                                             setIsMenuOpen(false);
                                         }}
-                                        role="menuitem"
                                         to="/account"
                                     >
                                         Manage account
@@ -115,7 +129,7 @@ export default function SiteNav() {
                                         onClick={() => {
                                             void handleSignOut();
                                         }}
-                                        role="menuitem"
+                                        title="Log out"
                                         type="button"
                                     >
                                         Log out
@@ -142,43 +156,5 @@ export default function SiteNav() {
                 </nav>
             </div>
         </header>
-    );
-}
-
-function ProfileIcon() {
-    return (
-        <svg
-            aria-hidden="true"
-            fill="none"
-            height="20"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            stroke="currentColor"
-            strokeWidth="2"
-            viewBox="0 0 24 24"
-            width="20"
-        >
-            <circle cx="12" cy="8" r="3.5" />
-            <path d="M5 19c1.8-3 4.2-4.5 7-4.5s5.2 1.5 7 4.5" />
-        </svg>
-    );
-}
-
-function ChevronIcon({ open = false }: { open?: boolean }) {
-    return (
-        <svg
-            aria-hidden="true"
-            className={`transition-transform duration-200 ease-out ${open ? 'rotate-180' : ''}`}
-            fill="none"
-            height="18"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            stroke="currentColor"
-            strokeWidth="2"
-            viewBox="0 0 24 24"
-            width="18"
-        >
-            <path d="m6 9 6 6 6-6" />
-        </svg>
     );
 }

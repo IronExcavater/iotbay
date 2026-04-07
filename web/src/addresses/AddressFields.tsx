@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import clsx from 'clsx';
+import { FiChevronDown } from 'react-icons/fi';
 
 import { sanitizeAddressField } from '../auth/validation';
 import { Button } from '../components/form/Button';
@@ -91,8 +93,6 @@ export function AddressFields({
                     return;
                 }
                 setSuggestions([]);
-            } finally {
-                // no-op: suggestion UI does not show a loading indicator
             }
         }, SEARCH_DEBOUNCE_MS);
 
@@ -201,6 +201,11 @@ export function AddressFields({
                             event.preventDefault();
                             void handleSuggestionSelect(suggestion);
                         }}
+                        title={
+                            suggestion.subtitle
+                                ? `${suggestion.label}, ${suggestion.subtitle}`
+                                : suggestion.label
+                        }
                         type="button"
                     >
                         <span className="font-medium text-slate-900">
@@ -441,18 +446,13 @@ export function AddressFields({
                 type="button"
                 variant="text"
             >
-                <svg
+                <FiChevronDown
                     aria-hidden="true"
-                    className={`h-4 w-4 shrink-0 transition-transform duration-200 ease-out ${showDetails ? 'rotate-180' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="1.75"
-                    viewBox="0 0 24 24"
-                >
-                    <path d="m6 9 6 6 6-6" />
-                </svg>
+                    className={clsx(
+                        'h-4 w-4 shrink-0 transition-transform duration-200 ease-out',
+                        showDetails && 'rotate-180'
+                    )}
+                />
                 <span className="whitespace-nowrap">
                     {showDetails
                         ? 'Hide address details'
@@ -623,6 +623,9 @@ function HiddenAutofillFields({
     onFieldChange: (name: AddressFieldName, value: string) => void;
     values: AddressFormValues;
 }) {
+    // Browsers and password managers often know how to autofill the standard
+    // address fields but not the collapsed search UI, so mirror those fields
+    // off-screen and feed the values back into the real form state.
     return (
         <div aria-hidden="true" className="sr-only">
             <input

@@ -7,6 +7,8 @@ import {
     useState,
     type PropsWithChildren,
 } from 'react';
+import clsx from 'clsx';
+import { FiX } from 'react-icons/fi';
 
 type Toast = {
     id: number;
@@ -100,42 +102,24 @@ function ToastItem({
 
     return (
         <div
-            className={[
+            className={clsx(
                 'pointer-events-auto flex items-start gap-3 rounded bg-slate-950 px-4 py-3 text-white shadow-lg transition-all duration-200',
                 isVisible && !isLeaving
                     ? 'translate-y-0 opacity-100'
                     : '-translate-y-2 opacity-0',
                 'ring-1 ring-white/10',
-            ].join(' ')}
+            )}
         >
             <p className="min-w-0 flex-1 text-sm">{children}</p>
             <button
                 aria-label="Dismiss notification"
                 className="cursor-pointer text-slate-400 transition-colors hover:text-white"
                 onClick={handleDismiss}
+                title="Dismiss notification"
                 type="button"
             >
-                <DismissIcon />
+                <FiX aria-hidden="true" size={16} />
             </button>
         </div>
-    );
-}
-
-function DismissIcon() {
-    return (
-        <svg
-            aria-hidden="true"
-            fill="none"
-            height="16"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            viewBox="0 0 24 24"
-            width="16"
-        >
-            <path d="M6 6l12 12" />
-            <path d="M18 6 6 18" />
-        </svg>
     );
 }
