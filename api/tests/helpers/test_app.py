@@ -25,4 +25,9 @@ def create_test_app_client(
     app.testing = True
     if address_service is not None:
         app.extensions["address_service"] = address_service
-    return app.test_client(), config.database_path
+
+    client = app.test_client()
+    api_key = app.config.get("API_ACCESS_KEY")
+    if isinstance(api_key, str) and api_key:
+        client.environ_base["HTTP_X_API_KEY"] = api_key
+    return client, config.database_path

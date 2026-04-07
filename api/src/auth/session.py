@@ -41,6 +41,8 @@ def current_authenticated_staff_user(*required_permissions: str) -> User:
 
 
 def request_session_token() -> str | None:
+    # The browser stores an opaque HttpOnly session cookie. Routes read the raw
+    # value here, but repositories only ever see the hashed form.
     return stripped_or_none(request.cookies.get(session_cookie_name()))
 
 
@@ -54,6 +56,8 @@ def _load_authenticated_user() -> User:
         raise _authentication_required()
 
     repository = app_extension("user_repository", UserRepository)
+    # Sessions are looked up by hash so the database never stores or compares
+    # the raw cookie value sent by the browser.
     user = repository.select_user_by_session_token_hash(
         session_token_hash=hash_session_token(session_token),
         now_iso=UtcTime.now().iso,

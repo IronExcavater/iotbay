@@ -24,6 +24,8 @@ class DuplicateEmailError(ApiError):
 
 
 class UserRepository(Repository):
+    # A user is split across the base users row plus exactly one detail table:
+    # customers or staff. The helpers below keep those side tables in sync.
     def __init__(self, database_path: str) -> None:
         super().__init__(database_path)
         self._addresses = AddressRepository(database_path)
@@ -187,6 +189,8 @@ class UserRepository(Repository):
         created_at: str,
         expires_at: str,
     ) -> UserSession:
+        # Only the hashed token is persisted so leaking the database still
+        # doesn't reveal the raw browser session cookie value.
         session = UserSession(
             user_id=user_id,
             session_token_hash=session_token_hash,
@@ -512,6 +516,8 @@ class UserRepository(Repository):
         designation: str | None,
         permission: str | None,
     ) -> None:
+        # Customer and staff detail tables are mutually exclusive, so each write
+        # updates the relevant side table and clears the other one.
         if user_type == USER_TYPE_CUSTOMER:
             self._upsert_customer_details(
                 connection,
@@ -538,6 +544,9 @@ class UserRepository(Repository):
         validated_address: ValidatedAddress | None,
         address_line_two: str | None,
     ) -> None:
+        # Address rows are normalized into the shared addresses table, so
+        # customer detail updates may need to create, update, or delete an
+        # address row alongside the customer record.
         current_address_id = self._select_customer_address_id(
             connection,
             user_id=user_id,

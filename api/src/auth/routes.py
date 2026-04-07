@@ -51,6 +51,8 @@ def _verification_payload(
 
 
 def _set_session_cookie(response: Response, session_token: str) -> None:
+    # The browser stores the opaque session token in an HttpOnly cookie; the
+    # frontend never reads or writes this value directly.
     response.set_cookie(
         session_cookie_name(),
         session_token,

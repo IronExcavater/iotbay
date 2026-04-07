@@ -1,3 +1,4 @@
+import hmac
 from http import HTTPStatus
 from typing import TypeVar
 
@@ -5,6 +6,8 @@ from flask import Flask, request
 from flask.typing import ResponseReturnValue
 from pydantic import BaseModel
 from pydantic import ValidationError as PydanticValidationError
+
+API_ACCESS_HEADER_NAME = "x-api-key"
 
 
 class ApiError(Exception):
@@ -35,6 +38,33 @@ class ValidationError(ApiError):
 TRequestModel = TypeVar("TRequestModel", bound=BaseModel)
 
 
+def register_api_access(app: Flask) -> None:
+    # The browser must present the shared app key on every /api request so
+    # backend access is gated before any route-specific auth logic runs.
+    configured_key = str(app.config.get("API_ACCESS_KEY") or "").strip()
+    if not configured_key:
+        raise RuntimeError("API_ACCESS_KEY must be configured")
+
+    @app.before_request
+    def require_api_access() -> None:
+        if request.method == "OPTIONS" or not request.path.startswith("/api"):
+            return
+
+        provided_key = request.headers.get(API_ACCESS_HEADER_NAME, "").strip()
+        if not provided_key:
+            raise ApiError(
+                "api key is required",
+                status_code=HTTPStatus.UNAUTHORIZED,
+                code="API_KEY_REQUIRED",
+            )
+        if not hmac.compare_digest(provided_key, configured_key):
+            raise ApiError(
+                "api key is invalid",
+                status_code=HTTPStatus.UNAUTHORIZED,
+                code="API_KEY_INVALID",
+            )
+
+
 def register_errors(app: Flask) -> None:
     @app.errorhandler(ApiError)
     def handle_api_error(error: ApiError) -> ResponseReturnValue:
@@ -42,6 +72,8 @@ def register_errors(app: Flask) -> None:
 
 
 def parse_request(model: type[TRequestModel]) -> TRequestModel:
+    # Request models are validated once at the HTTP boundary so services can
+    # depend on typed data instead of Flask payload dictionaries.
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
         raise ValidationError("request body must be a JSON object")
