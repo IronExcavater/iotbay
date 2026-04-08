@@ -8,10 +8,6 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 
 import { AddressFields } from '../addresses/AddressFields';
 import { setAddressField, type AddressFieldName } from '../addresses/form';
-import {
-    AuthPageLayout,
-    authPanelClassName,
-} from '../auth/AuthPageLayout';
 import { useAuth } from '../auth/AuthProvider';
 import {
     toAuthErrorState,
@@ -23,9 +19,11 @@ import {
 import { PasswordRuleList } from '../auth/PasswordRuleList';
 import { getBrowserPhoneCountry, validatePhoneNumber } from '../auth/phone';
 import {
+    buildVerifyEmailPath,
     buildForgotPasswordPath,
     buildSignInPath,
     buildSignUpPath,
+    normalizeNextPath,
     resolvePostAuthPath,
 } from '../auth/redirects';
 import {
@@ -47,95 +45,11 @@ import { FormNotice } from '../components/form/FormNotice';
 import { inputClassName } from '../components/form/Input';
 import { PasswordInput } from '../components/form/PasswordInput';
 import { PhoneField } from '../components/form/PhoneField';
+import { PageHeader } from '../components/PageHeader';
 import { useToast } from '../components/toast/ToastProvider';
 import { downloadHtml } from '../services/download';
 
 type AuthPageMode = 'signin' | 'signup' | 'staff';
-type NameFieldName = 'firstName' | 'lastName';
-type PasswordFieldName = 'confirmPassword' | 'password';
-
-type AuthModeConfig = {
-    defaultNextPath: string;
-    passwordAutoComplete: string;
-    passwordPlaceholder: string;
-    submitLabel: string;
-    switchLink: {
-        label: string;
-        to: string;
-    };
-    title: string;
-    userType?: 'staff';
-};
-
-type NameFieldConfig = {
-    autoComplete: string;
-    label: string;
-    name: NameFieldName;
-    placeholder: string;
-    sanitize: (value: string) => string;
-    validate: (value: string) => string | null | undefined;
-};
-
-const AUTH_MODE_CONFIG: Record<AuthPageMode, AuthModeConfig> = {
-    signin: {
-        defaultNextPath: '/',
-        passwordAutoComplete: 'current-password',
-        passwordPlaceholder: 'Enter your password',
-        submitLabel: 'Sign in',
-        switchLink: {
-            label: "Don't have an account? Sign up",
-            to: buildSignUpPath(),
-        },
-        title: 'Sign in',
-    },
-    signup: {
-        defaultNextPath: '/',
-        passwordAutoComplete: 'new-password',
-        passwordPlaceholder: 'Choose a password',
-        submitLabel: 'Create account',
-        switchLink: {
-            label: 'Have an account? Sign in',
-            to: buildSignInPath(),
-        },
-        title: 'Sign up',
-    },
-    staff: {
-        defaultNextPath: '/admin',
-        passwordAutoComplete: 'current-password',
-        passwordPlaceholder: 'Enter your password',
-        submitLabel: 'Sign in',
-        switchLink: {
-            label: 'Not staff? Sign in here',
-            to: buildSignInPath(),
-        },
-        title: 'Staff sign in',
-        userType: 'staff',
-    },
-};
-
-const DEFAULT_PASSWORD_VISIBILITY: Record<PasswordFieldName, boolean> = {
-    confirmPassword: false,
-    password: false,
-};
-
-const SIGN_UP_NAME_FIELDS: readonly NameFieldConfig[] = [
-    {
-        autoComplete: 'given-name',
-        label: 'First name',
-        name: 'firstName',
-        placeholder: 'Jane',
-        sanitize: sanitizeFirstName,
-        validate: validateFirstNameOnBlur,
-    },
-    {
-        autoComplete: 'family-name',
-        label: 'Last name',
-        name: 'lastName',
-        placeholder: 'Doe',
-        sanitize: sanitizeLastName,
-        validate: validateLastNameOnBlur,
-    },
-];
 
 function createDefaultValues(overrides: Partial<FormValues> = {}): FormValues {
     return {
@@ -166,40 +80,41 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
     const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
     const [formError, setFormError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [passwordVisibility, setPasswordVisibility] = useState(
-        DEFAULT_PASSWORD_VISIBILITY
-    );
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    const modeConfig = AUTH_MODE_CONFIG[mode];
     const isSignUp = mode === 'signup';
+    const isStaff = mode === 'staff';
     const prefilledEmail = searchParams.get('email')?.trim() ?? '';
-    const nextPath =
-        searchParams.get('next')?.trim() || modeConfig.defaultNextPath;
-    const forgotPasswordPath = buildForgotPasswordPath({
-        email: values.email,
-        userType: modeConfig.userType,
-    });
+    const nextPath = normalizeNextPath(
+        searchParams.get('next'),
+        isStaff ? '/admin' : '/'
+    );
     const passwordRules = getPasswordRules(values.password, {
         email: values.email,
         firstName: values.firstName,
         lastName: values.lastName,
     });
-    const validationOptions = {
-        isSignUp,
-        passwordRulesMet: passwordRules.every((rule) => rule.met),
-    };
+    const pageCopy = getAuthPageCopy(mode, nextPath);
+    const forgotPasswordPath = buildForgotPasswordPath({
+        email: values.email,
+        nextPath,
+        userType: isStaff ? 'staff' : undefined,
+    });
 
     useEffect(() => {
+        // Route changes can carry a success message or a prefilled email.
+        // Reset the transient form state, but keep any forwarded email.
         setFieldErrors({});
         setFormError(null);
         setValues((current) =>
             createDefaultValues({ email: prefilledEmail || current.email })
         );
-        setPasswordVisibility(DEFAULT_PASSWORD_VISIBILITY);
+        setShowPassword(false);
+        setShowConfirmPassword(false);
 
-        if (typeof location.state?.successMessage !== 'string') {
+        if (typeof location.state?.successMessage !== 'string')
             return;
-        }
 
         showToast(location.state.successMessage);
         navigate(location.pathname + location.search, {
@@ -215,8 +130,19 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
         showToast,
     ]);
 
-    function getValidationErrors(nextValues: FormValues = values) {
-        return validateAuthForm(nextValues, validationOptions);
+    function updateValues(patch: Partial<FormValues>) {
+        setValues((current) => ({
+            ...current,
+            ...patch,
+        }));
+    }
+
+    function resetForm() {
+        setFieldErrors({});
+        setFormError(null);
+        setValues(createDefaultValues());
+        setShowPassword(false);
+        setShowConfirmPassword(false);
     }
 
     function setFieldError(name: keyof FieldErrors, error?: string | null) {
@@ -226,110 +152,45 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
         }));
     }
 
-    function patchValues(patch: Partial<FormValues>) {
-        setValues((current) => ({
-            ...current,
-            ...patch,
-        }));
-    }
-
-    function togglePasswordVisibility(name: PasswordFieldName) {
-        setPasswordVisibility((current) => ({
-            ...current,
-            [name]: !current[name],
-        }));
-    }
-
-    function resetForm() {
-        setFieldErrors({});
-        setFormError(null);
-        setValues(createDefaultValues());
-        setPasswordVisibility(DEFAULT_PASSWORD_VISIBILITY);
-    }
-
-    function syncConfirmPasswordError(
-        confirmPassword: string,
-        password: string
-    ) {
-        setFieldError(
-            'confirmPassword',
-            getConfirmPasswordError(confirmPassword, password)
-        );
-    }
-
-    function handleNameChange(
-        field: Pick<NameFieldConfig, 'name' | 'sanitize'>,
-        event: ChangeEvent<HTMLInputElement>
-    ) {
-        patchValues({
-            [field.name]: field.sanitize(event.target.value),
-        });
-    }
-
-    function handleNameBlur(
-        field: Pick<NameFieldConfig, 'name' | 'validate'>
-    ) {
-        setFieldError(field.name, field.validate(values[field.name]));
-    }
-
-    function handleEmailBlur() {
-        setFieldError('email', validateEmail(values.email));
-    }
-
     function handleEmailChange(event: ChangeEvent<HTMLInputElement>) {
-        patchValues({
+        updateValues({
             email: sanitizeEmail(event.target.value),
         });
     }
 
-    function handlePhoneBlur() {
-        setFieldError(
-            'phoneNumber',
-            values.phoneNumber.trim()
-                ? validatePhoneNumber(values.phoneNumber, values.phoneCountry)
-                : null
-        );
-    }
-
-    function handlePhoneCountryChange(phoneCountry: FormValues['phoneCountry']) {
-        patchValues({ phoneCountry });
-    }
-
-    function handlePhoneNumberChange(phoneNumber: string) {
-        patchValues({ phoneNumber });
-    }
-
-    function handleAddressFieldChange(name: AddressFieldName, value: string) {
-        setValues((current) => setAddressField(current, name, value));
-    }
-
-    function handlePasswordBlur() {
-        if (!isSignUp || !values.password) {
-            return;
-        }
-
-        setFieldError('password', getValidationErrors().password);
-    }
-
     function handlePasswordChange(event: ChangeEvent<HTMLInputElement>) {
         const password = sanitizePasswordInput(event.target.value);
-        patchValues({ password });
+        updateValues({ password });
 
-        if (isSignUp && values.confirmPassword) {
-            syncConfirmPasswordError(values.confirmPassword, password);
-        }
-    }
+        if (!isSignUp || !values.confirmPassword)
+            return;
 
-    function handleConfirmPasswordBlur() {
-        syncConfirmPasswordError(values.confirmPassword, values.password);
+        setFieldError(
+            'confirmPassword',
+            getConfirmPasswordError(values.confirmPassword, password)
+        );
     }
 
     function handleConfirmPasswordChange(
         event: ChangeEvent<HTMLInputElement>
     ) {
         const confirmPassword = sanitizePasswordInput(event.target.value);
-        patchValues({ confirmPassword });
-        syncConfirmPasswordError(confirmPassword, values.password);
+        updateValues({ confirmPassword });
+        setFieldError(
+            'confirmPassword',
+            getConfirmPasswordError(confirmPassword, values.password)
+        );
+    }
+
+    function handleAddressFieldChange(name: AddressFieldName, value: string) {
+        setValues((current) => setAddressField(current, name, value));
+    }
+
+    function getValidationErrors(nextValues: FormValues = values) {
+        return validateAuthForm(nextValues, {
+            isSignUp,
+            passwordRulesMet: passwordRules.every((rule) => rule.met),
+        });
     }
 
     async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
@@ -337,6 +198,7 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
 
         const nextFieldErrors = getValidationErrors();
         setFieldErrors(nextFieldErrors);
+
         if (Object.values(nextFieldErrors).some(Boolean)) {
             setFormError('Check the highlighted fields');
             return;
@@ -350,14 +212,14 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
                 const result = await register(toRegisterInput(values));
                 downloadHtml(result.download);
                 resetForm();
-                navigate(buildSignupVerificationPath(result));
+                navigate(buildSignupVerificationPath(result, nextPath));
                 return;
             }
 
             const authenticatedUser = await login({
                 email: values.email.trim(),
                 password: values.password,
-                userType: modeConfig.userType,
+                userType: isStaff ? 'staff' : undefined,
             });
             navigate(resolvePostAuthPath(authenticatedUser, nextPath));
         } catch (error) {
@@ -370,9 +232,11 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
     }
 
     return (
-        <AuthPageLayout title={modeConfig.title}>
+        <section className="mx-auto grid max-w-xl gap-6">
+            <PageHeader title={pageCopy.title} />
+
             <form
-                className={authPanelClassName}
+                className="grid gap-4 rounded border border-slate-200 bg-white p-5"
                 noValidate
                 onSubmit={handleSubmit}
             >
@@ -383,39 +247,90 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
                 {isSignUp ? (
                     <>
                         <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
-                            {SIGN_UP_NAME_FIELDS.map((field) => (
-                                <Field
-                                    error={fieldErrors[field.name]}
-                                    key={field.name}
-                                    label={field.label}
-                                    required
-                                >
-                                    <input
-                                        autoComplete={field.autoComplete}
-                                        className={inputClassName(
-                                            Boolean(fieldErrors[field.name])
-                                        )}
-                                        maxLength={NAME_MAX_LENGTH}
-                                        onBlur={() => {
-                                            handleNameBlur(field);
-                                        }}
-                                        onChange={(event) => {
-                                            handleNameChange(field, event);
-                                        }}
-                                        placeholder={field.placeholder}
-                                        value={values[field.name]}
-                                    />
-                                </Field>
-                            ))}
+                            <Field
+                                error={fieldErrors.firstName}
+                                label="First name"
+                                required
+                            >
+                                <input
+                                    autoComplete="given-name"
+                                    className={inputClassName(
+                                        Boolean(fieldErrors.firstName)
+                                    )}
+                                    maxLength={NAME_MAX_LENGTH}
+                                    onBlur={() => {
+                                        setFieldError(
+                                            'firstName',
+                                            validateFirstNameOnBlur(
+                                                values.firstName
+                                            )
+                                        );
+                                    }}
+                                    onChange={(event) => {
+                                        updateValues({
+                                            firstName: sanitizeFirstName(
+                                                event.target.value
+                                            ),
+                                        });
+                                    }}
+                                    placeholder="Jane"
+                                    value={values.firstName}
+                                />
+                            </Field>
+
+                            <Field
+                                error={fieldErrors.lastName}
+                                label="Last name"
+                                required
+                            >
+                                <input
+                                    autoComplete="family-name"
+                                    className={inputClassName(
+                                        Boolean(fieldErrors.lastName)
+                                    )}
+                                    maxLength={NAME_MAX_LENGTH}
+                                    onBlur={() => {
+                                        setFieldError(
+                                            'lastName',
+                                            validateLastNameOnBlur(
+                                                values.lastName
+                                            )
+                                        );
+                                    }}
+                                    onChange={(event) => {
+                                        updateValues({
+                                            lastName: sanitizeLastName(
+                                                event.target.value
+                                            ),
+                                        });
+                                    }}
+                                    placeholder="Doe"
+                                    value={values.lastName}
+                                />
+                            </Field>
                         </div>
 
                         <PhoneField
                             country={values.phoneCountry}
                             error={fieldErrors.phoneNumber}
                             label="Phone number"
-                            onBlur={handlePhoneBlur}
-                            onCountryChange={handlePhoneCountryChange}
-                            onNumberChange={handlePhoneNumberChange}
+                            onBlur={() => {
+                                setFieldError(
+                                    'phoneNumber',
+                                    values.phoneNumber.trim()
+                                        ? validatePhoneNumber(
+                                              values.phoneNumber,
+                                              values.phoneCountry
+                                          )
+                                        : null
+                                );
+                            }}
+                            onCountryChange={(phoneCountry) => {
+                                updateValues({ phoneCountry });
+                            }}
+                            onNumberChange={(phoneNumber) => {
+                                updateValues({ phoneNumber });
+                            }}
                             value={values.phoneNumber}
                         />
 
@@ -433,7 +348,9 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
                         autoComplete="email"
                         className={inputClassName(Boolean(fieldErrors.email))}
                         maxLength={EMAIL_MAX_LENGTH}
-                        onBlur={handleEmailBlur}
+                        onBlur={() => {
+                            setFieldError('email', validateEmail(values.email));
+                        }}
                         onChange={handleEmailChange}
                         placeholder="jane.doe@email.com"
                         type="email"
@@ -443,19 +360,34 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
 
                 <Field error={fieldErrors.password} label="Password" required>
                     <PasswordInput
-                        autoComplete={modeConfig.passwordAutoComplete}
+                        autoComplete={
+                            isSignUp ? 'new-password' : 'current-password'
+                        }
                         hasError={Boolean(fieldErrors.password)}
                         maxLength={PASSWORD_MAX_LENGTH}
                         name="password"
-                        onBlur={handlePasswordBlur}
+                        onBlur={() => {
+                            if (!isSignUp || !values.password)
+                                return;
+
+                            setFieldError(
+                                'password',
+                                getValidationErrors().password
+                            );
+                        }}
                         onChange={handlePasswordChange}
                         onToggle={() => {
-                            togglePasswordVisibility('password');
+                            setShowPassword((current) => !current);
                         }}
-                        placeholder={modeConfig.passwordPlaceholder}
-                        showPassword={passwordVisibility.password}
+                        placeholder={
+                            isSignUp
+                                ? 'Choose a password'
+                                : 'Enter your password'
+                        }
+                        showPassword={showPassword}
                         value={values.password}
                     />
+
                     {isSignUp ? (
                         <PasswordRuleList rules={passwordRules} />
                     ) : null}
@@ -472,13 +404,21 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
                             hasError={Boolean(fieldErrors.confirmPassword)}
                             maxLength={PASSWORD_MAX_LENGTH}
                             name="confirmPassword"
-                            onBlur={handleConfirmPasswordBlur}
+                            onBlur={() => {
+                                setFieldError(
+                                    'confirmPassword',
+                                    getConfirmPasswordError(
+                                        values.confirmPassword,
+                                        values.password
+                                    )
+                                );
+                            }}
                             onChange={handleConfirmPasswordChange}
                             onToggle={() => {
-                                togglePasswordVisibility('confirmPassword');
+                                setShowConfirmPassword((current) => !current);
                             }}
                             placeholder="Re-enter your password"
-                            showPassword={passwordVisibility.confirmPassword}
+                            showPassword={showConfirmPassword}
                             value={values.confirmPassword}
                         />
                     </Field>
@@ -494,27 +434,56 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
                     type="submit"
                     variant="primary"
                 >
-                    {modeConfig.submitLabel}
+                    {pageCopy.submitLabel}
                 </Button>
 
-                <Link
-                    className={textButtonClassName}
-                    to={modeConfig.switchLink.to}
-                >
-                    {modeConfig.switchLink.label}
+                <Link className={textButtonClassName} to={pageCopy.switchLink.to}>
+                    {pageCopy.switchLink.label}
                 </Link>
             </form>
-        </AuthPageLayout>
+        </section>
     );
+}
+
+function getAuthPageCopy(mode: AuthPageMode, nextPath: string) {
+    if (mode === 'signup') {
+        return {
+            submitLabel: 'Create account',
+            switchLink: {
+                label: 'Have an account? Sign in',
+                to: buildSignInPath({ nextPath }),
+            },
+            title: 'Sign up',
+        };
+    }
+
+    if (mode === 'staff') {
+        return {
+            submitLabel: 'Sign in',
+            switchLink: {
+                label: 'Not staff? Sign in here',
+                to: buildSignInPath({ nextPath }),
+            },
+            title: 'Staff sign in',
+        };
+    }
+
+    return {
+        submitLabel: 'Sign in',
+        switchLink: {
+            label: "Don't have an account? Sign up",
+            to: buildSignUpPath({ nextPath }),
+        },
+        title: 'Sign in',
+    };
 }
 
 function getConfirmPasswordError(
     confirmPassword: string,
     password: string
 ): string | undefined {
-    if (!confirmPassword) {
+    if (!confirmPassword)
         return 'Confirm password is required';
-    }
 
     return confirmPassword !== password ? 'Passwords do not match' : undefined;
 }
@@ -522,15 +491,11 @@ function getConfirmPasswordError(
 function buildSignupVerificationPath(result: {
     download?: { filename: string; html: string };
     verification: { email: string };
-}) {
-    // Local development may return the verification email as a downloadable
-    // HTML artifact, so carry that state forward to the verify screen.
-    const query = new URLSearchParams({
+}, nextPath: string) {
+    return buildVerifyEmailPath({
         context: 'signup',
+        downloaded: Boolean(result.download),
         email: result.verification.email,
+        nextPath,
     });
-    if (result.download) {
-        query.set('downloaded', '1');
-    }
-    return `/verify-email?${query.toString()}`;
 }

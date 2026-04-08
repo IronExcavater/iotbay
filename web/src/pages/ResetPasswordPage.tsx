@@ -2,12 +2,8 @@ import { useEffect, useState, type SubmitEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { authApi } from '../auth/api';
-import {
-    AuthPageLayout,
-    authPanelClassName,
-} from '../auth/AuthPageLayout';
 import { PasswordRuleList } from '../auth/PasswordRuleList';
-import { buildSignInPath } from '../auth/redirects';
+import { buildSignInPath, normalizeNextPath } from '../auth/redirects';
 import {
     EMAIL_MAX_LENGTH,
     getPasswordRules,
@@ -22,6 +18,7 @@ import { Field } from '../components/form/Field';
 import { FormNotice } from '../components/form/FormNotice';
 import { inputClassName } from '../components/form/Input';
 import { PasswordInput } from '../components/form/PasswordInput';
+import { PageHeader } from '../components/PageHeader';
 import { useToast } from '../components/toast/ToastProvider';
 import { downloadHtmlAndNotify } from '../services/download';
 import {
@@ -29,44 +26,6 @@ import {
     normalizeMessage,
     resolveBackendError,
 } from '../services/http';
-
-type ResetPageMode = 'forgot' | 'reset';
-type PasswordFieldName = 'confirmPassword' | 'password';
-type ResetFormValues = {
-    confirmPassword: string;
-    email: string;
-    password: string;
-};
-
-const RESET_PAGE_CONFIG: Record<
-    ResetPageMode,
-    {
-        submitLabel: string;
-        title: string;
-    }
-> = {
-    forgot: {
-        submitLabel: 'Send reset link',
-        title: 'Forgot password',
-    },
-    reset: {
-        submitLabel: 'Reset password',
-        title: 'Reset password',
-    },
-};
-
-const DEFAULT_PASSWORD_VISIBILITY: Record<PasswordFieldName, boolean> = {
-    confirmPassword: false,
-    password: false,
-};
-
-function createResetFormValues(email = ''): ResetFormValues {
-    return {
-        confirmPassword: '',
-        email,
-        password: '',
-    };
-}
 
 export default function ResetPasswordPage() {
     const navigate = useNavigate();
@@ -77,63 +36,46 @@ export default function ResetPasswordPage() {
     const userType = searchParams.get('userType')?.trim() === 'staff'
         ? 'staff'
         : undefined;
-    const mode: ResetPageMode = token ? 'reset' : 'forgot';
-    const pageConfig = RESET_PAGE_CONFIG[mode];
-
-    const [values, setValues] = useState<ResetFormValues>(() =>
-        createResetFormValues(initialEmail)
+    const nextPath = normalizeNextPath(
+        searchParams.get('next'),
+        userType === 'staff' ? '/admin' : '/'
     );
+
+    const isResetMode = Boolean(token);
+    const [email, setEmail] = useState(initialEmail);
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [passwordVisibility, setPasswordVisibility] = useState(
-        DEFAULT_PASSWORD_VISIBILITY
-    );
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    const { confirmPassword, email, password } = values;
-    const signInPath = buildSignInPath({ email, userType });
+    const signInPath = buildSignInPath({ email, nextPath, userType });
     const passwordRules = getPasswordRules(password);
 
     useEffect(() => {
-        setValues(createResetFormValues(initialEmail));
+        setEmail(initialEmail);
+        setPassword('');
+        setConfirmPassword('');
         setError(null);
         setIsSubmitting(false);
-        setPasswordVisibility(DEFAULT_PASSWORD_VISIBILITY);
+        setShowPassword(false);
+        setShowConfirmPassword(false);
     }, [initialEmail, token, userType]);
 
-    function updateValue(name: keyof ResetFormValues, value: string) {
-        setValues((current) => ({
-            ...current,
-            [name]: value,
-        }));
-    }
-
-    function togglePasswordVisibility(name: PasswordFieldName) {
-        setPasswordVisibility((current) => ({
-            ...current,
-            [name]: !current[name],
-        }));
-    }
-
-    function handleEmailBlur() {
-        setError(validateEmail(email));
-    }
-
-    function handleEmailChange(nextEmail: string) {
-        updateValue('email', nextEmail);
-        setError(null);
-    }
-
     function handlePasswordChange(nextPassword: string) {
-        updateValue('password', nextPassword);
-        setError(
-            confirmPassword
-                ? getResetConfirmPasswordError(confirmPassword, nextPassword)
-                : null
-        );
+        setPassword(nextPassword);
+
+        if (!confirmPassword) {
+            setError(null);
+            return;
+        }
+
+        setError(getResetConfirmPasswordError(confirmPassword, nextPassword));
     }
 
     function handleConfirmPasswordChange(nextConfirmPassword: string) {
-        updateValue('confirmPassword', nextConfirmPassword);
+        setConfirmPassword(nextConfirmPassword);
         setError(getResetConfirmPasswordError(nextConfirmPassword, password));
     }
 
@@ -143,10 +85,11 @@ export default function ResetPasswordPage() {
         const validationError = getResetFormError({
             confirmPassword,
             email,
-            isResetMode: mode === 'reset',
+            isResetMode,
             password,
             passwordRulesMet: passwordRules.every((rule) => rule.met),
         });
+
         if (validationError) {
             setError(validationError);
             return;
@@ -156,7 +99,7 @@ export default function ResetPasswordPage() {
         setIsSubmitting(true);
 
         try {
-            if (mode === 'reset') {
+            if (isResetMode) {
                 await authApi.resetPassword({ password, token });
                 navigate(signInPath, {
                     replace: true,
@@ -181,15 +124,17 @@ export default function ResetPasswordPage() {
     }
 
     return (
-        <AuthPageLayout title={pageConfig.title}>
+        <section className="mx-auto grid max-w-xl gap-6">
+            <PageHeader title={isResetMode ? 'Reset password' : 'Forgot password'} />
+
             <form
-                className={authPanelClassName}
+                className="grid gap-4 rounded border border-slate-200 bg-white p-5"
                 noValidate
                 onSubmit={handleSubmit}
             >
                 {error ? <FormNotice tone="error">{error}</FormNotice> : null}
 
-                {mode === 'reset' ? (
+                {isResetMode ? (
                     <>
                         <Field label="New password" required>
                             <PasswordInput
@@ -205,12 +150,13 @@ export default function ResetPasswordPage() {
                                     );
                                 }}
                                 onToggle={() => {
-                                    togglePasswordVisibility('password');
+                                    setShowPassword((current) => !current);
                                 }}
                                 placeholder="Choose a new password"
-                                showPassword={passwordVisibility.password}
+                                showPassword={showPassword}
                                 value={password}
                             />
+
                             <PasswordRuleList rules={passwordRules} />
                         </Field>
 
@@ -228,12 +174,10 @@ export default function ResetPasswordPage() {
                                     );
                                 }}
                                 onToggle={() => {
-                                    togglePasswordVisibility('confirmPassword');
+                                    setShowConfirmPassword((current) => !current);
                                 }}
                                 placeholder="Re-enter your new password"
-                                showPassword={
-                                    passwordVisibility.confirmPassword
-                                }
+                                showPassword={showConfirmPassword}
                                 value={confirmPassword}
                             />
                         </Field>
@@ -245,11 +189,12 @@ export default function ResetPasswordPage() {
                             className={inputClassName(Boolean(error))}
                             maxLength={EMAIL_MAX_LENGTH}
                             name="email"
-                            onBlur={handleEmailBlur}
+                            onBlur={() => {
+                                setError(validateEmail(email));
+                            }}
                             onChange={(event) => {
-                                handleEmailChange(
-                                    sanitizeEmail(event.target.value)
-                                );
+                                setEmail(sanitizeEmail(event.target.value));
+                                setError(null);
                             }}
                             placeholder="jane.doe@email.com"
                             type="email"
@@ -264,14 +209,14 @@ export default function ResetPasswordPage() {
                     type="submit"
                     variant="primary"
                 >
-                    {pageConfig.submitLabel}
+                    {isResetMode ? 'Reset password' : 'Send reset link'}
                 </Button>
 
                 <Link className={textButtonClassName} to={signInPath}>
                     Back to sign in
                 </Link>
             </form>
-        </AuthPageLayout>
+        </section>
     );
 }
 
@@ -288,26 +233,22 @@ function getResetFormError({
     password: string;
     passwordRulesMet: boolean;
 }) {
-    if (!isResetMode) {
+    if (!isResetMode)
         return validateEmail(email);
-    }
 
-    if (!password) {
+    if (!password)
         return 'Password is required';
-    }
 
     const passwordError = PASSWORD_VALIDATOR.tryValidate(password).error?.message;
-    if (passwordError) {
+
+    if (passwordError)
         return normalizeMessage(passwordError);
-    }
 
-    if (!passwordRulesMet) {
+    if (!passwordRulesMet)
         return 'Password requirements are not met';
-    }
 
-    if (!confirmPassword) {
+    if (!confirmPassword)
         return 'Confirm password is required';
-    }
 
     return getResetConfirmPasswordError(confirmPassword, password);
 }
@@ -335,9 +276,8 @@ function getResetConfirmPasswordError(
     confirmPassword: string,
     password: string
 ) {
-    if (!confirmPassword) {
+    if (!confirmPassword)
         return null;
-    }
 
     return confirmPassword !== password ? 'Passwords do not match' : null;
 }
