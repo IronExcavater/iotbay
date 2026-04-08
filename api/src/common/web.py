@@ -84,6 +84,13 @@ def parse_request(model: type[TRequestModel]) -> TRequestModel:
         raise ValidationError(_request_validation_message(error)) from error
 
 
+def parse_query(model: type[TRequestModel]) -> TRequestModel:
+    try:
+        return model.model_validate(request.args.to_dict(flat=True))
+    except PydanticValidationError as error:
+        raise ValidationError(_request_validation_message(error)) from error
+
+
 def request_locale() -> str:
     locale = request.accept_languages.best or ""
     normalized = locale.replace("-", "_").strip()

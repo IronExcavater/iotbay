@@ -8,7 +8,7 @@ import {
     type PropsWithChildren,
 } from 'react';
 import clsx from 'clsx';
-import { FiX } from 'react-icons/fi';
+import { FaXmark } from 'react-icons/fa6';
 
 type Toast = {
     id: number;
@@ -118,7 +118,7 @@ function ToastItem({
                 title="Dismiss notification"
                 type="button"
             >
-                <FiX aria-hidden="true" size={16} />
+                <FaXmark aria-hidden="true" size={16} />
             </button>
         </div>
     );

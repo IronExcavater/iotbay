@@ -1,6 +1,6 @@
 import type { ChangeEventHandler, FocusEventHandler } from 'react';
 import clsx from 'clsx';
-import { FiEye, FiEyeOff } from 'react-icons/fi';
+import { FaEye, FaEyeSlash } from 'react-icons/fa6';
 
 import { inputClassName } from './Input';
 
@@ -50,9 +50,9 @@ export function PasswordInput({
                 type="button"
             >
                 {showPassword ? (
-                    <FiEyeOff aria-hidden="true" size={20} />
+                    <FaEyeSlash aria-hidden="true" size={20} />
                 ) : (
-                    <FiEye aria-hidden="true" size={20} />
+                    <FaEye aria-hidden="true" size={20} />
                 )}
             </button>
         </div>

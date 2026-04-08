@@ -397,10 +397,18 @@ class AuthService:
         )
         return token, expires_at
 
-    def _token_url(self, path: str, token: str, *, user_type: str = "") -> str:
+    def _token_url(
+        self,
+        path: str,
+        token: str,
+        *,
+        user_type: str = "",
+    ) -> str:
         query = {"token": token}
+
         if user_type:
             query["userType"] = user_type
+
         return f"{self.web_url.rstrip('/')}{path}?{urlencode(query)}"
 
     def _require_user_token(

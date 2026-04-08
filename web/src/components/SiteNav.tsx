@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { FiChevronDown, FiUser } from 'react-icons/fi';
+import { FaChevronDown, FaUser } from 'react-icons/fa6';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthProvider';
@@ -10,30 +10,32 @@ export default function SiteNav() {
     const { logout, user } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement | null>(null);
-    const profileLabel = user
-        ? `${user.firstName} ${user.lastName}`
-        : 'Profile';
-    const showProfileMenu = user !== null;
+
+    const profileLabel = user ? `${user.firstName} ${user.lastName}` : 'Profile';
+    const menuLabel = isMenuOpen ? 'Close account menu' : 'Open account menu';
+    const showStaffPortal = user?.userType === 'staff';
+
+    function closeMenu() {
+        setIsMenuOpen(false);
+    }
 
     useEffect(() => {
-        if (!isMenuOpen) {
+        if (!isMenuOpen)
             return;
-        }
 
         function handlePointerDown(event: MouseEvent) {
-            if (!menuRef.current?.contains(event.target as Node)) {
-                setIsMenuOpen(false);
-            }
+            if (!menuRef.current?.contains(event.target as Node))
+                closeMenu();
         }
 
         function handleKeyDown(event: KeyboardEvent) {
-            if (event.key === 'Escape') {
-                setIsMenuOpen(false);
-            }
+            if (event.key === 'Escape')
+                closeMenu();
         }
 
         window.addEventListener('mousedown', handlePointerDown);
         window.addEventListener('keydown', handleKeyDown);
+
         return () => {
             window.removeEventListener('mousedown', handlePointerDown);
             window.removeEventListener('keydown', handleKeyDown);
@@ -41,11 +43,11 @@ export default function SiteNav() {
     }, [isMenuOpen]);
 
     useEffect(() => {
-        setIsMenuOpen(false);
-    }, [showProfileMenu]);
+        closeMenu();
+    }, [user]);
 
     async function handleSignOut() {
-        setIsMenuOpen(false);
+        closeMenu();
         await logout();
         navigate('/');
     }
@@ -60,6 +62,7 @@ export default function SiteNav() {
                     <span className="inline-block transition-[letter-spacing,transform] duration-200 ease-out group-hover:tracking-[0.24em] group-focus-visible:-translate-y-0.5 group-focus-visible:tracking-[0.24em]">
                         IoTBay
                     </span>
+
                     <span
                         aria-hidden="true"
                         className="absolute right-3 bottom-0 left-2 h-0.5 origin-left scale-x-0 rounded-full bg-slate-900 transition-transform duration-200 ease-out group-hover:scale-x-100 group-focus-visible:scale-x-100"
@@ -67,30 +70,22 @@ export default function SiteNav() {
                 </Link>
 
                 <nav className="flex items-center gap-3 text-sm">
-                    {showProfileMenu ? (
+                    {user ? (
                         <div className="relative" ref={menuRef}>
                             <button
-                                aria-label={
-                                    isMenuOpen
-                                        ? 'Close account menu'
-                                        : 'Open account menu'
-                                }
+                                aria-label={menuLabel}
                                 className="flex items-center gap-2 rounded border border-slate-300 px-3 py-2 text-slate-700 hover:bg-slate-100"
                                 onClick={() => {
                                     setIsMenuOpen((current) => !current);
                                 }}
-                                title={
-                                    isMenuOpen
-                                        ? 'Close account menu'
-                                        : 'Open account menu'
-                                }
+                                title={menuLabel}
                                 type="button"
                             >
-                                <FiUser aria-hidden="true" size={18} />
+                                <FaUser aria-hidden="true" size={18} />
                                 <span className="hidden sm:inline">
                                     {profileLabel}
                                 </span>
-                                <FiChevronDown
+                                <FaChevronDown
                                     aria-hidden="true"
                                     className={clsx(
                                         'transition-transform duration-200 ease-out',
@@ -101,29 +96,25 @@ export default function SiteNav() {
                             </button>
 
                             {isMenuOpen ? (
-                                <div
-                                    className="absolute top-full right-0 z-10 mt-2 grid min-w-48 gap-1 rounded border border-slate-200 bg-white p-2 shadow-sm"
-                                >
-                                    {user.userType === 'staff' ? (
+                                <div className="absolute top-full right-0 z-10 mt-2 grid min-w-48 gap-1 rounded border border-slate-200 bg-white p-2 shadow-sm">
+                                    {showStaffPortal ? (
                                         <Link
                                             className="rounded px-3 py-2 text-left hover:bg-slate-100"
-                                            onClick={() => {
-                                                setIsMenuOpen(false);
-                                            }}
+                                            onClick={closeMenu}
                                             to="/admin"
                                         >
                                             Staff portal
                                         </Link>
                                     ) : null}
+
                                     <Link
                                         className="rounded px-3 py-2 text-left hover:bg-slate-100"
-                                        onClick={() => {
-                                            setIsMenuOpen(false);
-                                        }}
+                                        onClick={closeMenu}
                                         to="/account"
                                     >
                                         Manage account
                                     </Link>
+
                                     <button
                                         className="rounded px-3 py-2 text-left hover:bg-slate-100"
                                         onClick={() => {
@@ -141,13 +132,14 @@ export default function SiteNav() {
                         <>
                             <Link
                                 className="rounded border border-slate-300 px-3 py-2 hover:bg-slate-100"
-                                to="/auth?mode=signin"
+                                to="/sign-in"
                             >
                                 Sign in
                             </Link>
+
                             <Link
                                 className="rounded bg-slate-900 px-3 py-2 text-white hover:bg-slate-700"
-                                to="/auth?mode=signup"
+                                to="/sign-up"
                             >
                                 Sign up
                             </Link>
