@@ -2,11 +2,7 @@ import type { ReactNode } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 
 import { useAuth } from './AuthProvider';
-import {
-    buildSignInPath,
-    canAccessStaffPortal,
-    resolvePostAuthPath,
-} from './redirects';
+import { buildSignInPath, canAccessStaffPortal, resolvePostAuthPath } from './redirects';
 
 export type ProtectedRouteAccess = 'authenticated' | 'guest' | 'staff';
 
@@ -15,12 +11,6 @@ interface ProtectedRouteProps {
     children?: ReactNode;
 }
 
-const loadingMessages: Record<ProtectedRouteAccess, string> = {
-    authenticated: 'Checking your session',
-    guest: 'Checking your session',
-    staff: 'Checking staff access',
-};
-
 export function ProtectedRoute({
     access = 'authenticated',
     children,
@@ -28,15 +18,11 @@ export function ProtectedRoute({
     const { isLoading, user } = useAuth();
     const location = useLocation();
     const requestedPath = location.pathname + location.search;
-
-    if (isLoading) {
-        return <p className="py-8 text-slate-500">{loadingMessages[access]}</p>;
-    }
+    const content = children ?? <Outlet />;
 
     if (access === 'guest') {
-        if (user === null) {
-            return children;
-        }
+        if (user === null)
+            return content;
 
         return (
             <Navigate
@@ -48,6 +34,9 @@ export function ProtectedRoute({
             />
         );
     }
+
+    if (isLoading)
+        return null;
 
     if (user === null) {
         return (
@@ -65,5 +54,5 @@ export function ProtectedRoute({
         return <Navigate replace to="/account" />;
     }
 
-    return children ?? <Outlet />;
+    return content;
 }

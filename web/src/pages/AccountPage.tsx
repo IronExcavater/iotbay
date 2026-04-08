@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type SubmitEvent } from 'react';
+import { useEffect, useState, type SubmitEvent } from 'react';
 import type { CountryCode } from 'libphonenumber-js';
 import { useNavigate } from 'react-router-dom';
 
@@ -16,6 +16,7 @@ import {
     toEditablePhoneNumber,
     validatePhoneNumber,
 } from '../auth/phone';
+import { buildVerifyEmailPath } from '../auth/redirects';
 import {
     EMAIL_MAX_LENGTH,
     NAME_MAX_LENGTH,
@@ -37,7 +38,6 @@ import { FormNotice } from '../components/form/FormNotice';
 import { inputClassName } from '../components/form/Input';
 import { PasswordInput } from '../components/form/PasswordInput';
 import { PhoneField } from '../components/form/PhoneField';
-import { useEnterSubmit } from '../components/form/useEnterSubmit';
 import { useToast } from '../components/toast/ToastProvider';
 import { downloadHtml } from '../services/download';
 import { backendErrorMessage, resolveBackendError } from '../services/http';
@@ -79,7 +79,6 @@ const DEFAULT_VALUES: ProfileValues = {
 };
 
 export default function AccountPage() {
-    const formRef = useRef<HTMLFormElement | null>(null);
     const navigate = useNavigate();
     const { updateMe, user } = useAuth();
     const { showToast } = useToast();
@@ -126,18 +125,6 @@ export default function AccountPage() {
     const isCustomer = user?.userType === 'customer';
     const isStaff = user?.userType === 'staff';
     const hasChanges = hasProfileChanges(values, initialValues);
-    const enterSubmit = useEnterSubmit({
-        canSubmit: () =>
-            hasChanges &&
-            !isSubmitting &&
-            Object.values(
-                validateProfileForm(values, {
-                    hasChanges,
-                    isCustomer,
-                })
-            ).every((error) => !error),
-        formRef,
-    });
 
     function setFieldError(name: keyof FieldErrors, message?: string | null) {
         setFieldErrors((current) => ({
@@ -184,7 +171,13 @@ export default function AccountPage() {
             if ('verification' in result) {
                 downloadHtml(result.download);
                 navigate(
-                    `/verify-email?email=${encodeURIComponent(values.email.trim())}&context=account${isStaff ? '&userType=staff' : ''}${result.download ? '&downloaded=1' : ''}`
+                    buildVerifyEmailPath({
+                        context: 'account',
+                        downloaded: Boolean(result.download),
+                        email: values.email.trim(),
+                        nextPath: '/account',
+                        userType: isStaff ? 'staff' : undefined,
+                    })
                 );
                 return;
             }
@@ -218,9 +211,7 @@ export default function AccountPage() {
 
                 <form
                     className="mt-5 grid gap-6"
-                    onKeyDown={enterSubmit.onKeyDown}
                     onSubmit={handleSubmit}
-                    ref={formRef}
                 >
                     {error ? (
                         <FormNotice tone="error">{error}</FormNotice>

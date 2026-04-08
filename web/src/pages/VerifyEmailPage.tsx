@@ -3,11 +3,7 @@ import clsx from 'clsx';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { authApi } from '../auth/api';
-import {
-    AuthPageLayout,
-    authMetaLabelClassName,
-    authPanelClassName,
-} from '../auth/AuthPageLayout';
+import { normalizeNextPath, resolvePostAuthPath } from '../auth/redirects';
 import {
     EMAIL_MAX_LENGTH,
     PASSWORD_MAX_LENGTH,
@@ -20,6 +16,7 @@ import { Field } from '../components/form/Field';
 import { FormNotice } from '../components/form/FormNotice';
 import { inputClassName } from '../components/form/Input';
 import { PasswordInput } from '../components/form/PasswordInput';
+import { PageHeader } from '../components/PageHeader';
 import { useToast } from '../components/toast/ToastProvider';
 import { downloadHtmlAndNotify } from '../services/download';
 import {
@@ -29,59 +26,46 @@ import {
 } from '../services/http';
 
 type VerificationScreen = 'error' | 'pending' | 'verifying';
-type PendingAction = 'change-email' | 'resend' | null;
-type VerificationContext = 'account' | 'signup';
-type VerificationStatus = {
-    message: string;
-    screen: VerificationScreen;
-};
-
-type VerificationFormValues = {
-    email: string;
-    password: string;
-};
-
-const VERIFICATION_CONTEXT_MESSAGE: Record<VerificationContext, string> = {
-    account: 'Verify your new email address to finish updating your account',
-    signup: 'Verify your email address to finish creating your account',
-};
 
 export default function VerifyEmailPage() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { showToast } = useToast();
-    const context = resolveVerificationContext(searchParams.get('context'));
     const token = searchParams.get('token')?.trim() ?? '';
     const queryEmail = searchParams.get('email')?.trim() ?? '';
     const userType = searchParams.get('userType')?.trim() === 'staff'
         ? 'staff'
         : undefined;
+    const context = searchParams.get('context')?.trim() === 'account'
+        ? 'account'
+        : 'signup';
     const wasDownloaded = searchParams.get('downloaded') === '1';
+    const nextPath = normalizeNextPath(
+        searchParams.get('next'),
+        context === 'account' ? '/account' : userType === 'staff' ? '/admin' : '/'
+    );
 
     const [email, setEmail] = useState(queryEmail);
-    const [formValues, setFormValues] = useState<VerificationFormValues>({
-        email: '',
-        password: '',
-    });
-    const [status, setStatus] = useState<VerificationStatus>(() =>
-        getPendingVerificationStatus(queryEmail, context)
+    const [changeEmail, setChangeEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [screen, setScreen] = useState<VerificationScreen>('pending');
+    const [message, setMessage] = useState(getPendingMessage(queryEmail, context));
+    const [pendingAction, setPendingAction] = useState<'change' | 'resend' | null>(
+        null
     );
-    const [pendingAction, setPendingAction] = useState<PendingAction>(null);
     const [formError, setFormError] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
 
-    const nextEmail = formValues.email.trim();
-    const isErrorScreen = status.screen === 'error';
-    const showPendingActions = !token && !isErrorScreen;
-    const showStatusMessage = status.screen !== 'pending';
+    const hasToken = Boolean(token);
+    const nextEmail = changeEmail.trim();
     const hasChangedEmail = Boolean(nextEmail) && nextEmail !== email.trim();
-    const isChangingEmail = pendingAction === 'change-email';
+    const showPendingActions = !hasToken && screen !== 'error';
+    const isChangingEmail = pendingAction === 'change';
     const isResending = pendingAction === 'resend';
 
     useEffect(() => {
-        if (!wasDownloaded) {
+        if (!wasDownloaded)
             return;
-        }
 
         showToast('Verification email downloaded');
 
@@ -89,9 +73,7 @@ export default function VerifyEmailPage() {
         nextParams.delete('downloaded');
         navigate(
             {
-                search: nextParams.toString()
-                    ? `?${nextParams.toString()}`
-                    : '',
+                search: nextParams.toString() ? `?${nextParams.toString()}` : '',
             },
             { replace: true }
         );
@@ -99,79 +81,69 @@ export default function VerifyEmailPage() {
 
     useEffect(() => {
         setEmail(queryEmail);
+        setChangeEmail('');
+        setPassword('');
         setFormError(null);
-        setFormValues({
-            email: '',
-            password: '',
-        });
         setPendingAction(null);
         setShowPassword(false);
 
-        if (!token) {
-            setStatus(getPendingVerificationStatus(queryEmail, context));
+        if (!hasToken) {
+            setScreen(queryEmail ? 'pending' : 'error');
+            setMessage(getPendingMessage(queryEmail, context));
             return;
         }
 
-        setStatus({
-            message: 'Verifying your email',
-            screen: 'verifying',
-        });
+        setScreen('verifying');
+        setMessage('Verifying your email');
 
         let isActive = true;
+
         void authApi
             .verifyEmail(token)
-            .then(() => {
-                window.location.assign(userType === 'staff' ? '/admin' : '/');
+            .then((user) => {
+                // The verification link may come from deep inside an auth flow,
+                // so finish on the originally requested destination when possible.
+                window.location.assign(resolvePostAuthPath(user, nextPath));
             })
             .catch((error: unknown) => {
-                if (!isActive) {
+                if (!isActive)
                     return;
-                }
 
-                setStatus(getFailedVerificationStatus(error));
+                setScreen('error');
+                setMessage(getVerificationErrorMessage(error));
             });
 
         return () => {
             isActive = false;
         };
-    }, [context, queryEmail, token, userType]);
+    }, [context, hasToken, nextPath, queryEmail, token]);
 
-    function updateFormValue(
-        name: keyof VerificationFormValues,
-        value: string
-    ) {
-        setFormValues((current) => ({
-            ...current,
-            [name]: value,
-        }));
+    function handleChangeEmailInput(nextValue: string) {
+        setChangeEmail(nextValue);
         setFormError(null);
     }
 
-    function handleResend() {
-        if (!email || isResending) {
+    async function handleResend() {
+        if (!email || isResending)
             return;
-        }
 
         setFormError(null);
         setPendingAction('resend');
 
-        void authApi
-            .resendVerification({
+        try {
+            const result = await authApi.resendVerification({
                 email,
                 userType,
-            })
-            .then((result) => {
-                downloadHtmlAndNotify(result.download, showToast, {
-                    downloadedMessage: 'Verification email downloaded',
-                    sentMessage: 'Verification email sent',
-                });
-            })
-            .catch((error) => {
-                setFormError(toVerificationError(error));
-            })
-            .finally(() => {
-                setPendingAction(null);
             });
+            downloadHtmlAndNotify(result.download, showToast, {
+                downloadedMessage: 'Verification email downloaded',
+                sentMessage: 'Verification email sent',
+            });
+        } catch (error) {
+            setFormError(toVerificationError(error));
+        } finally {
+            setPendingAction(null);
+        }
     }
 
     async function handleChangeEmail(event: SubmitEvent<HTMLFormElement>) {
@@ -180,21 +152,22 @@ export default function VerifyEmailPage() {
         const validationError = validatePendingEmailForm({
             currentEmail: email,
             nextEmail,
-            password: formValues.password,
+            password,
         });
+
         if (validationError) {
             setFormError(validationError);
             return;
         }
 
         setFormError(null);
-        setPendingAction('change-email');
+        setPendingAction('change');
 
         try {
             const result = await authApi.changePendingEmail({
                 currentEmail: email,
                 email: nextEmail,
-                password: formValues.password,
+                password,
                 userType,
             });
             downloadHtmlAndNotify(result.download, showToast, {
@@ -202,12 +175,11 @@ export default function VerifyEmailPage() {
                 sentMessage: 'Verification email sent',
             });
             setEmail(result.verification.email);
-            setFormValues({
-                email: '',
-                password: '',
-            });
+            setChangeEmail('');
+            setPassword('');
             setShowPassword(false);
-            setStatus(getPendingVerificationStatus(result.verification.email, context));
+            setScreen('pending');
+            setMessage(getPendingMessage(result.verification.email, context));
         } catch (error) {
             setFormError(toVerificationError(error));
         } finally {
@@ -216,33 +188,40 @@ export default function VerifyEmailPage() {
     }
 
     return (
-        <AuthPageLayout title="Verify email">
-            <section className={clsx(authPanelClassName, 'gap-5')}>
-                {showStatusMessage ? (
+        <section className="mx-auto grid max-w-xl gap-6">
+            <PageHeader title="Verify email" />
+
+            <section className="grid gap-5 rounded border border-slate-200 bg-white p-5">
+                {screen !== 'pending' ? (
                     <p
                         className={clsx(
                             'text-sm',
-                            isErrorScreen ? 'text-red-700' : 'text-slate-600'
+                            screen === 'error' ? 'text-red-700' : 'text-slate-600'
                         )}
                     >
-                        {status.message}
+                        {message}
                     </p>
                 ) : null}
 
                 {email ? (
                     <section className="grid gap-3 border-b border-slate-200 pb-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
                         <div className="grid gap-1">
-                            <span className={authMetaLabelClassName}>Email</span>
+                            <span className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
+                                Email
+                            </span>
                             <strong className="text-base font-medium break-all text-slate-900">
                                 {email}
                             </strong>
                         </div>
+
                         {showPendingActions ? (
                             <div className="flex justify-start sm:justify-end sm:self-end">
                                 <Button
                                     disabled={isResending}
                                     loading={isResending}
-                                    onClick={handleResend}
+                                    onClick={() => {
+                                        void handleResend();
+                                    }}
                                     type="button"
                                     variant="secondary"
                                 >
@@ -275,14 +254,13 @@ export default function VerifyEmailPage() {
                                 maxLength={EMAIL_MAX_LENGTH}
                                 name="email"
                                 onChange={(event) => {
-                                    updateFormValue(
-                                        'email',
+                                    handleChangeEmailInput(
                                         sanitizeEmail(event.target.value)
                                     );
                                 }}
                                 placeholder="jane.doe@email.com"
                                 type="email"
-                                value={formValues.email}
+                                value={changeEmail}
                             />
                         </Field>
 
@@ -300,19 +278,19 @@ export default function VerifyEmailPage() {
                                         maxLength={PASSWORD_MAX_LENGTH}
                                         name="currentPassword"
                                         onChange={(event) => {
-                                            updateFormValue(
-                                                'password',
+                                            setPassword(
                                                 sanitizePasswordInput(
                                                     event.target.value
                                                 )
                                             );
+                                            setFormError(null);
                                         }}
                                         onToggle={() => {
                                             setShowPassword((current) => !current);
                                         }}
                                         placeholder="Enter your password"
                                         showPassword={showPassword}
-                                        value={formValues.password}
+                                        value={password}
                                     />
                                 </Field>
                             ) : (
@@ -333,42 +311,27 @@ export default function VerifyEmailPage() {
                     </form>
                 ) : null}
             </section>
-        </AuthPageLayout>
+        </section>
     );
 }
 
-function getPendingVerificationStatus(
+function getPendingMessage(
     email: string,
-    context: VerificationContext
-): VerificationStatus {
-    if (!email) {
-        return {
-            message: 'Verification details are missing',
-            screen: 'error',
-        };
-    }
+    context: 'account' | 'signup'
+) {
+    if (!email)
+        return 'Verification details are missing';
 
-    return {
-        message: VERIFICATION_CONTEXT_MESSAGE[context],
-        screen: 'pending',
-    };
+    return context === 'account'
+        ? 'Verify your new email address to finish updating your account'
+        : 'Verify your email address to finish creating your account';
 }
 
-function getFailedVerificationStatus(error: unknown): VerificationStatus {
-    return {
-        message:
-            error instanceof BackendError &&
-            error.code === 'INVALID_EMAIL_VERIFICATION_TOKEN'
-                ? 'Verification link is invalid or expired'
-                : 'Unable to verify your email',
-        screen: 'error',
-    };
-}
-
-function resolveVerificationContext(
-    value: string | null
-): VerificationContext {
-    return value === 'account' ? 'account' : 'signup';
+function getVerificationErrorMessage(error: unknown) {
+    return error instanceof BackendError &&
+        error.code === 'INVALID_EMAIL_VERIFICATION_TOKEN'
+        ? 'Verification link is invalid or expired'
+        : 'Unable to verify your email';
 }
 
 function validatePendingEmailForm({
@@ -380,18 +343,16 @@ function validatePendingEmailForm({
     nextEmail: string;
     password: string;
 }) {
-    if (!currentEmail) {
+    if (!currentEmail)
         return 'Verification details are missing';
-    }
 
     const emailError = validateEmail(nextEmail);
-    if (emailError) {
-        return emailError;
-    }
 
-    if (!password) {
+    if (emailError)
+        return emailError;
+
+    if (!password)
         return 'Password is required';
-    }
 
     return null;
 }
