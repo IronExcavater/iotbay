@@ -5,9 +5,11 @@ import { useNavigate } from 'react-router-dom';
 import { AddressFields } from '../addresses/AddressFields';
 import {
     setAddressField,
+    type AddressFieldName,
     toAddressInput,
     validateAddressValues,
 } from '../addresses/form';
+import type { UpdateProfileInput, User } from '../auth/api';
 import { useAuth } from '../auth/AuthProvider';
 import {
     getBrowserPhoneCountry,
@@ -78,6 +80,54 @@ const DEFAULT_VALUES: ProfileValues = {
     suburb: '',
 };
 
+function toProfileValues(user: User): ProfileValues {
+    const phoneCountry = user.phoneNumber
+        ? inferPhoneCountry(user.phoneNumber)
+        : getBrowserPhoneCountry();
+
+    return {
+        addressLineOne: user.addressLineOne ?? '',
+        addressLineTwo: user.addressLineTwo ?? '',
+        country: user.country ?? '',
+        currentPassword: '',
+        designation: user.designation ?? '',
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        postcode: user.postcode ?? '',
+        permission: user.permission ?? '',
+        phoneCountry,
+        phoneNumber: toEditablePhoneNumber(user.phoneNumber, phoneCountry),
+        state: user.state ?? '',
+        suburb: user.suburb ?? '',
+    };
+}
+
+function toProfileUpdateInput(
+    values: ProfileValues,
+    {
+        hasChanges,
+        isCustomer,
+        isStaff,
+    }: {
+        hasChanges: boolean;
+        isCustomer: boolean;
+        isStaff: boolean;
+    }
+): UpdateProfileInput {
+    return {
+        ...(isCustomer ? toAddressInput(values) : {}),
+        currentPassword: hasChanges ? values.currentPassword : undefined,
+        designation: isStaff ? values.designation.trim() : '',
+        email: values.email.trim(),
+        firstName: values.firstName.trim(),
+        lastName: values.lastName.trim(),
+        permission: isStaff ? values.permission : '',
+        phoneCountry: isCustomer ? values.phoneCountry : '',
+        phoneNumber: isCustomer ? values.phoneNumber.trim() : '',
+    };
+}
+
 export default function AccountPage() {
     const navigate = useNavigate();
     const { updateMe, user } = useAuth();
@@ -91,30 +141,11 @@ export default function AccountPage() {
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
 
     useEffect(() => {
-        if (!user) {
+        if (!user)
             return;
-        }
 
-        const phoneCountry = user.phoneNumber
-            ? inferPhoneCountry(user.phoneNumber)
-            : getBrowserPhoneCountry();
+        const nextValues = toProfileValues(user);
 
-        const nextValues = {
-            addressLineOne: user.addressLineOne ?? '',
-            addressLineTwo: user.addressLineTwo ?? '',
-            country: user.country ?? '',
-            currentPassword: '',
-            designation: user.designation ?? '',
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            postcode: user.postcode ?? '',
-            permission: user.permission ?? '',
-            phoneCountry,
-            phoneNumber: toEditablePhoneNumber(user.phoneNumber, phoneCountry),
-            state: user.state ?? '',
-            suburb: user.suburb ?? '',
-        };
         setValues(nextValues);
         setInitialValues(nextValues);
     }, [user]);
@@ -125,6 +156,9 @@ export default function AccountPage() {
     const isCustomer = user?.userType === 'customer';
     const isStaff = user?.userType === 'staff';
     const hasChanges = hasProfileChanges(values, initialValues);
+    const currentPasswordHint = emailChanged
+        ? 'Changing your email will require verification'
+        : 'Required to save changes';
 
     function setFieldError(name: keyof FieldErrors, message?: string | null) {
         setFieldErrors((current) => ({
@@ -133,13 +167,32 @@ export default function AccountPage() {
         }));
     }
 
-    const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
+    function updateValues(patch: Partial<ProfileValues>) {
+        setValues((current) => ({
+            ...current,
+            ...patch,
+        }));
+    }
+
+    function handleAddressFieldChange(name: AddressFieldName, value: string) {
+        setValues((current) => setAddressField(current, name, value));
+    }
+
+    function handlePhoneBlur() {
+        setFieldError(
+            'phoneNumber',
+            values.phoneNumber.trim()
+                ? validatePhoneNumber(values.phoneNumber, values.phoneCountry)
+                : null
+        );
+    }
+
+    async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
         event.preventDefault();
         setError(null);
 
-        if (!hasChanges) {
+        if (!hasChanges)
             return;
-        }
 
         const nextFieldErrors = validateProfileForm(values, {
             hasChanges,
@@ -147,27 +200,21 @@ export default function AccountPage() {
         });
 
         setFieldErrors(nextFieldErrors);
-        if (Object.values(nextFieldErrors).some(Boolean)) {
+        if (Object.values(nextFieldErrors).some(Boolean))
             return;
-        }
 
         setIsSubmitting(true);
         try {
-            const result = await updateMe({
-                ...(isCustomer ? toAddressInput(values) : {}),
-                currentPassword: hasChanges
-                    ? values.currentPassword
-                    : undefined,
-                designation: isStaff ? values.designation.trim() : '',
-                email: values.email.trim(),
-                firstName: values.firstName.trim(),
-                lastName: values.lastName.trim(),
-                permission: isStaff ? values.permission : '',
-                phoneCountry: isCustomer ? values.phoneCountry : '',
-                phoneNumber: isCustomer ? values.phoneNumber.trim() : '',
-            });
+            const result = await updateMe(
+                toProfileUpdateInput(values, {
+                    hasChanges,
+                    isCustomer,
+                    isStaff,
+                })
+            );
 
             setFieldErrors({});
+
             if ('verification' in result) {
                 downloadHtml(result.download);
                 navigate(
@@ -186,6 +233,7 @@ export default function AccountPage() {
                 ...values,
                 currentPassword: '',
             };
+
             setValues(nextValues);
             setInitialValues(nextValues);
             showToast('Account updated');
@@ -196,7 +244,7 @@ export default function AccountPage() {
         } finally {
             setIsSubmitting(false);
         }
-    };
+    }
 
     return (
         <section className="mx-auto grid max-w-3xl gap-6">
@@ -241,12 +289,11 @@ export default function AccountPage() {
                                         );
                                     }}
                                     onChange={(event) => {
-                                        setValues((current) => ({
-                                            ...current,
+                                        updateValues({
                                             firstName: sanitizeFirstName(
                                                 event.target.value
                                             ),
-                                        }));
+                                        });
                                     }}
                                     placeholder="Jane"
                                     value={values.firstName}
@@ -272,12 +319,11 @@ export default function AccountPage() {
                                         );
                                     }}
                                     onChange={(event) => {
-                                        setValues((current) => ({
-                                            ...current,
+                                        updateValues({
                                             lastName: sanitizeLastName(
                                                 event.target.value
                                             ),
-                                        }));
+                                        });
                                     }}
                                     placeholder="Doe"
                                     value={values.lastName}
@@ -298,12 +344,11 @@ export default function AccountPage() {
                                     );
                                 }}
                                 onChange={(event) => {
-                                    setValues((current) => ({
-                                        ...current,
+                                    updateValues({
                                         email: sanitizeEmail(
                                             event.target.value
                                         ),
-                                    }));
+                                    });
                                 }}
                                 placeholder="jane.doe@email.com"
                                 type="email"
@@ -321,28 +366,12 @@ export default function AccountPage() {
                                 country={values.phoneCountry}
                                 error={fieldErrors.phoneNumber}
                                 label="Phone number"
-                                onBlur={() => {
-                                    setFieldError(
-                                        'phoneNumber',
-                                        values.phoneNumber.trim()
-                                            ? validatePhoneNumber(
-                                                  values.phoneNumber,
-                                                  values.phoneCountry
-                                              )
-                                            : null
-                                    );
-                                }}
+                                onBlur={handlePhoneBlur}
                                 onCountryChange={(country) => {
-                                    setValues((current) => ({
-                                        ...current,
-                                        phoneCountry: country,
-                                    }));
+                                    updateValues({ phoneCountry: country });
                                 }}
                                 onNumberChange={(value) => {
-                                    setValues((current) => ({
-                                        ...current,
-                                        phoneNumber: value,
-                                    }));
+                                    updateValues({ phoneNumber: value });
                                 }}
                                 value={values.phoneNumber}
                             />
@@ -350,11 +379,7 @@ export default function AccountPage() {
                             <AddressFields
                                 countryCode={values.phoneCountry}
                                 errors={fieldErrors}
-                                onFieldChange={(name, value) => {
-                                    setValues((current) =>
-                                        setAddressField(current, name, value)
-                                    );
-                                }}
+                                onFieldChange={handleAddressFieldChange}
                                 values={values}
                             />
                         </section>
@@ -376,10 +401,9 @@ export default function AccountPage() {
                                         )}
                                         maxLength={STAFF_DESIGNATION_MAX_LENGTH}
                                         onChange={(event) => {
-                                            setValues((current) => ({
-                                                ...current,
+                                            updateValues({
                                                 designation: event.target.value,
-                                            }));
+                                            });
                                         }}
                                         placeholder="Store manager"
                                         value={values.designation}
@@ -395,13 +419,12 @@ export default function AccountPage() {
                                         className={inputClassName(
                                             Boolean(fieldErrors.permission)
                                         )}
-                                        title="Permission"
                                         onChange={(event) => {
-                                            setValues((current) => ({
-                                                ...current,
+                                            updateValues({
                                                 permission: event.target.value,
-                                            }));
+                                            });
                                         }}
+                                        title="Permission"
                                         value={values.permission}
                                     >
                                         <option value="">
@@ -421,11 +444,7 @@ export default function AccountPage() {
                         {hasChanges ? (
                             <Field
                                 error={fieldErrors.currentPassword}
-                                hint={
-                                    emailChanged
-                                        ? 'Changing your email will require verification'
-                                        : 'Required to save changes'
-                                }
+                                hint={currentPasswordHint}
                                 label="Password"
                                 metaPlacement="inline"
                                 required
@@ -440,6 +459,7 @@ export default function AccountPage() {
                                         if (!hasChanges) {
                                             return;
                                         }
+
                                         setFieldError(
                                             'currentPassword',
                                             validateRequired(
@@ -449,13 +469,12 @@ export default function AccountPage() {
                                         );
                                     }}
                                     onChange={(event) => {
-                                        setValues((current) => ({
-                                            ...current,
+                                        updateValues({
                                             currentPassword:
                                                 sanitizePasswordInput(
                                                     event.target.value
                                                 ),
-                                        }));
+                                        });
                                     }}
                                     onToggle={() => {
                                         setShowCurrentPassword(
