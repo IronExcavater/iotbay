@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FiGithub } from 'react-icons/fi';
+import { FaGithub } from 'react-icons/fa6';
 import { Link } from 'react-router-dom';
 
 import { getJson } from '../services/http';
@@ -25,7 +25,11 @@ export default function SiteFooter() {
                 if (payload.contactEmail) {
                     setContactEmail(payload.contactEmail);
                 }
-            } catch {}
+            } catch {
+                if (!abortController.signal.aborted) {
+                    setContactEmail(DEFAULT_CONTACT_EMAIL);
+                }
+            }
         }
 
         void loadAppInfo();
@@ -48,7 +52,7 @@ export default function SiteFooter() {
                         </Link>
                         <Link
                             className={textButtonClassName}
-                            to="/auth?mode=signin&userType=staff&next=/admin"
+                            to="/staff/sign-in?next=/admin"
                         >
                             Staff portal
                         </Link>
@@ -83,7 +87,7 @@ export default function SiteFooter() {
                             title="View IoTBay on GitHub"
                             target="_blank"
                         >
-                            <FiGithub aria-hidden="true" size={20} />
+                            <FaGithub aria-hidden="true" size={20} />
                             <span>IoTBay</span>
                         </a>
                     </div>

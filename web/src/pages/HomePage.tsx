@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 
+import { PageHeader } from '../components/PageHeader';
 import { formatDateTime } from '../formatting/dateTime';
 import { formatAud } from '../formatting/money';
 import { productApi, type Product } from '../products/api';
 import { toErrorMessage } from '../services/http';
 
 export default function HomePage() {
-    const [isLoadingProducts, setIsLoadingProducts] = useState(true);
     const [products, setProducts] = useState<Product[]>([]);
+    const [isLoadingProducts, setIsLoadingProducts] = useState(true);
     const [productsError, setProductsError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -15,30 +16,32 @@ export default function HomePage() {
 
         async function loadProducts() {
             try {
-                setProducts(await productApi.list(abortController.signal));
+                const items = await productApi.list(abortController.signal);
+
+                if (abortController.signal.aborted)
+                    return;
+
+                setProducts(items);
                 setProductsError(null);
             } catch (error) {
-                if (!abortController.signal.aborted) {
-                    setProductsError(
-                        toErrorMessage(error, 'Unable to load products')
-                    );
-                }
+                if (abortController.signal.aborted)
+                    return;
+
+                setProductsError(toErrorMessage(error, 'Unable to load products'));
             } finally {
-                if (!abortController.signal.aborted) {
+                if (!abortController.signal.aborted)
                     setIsLoadingProducts(false);
-                }
             }
         }
 
         void loadProducts();
+
         return () => abortController.abort();
     }, []);
 
     return (
         <section className="grid gap-6">
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                Products
-            </h1>
+            <PageHeader title="Products" />
 
             <div className="overflow-hidden rounded border border-slate-200 bg-white">
                 {isLoadingProducts ? (
@@ -58,6 +61,7 @@ export default function HomePage() {
                                     <th className="px-5 py-3">Updated</th>
                                 </tr>
                             </thead>
+
                             <tbody>
                                 {products.map((product) => (
                                     <tr

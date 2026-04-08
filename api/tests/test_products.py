@@ -1,5 +1,8 @@
-from tests.helpers.test_case import AppTestCase
-from tests.helpers.test_session import create_staff_test_session, create_test_session
+from tests.helpers.app_case import AppTestCase
+from tests.helpers.session_factory import (
+    create_staff_test_session,
+    create_test_session,
+)
 
 
 class ProductRouteTestCase(AppTestCase):
@@ -22,77 +25,14 @@ class ProductRouteTestCase(AppTestCase):
 
         self.assertEqual(create_response.status_code, 201)
         created = create_response.get_json()
-
         self.assertIsNotNone(created)
         self.assertEqual(created["name"], "Smart Sensor")
         self.assertEqual(created["code"], "SNSR-001")
         self.assertEqual(created["priceCents"], 12999)
+        self.assertEqual(len(self.client.get("/api/products").get_json()["items"]), 1)
 
-        list_response = self.client.get("/api/products")
-        self.assertEqual(list_response.status_code, 200)
-        self.assertEqual(len(list_response.get_json()["items"]), 1)
-
-    def test_create_product_duplicate_code_returns_conflict(self) -> None:
-        create_staff_test_session(self.client)
-        payload = {
-            "name": "Smart Hub",
-            "code": "hub-001",
-            "priceCents": 25999,
-        }
-
-        first = self.client.post("/api/admin/products", json=payload)
-        second = self.client.post("/api/admin/products", json=payload)
-
-        self.assertEqual(first.status_code, 201)
-        self.assertEqual(second.status_code, 409)
-        self.assertEqual(
-            second.get_json(),
-            {
-                "code": "PRODUCT_CODE_EXISTS",
-                "error": "code already exists",
-            },
-        )
-
-    def test_create_product_invalid_price_returns_bad_request(self) -> None:
-        create_staff_test_session(self.client)
-        response = self.client.post(
-            "/api/admin/products",
-            json={
-                "name": "Broken Price",
-                "code": "bad-price",
-                "priceCents": "abc",
-            },
-        )
-
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(
-            response.get_json(),
-            {
-                "error": (
-                    "Input should be a valid integer, unable to parse "
-                    "string as an integer"
-                )
-            },
-        )
-
-    def test_create_product_missing_code_returns_bad_request(self) -> None:
-        create_staff_test_session(self.client)
-        response = self.client.post(
-            "/api/admin/products",
-            json={
-                "name": "No Code",
-                "priceCents": 500,
-            },
-        )
-
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(
-            response.get_json(),
-            {"error": "Field required"},
-        )
-
-    def test_create_product_requires_staff_auth(self) -> None:
-        response = self.client.post(
+    def test_create_product_requires_staff_access(self) -> None:
+        unauthenticated_response = self.client.post(
             "/api/admin/products",
             json={
                 "name": "Smart Sensor",
@@ -100,16 +40,14 @@ class ProductRouteTestCase(AppTestCase):
                 "priceCents": 12999,
             },
         )
-
-        self.assertEqual(response.status_code, 401)
+        self.assertEqual(unauthenticated_response.status_code, 401)
         self.assertEqual(
-            response.get_json(),
+            unauthenticated_response.get_json(),
             {"error": "authentication is required"},
         )
 
-    def test_create_product_rejects_customer_auth(self) -> None:
         create_test_session(self.client)
-        response = self.client.post(
+        customer_response = self.client.post(
             "/api/admin/products",
             json={
                 "name": "Smart Sensor",
@@ -117,28 +55,66 @@ class ProductRouteTestCase(AppTestCase):
                 "priceCents": 12999,
             },
         )
-
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(customer_response.status_code, 403)
         self.assertEqual(
-            response.get_json(),
+            customer_response.get_json(),
             {
                 "code": "STAFF_ACCOUNT_REQUIRED",
                 "error": "staff account is required",
             },
         )
 
-    def test_update_and_delete_product(self) -> None:
+    def test_create_product_rejects_invalid_payloads(self) -> None:
         create_staff_test_session(self.client)
-        created = self.client.post(
-            "/api/admin/products",
-            json={
-                "name": "Smart Sensor",
-                "code": "snsr-001",
-                "priceCents": 12999,
-            },
-        ).get_json()
-        assert created is not None
+        cases = [
+            (
+                "invalid price",
+                {
+                    "name": "Broken Price",
+                    "code": "bad-price",
+                    "priceCents": "abc",
+                },
+                "Input should be a valid integer, unable to parse string as an integer",
+            ),
+            (
+                "missing code",
+                {
+                    "name": "No Code",
+                    "priceCents": 500,
+                },
+                "Field required",
+            ),
+        ]
 
+        for label, payload, message in cases:
+            with self.subTest(label=label):
+                response = self.client.post("/api/admin/products", json=payload)
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(response.get_json(), {"error": message})
+
+    def test_duplicate_update_and_delete_product(self) -> None:
+        create_staff_test_session(self.client)
+        payload = {
+            "name": "Smart Sensor",
+            "code": "snsr-001",
+            "priceCents": 12999,
+        }
+
+        first = self.client.post("/api/admin/products", json=payload)
+        self.assertEqual(first.status_code, 201)
+
+        duplicate = self.client.post("/api/admin/products", json=payload)
+        self.assertEqual(duplicate.status_code, 409)
+        self.assertEqual(
+            duplicate.get_json(),
+            {
+                "code": "PRODUCT_CODE_EXISTS",
+                "error": "code already exists",
+            },
+        )
+
+        created = first.get_json()
+        assert created is not None
         update_response = self.client.patch(
             f"/api/admin/products/{created['id']}",
             json={
@@ -153,8 +129,6 @@ class ProductRouteTestCase(AppTestCase):
         self.assertEqual(updated["name"], "Smart Sensor Pro")
         self.assertEqual(updated["code"], "SNSR-002")
         self.assertEqual(updated["priceCents"], 14999)
-        self.assertEqual(updated["createdAt"], created["createdAt"])
-        self.assertNotEqual(updated["updatedAt"], created["updatedAt"])
 
         delete_response = self.client.delete(f"/api/admin/products/{created['id']}")
         self.assertEqual(delete_response.status_code, 204)

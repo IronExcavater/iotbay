@@ -7,7 +7,7 @@ from src.users.models import (
     USER_TYPE_STAFF,
 )
 from src.users.repository import UserRepository
-from tests.helpers.test_case import AppTestCase
+from tests.helpers.app_case import AppTestCase
 
 
 class UserRepositoryTestCase(AppTestCase):

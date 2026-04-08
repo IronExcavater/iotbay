@@ -22,7 +22,8 @@ KEYBOARD_ROWS = (
 @dataclass(slots=True, frozen=True)
 class PasswordValidator(StringValidator):
     def validate(self, value: str, **context: object) -> str:
-        # slots=True dataclasses can break zero-arg super(), so call the base explicitly.
+        # slots=True dataclasses can break zero-arg super(), so call the base
+        # implementation explicitly.
         normalized = StringValidator.validate(self, value, **context)
         if len(normalized) < PASSWORD_MIN_LENGTH:
             self._fail(

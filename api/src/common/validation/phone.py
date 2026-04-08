@@ -12,7 +12,8 @@ DEFAULT_PHONE_COUNTRY = "AU"
 @dataclass(slots=True, frozen=True)
 class PhoneCountryValidator(StringValidator):
     def sanitize_input(self, value: str) -> str:
-        # slots=True dataclasses can break zero-arg super(), so call the base explicitly.
+        # slots=True dataclasses can break zero-arg super(), so call the base
+        # implementation explicitly.
         return (
             StringValidator.sanitize_input(self, value)
             .replace(" ", "")

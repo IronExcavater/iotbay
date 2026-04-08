@@ -25,8 +25,20 @@ export const router = createBrowserRouter([
                 element: <ProtectedRoute access="guest" />,
                 children: [
                     {
-                        path: 'auth',
-                        element: <AuthPage />,
+                        path: 'sign-in',
+                        element: <AuthPage mode="signin" />,
+                    },
+                    {
+                        path: 'sign-up',
+                        element: <AuthPage mode="signup" />,
+                    },
+                    {
+                        path: 'staff/sign-in',
+                        element: <AuthPage mode="staff" />,
+                    },
+                    {
+                        path: 'forgot-password',
+                        element: <ResetPasswordPage />,
                     },
                     {
                         path: 'reset-password',

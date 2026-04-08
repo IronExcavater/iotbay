@@ -15,8 +15,6 @@ import {
     validateLastName,
 } from './validation';
 
-export type AuthMode = 'signin' | 'signup';
-
 export interface AuthFormValues {
     addressLineOne: string;
     addressLineTwo: string;
@@ -35,10 +33,6 @@ export interface AuthFormValues {
 
 export type AuthFieldName = keyof AuthFormValues;
 export type AuthFieldErrors = Partial<Record<AuthFieldName, string>>;
-
-export function parseAuthMode(value: string | null): AuthMode {
-    return value === 'signup' ? 'signup' : 'signin';
-}
 
 export function validateAuthForm(
     values: AuthFormValues,

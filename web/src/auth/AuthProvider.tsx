@@ -35,32 +35,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         let isActive = true;
 
-        // Session state lives in the backend cookie, so app boot always asks
-        // the API who the current user is instead of reading browser storage.
         async function loadSession() {
             try {
+                // The backend cookie is the source of truth for the session, so
+                // app startup always asks the API for the current user.
                 const currentUser = await authApi.me();
-                if (isActive) {
+
+                if (isActive)
                     setUser(currentUser);
-                }
-            } catch (error) {
-                if (
-                    isActive &&
-                    error instanceof BackendError &&
-                    error.status === 401
-                ) {
+            } catch {
+                if (isActive)
                     setUser(null);
-                } else if (isActive) {
-                    setUser(null);
-                }
             } finally {
-                if (isActive) {
+                if (isActive)
                     setIsLoading(false);
-                }
             }
         }
 
         void loadSession();
+
         return () => {
             isActive = false;
         };
@@ -80,15 +73,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             try {
                 await authApi.logout();
             } catch (error) {
-                if (!(error instanceof BackendError) || error.status !== 401) {
+                if (!(error instanceof BackendError) || error.status !== 401)
                     throw error;
-                }
             } finally {
                 setUser(null);
             }
         },
         async updateMe(input) {
             const result = await authApi.updateMe(input);
+
             if ('verification' in result) {
                 // Changing email starts a new verification flow, so the old
                 // session is cleared until the new address is confirmed.
@@ -109,8 +102,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
     const context = useContext(AuthContext);
-    if (context === null) {
+
+    if (context === null)
         throw new Error('useAuth must be used within AuthProvider');
-    }
+
     return context;
 }

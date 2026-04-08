@@ -1,4 +1,4 @@
-from tests.helpers.test_case import AppTestCase
+from tests.helpers.app_case import AppTestCase
 
 
 class HealthRouteTestCase(AppTestCase):
