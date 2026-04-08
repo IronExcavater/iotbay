@@ -20,7 +20,6 @@ export interface PhoneCountryOption {
     dialCode: string;
     flag: string;
     dropdownLabel: string;
-    triggerLabel: string;
     name: string;
 }
 
@@ -37,7 +36,6 @@ export const PHONE_COUNTRY_OPTIONS: PhoneCountryOption[] = getCountries()
             dialCode,
             flag,
             dropdownLabel: `${flag} ${name} (+${dialCode})`,
-            triggerLabel: `${flag} +${dialCode}`,
             name,
         };
     })
