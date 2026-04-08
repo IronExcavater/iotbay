@@ -1,9 +1,13 @@
-import { useRef, useState, type SubmitEvent } from 'react';
+import { useEffect, useState, type SubmitEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { authApi } from '../auth/api';
-import { buildSignInPath } from '../auth/redirects';
+import {
+    AuthPageLayout,
+    authPanelClassName,
+} from '../auth/AuthPageLayout';
 import { PasswordRuleList } from '../auth/PasswordRuleList';
+import { buildSignInPath } from '../auth/redirects';
 import {
     EMAIL_MAX_LENGTH,
     getPasswordRules,
@@ -18,7 +22,6 @@ import { Field } from '../components/form/Field';
 import { FormNotice } from '../components/form/FormNotice';
 import { inputClassName } from '../components/form/Input';
 import { PasswordInput } from '../components/form/PasswordInput';
-import { useEnterSubmit } from '../components/form/useEnterSubmit';
 import { useToast } from '../components/toast/ToastProvider';
 import { downloadHtmlAndNotify } from '../services/download';
 import {
@@ -27,118 +30,166 @@ import {
     resolveBackendError,
 } from '../services/http';
 
+type ResetPageMode = 'forgot' | 'reset';
+type PasswordFieldName = 'confirmPassword' | 'password';
+type ResetFormValues = {
+    confirmPassword: string;
+    email: string;
+    password: string;
+};
+
+const RESET_PAGE_CONFIG: Record<
+    ResetPageMode,
+    {
+        submitLabel: string;
+        title: string;
+    }
+> = {
+    forgot: {
+        submitLabel: 'Send reset link',
+        title: 'Forgot password',
+    },
+    reset: {
+        submitLabel: 'Reset password',
+        title: 'Reset password',
+    },
+};
+
+const DEFAULT_PASSWORD_VISIBILITY: Record<PasswordFieldName, boolean> = {
+    confirmPassword: false,
+    password: false,
+};
+
+function createResetFormValues(email = ''): ResetFormValues {
+    return {
+        confirmPassword: '',
+        email,
+        password: '',
+    };
+}
+
 export default function ResetPasswordPage() {
-    const formRef = useRef<HTMLFormElement | null>(null);
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { showToast } = useToast();
     const initialEmail = searchParams.get('email')?.trim() ?? '';
     const token = searchParams.get('token')?.trim() ?? '';
-    const userType = searchParams.get('userType')?.trim() ?? '';
-    const hasToken = token.length > 0;
-    const signInPath = buildSignInPath({
-        email: initialEmail,
-        userType: userType === 'staff' ? 'staff' : undefined,
-    });
+    const userType = searchParams.get('userType')?.trim() === 'staff'
+        ? 'staff'
+        : undefined;
+    const mode: ResetPageMode = token ? 'reset' : 'forgot';
+    const pageConfig = RESET_PAGE_CONFIG[mode];
 
-    const [email, setEmail] = useState(initialEmail);
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
+    const [values, setValues] = useState<ResetFormValues>(() =>
+        createResetFormValues(initialEmail)
+    );
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [passwordVisibility, setPasswordVisibility] = useState(
+        DEFAULT_PASSWORD_VISIBILITY
+    );
 
+    const { confirmPassword, email, password } = values;
+    const signInPath = buildSignInPath({ email, userType });
     const passwordRules = getPasswordRules(password);
-    const enterSubmit = useEnterSubmit({
-        canSubmit: () =>
-            !isSubmitting &&
-            canSubmitResetForm({
-                confirmPassword,
-                email,
-                hasToken,
-                password,
-                passwordRulesMet: passwordRules.every((rule) => rule.met),
-            }),
-        formRef,
-    });
 
-    const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
-        event.preventDefault();
+    useEffect(() => {
+        setValues(createResetFormValues(initialEmail));
         setError(null);
+        setIsSubmitting(false);
+        setPasswordVisibility(DEFAULT_PASSWORD_VISIBILITY);
+    }, [initialEmail, token, userType]);
 
-        if (hasToken) {
-            if (!password) {
-                setError('Password is required');
-                return;
-            }
-            const passwordError =
-                PASSWORD_VALIDATOR.tryValidate(password).error?.message;
-            if (passwordError) {
-                setError(normalizeMessage(passwordError));
-                return;
-            }
-            if (passwordRules.some((rule) => !rule.met)) {
-                setError('Password requirements are not met');
-                return;
-            }
-            if (!confirmPassword) {
-                setError('Confirm password is required');
-                return;
-            }
-            if (confirmPassword !== password) {
-                setError('Passwords do not match');
-                return;
-            }
-        } else {
-            const emailError = validateEmail(email);
-            if (emailError) {
-                setError(emailError);
-                return;
-            }
+    function updateValue(name: keyof ResetFormValues, value: string) {
+        setValues((current) => ({
+            ...current,
+            [name]: value,
+        }));
+    }
+
+    function togglePasswordVisibility(name: PasswordFieldName) {
+        setPasswordVisibility((current) => ({
+            ...current,
+            [name]: !current[name],
+        }));
+    }
+
+    function handleEmailBlur() {
+        setError(validateEmail(email));
+    }
+
+    function handleEmailChange(nextEmail: string) {
+        updateValue('email', nextEmail);
+        setError(null);
+    }
+
+    function handlePasswordChange(nextPassword: string) {
+        updateValue('password', nextPassword);
+        setError(
+            confirmPassword
+                ? getResetConfirmPasswordError(confirmPassword, nextPassword)
+                : null
+        );
+    }
+
+    function handleConfirmPasswordChange(nextConfirmPassword: string) {
+        updateValue('confirmPassword', nextConfirmPassword);
+        setError(getResetConfirmPasswordError(nextConfirmPassword, password));
+    }
+
+    async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
+        event.preventDefault();
+
+        const validationError = getResetFormError({
+            confirmPassword,
+            email,
+            isResetMode: mode === 'reset',
+            password,
+            passwordRulesMet: passwordRules.every((rule) => rule.met),
+        });
+        if (validationError) {
+            setError(validationError);
+            return;
         }
 
+        setError(null);
         setIsSubmitting(true);
+
         try {
-            if (hasToken) {
+            if (mode === 'reset') {
                 await authApi.resetPassword({ password, token });
                 navigate(signInPath, {
                     replace: true,
                     state: { successMessage: 'Password reset successful' },
                 });
-            } else {
-                const result = await authApi.forgotPassword({
-                    email: email.trim(),
-                    userType: userType === 'staff' ? 'staff' : undefined,
-                });
-                downloadHtmlAndNotify(result?.download, showToast, {
-                    downloadedMessage: 'Reset email downloaded',
-                    sentMessage: 'Reset link sent if it exists',
-                });
+                return;
             }
+
+            const result = await authApi.forgotPassword({
+                email: email.trim(),
+                userType,
+            });
+            downloadHtmlAndNotify(result?.download, showToast, {
+                downloadedMessage: 'Reset email downloaded',
+                sentMessage: 'Reset link sent if it exists',
+            });
         } catch (caughtError) {
             setError(toResetError(caughtError));
         } finally {
             setIsSubmitting(false);
         }
-    };
+    }
 
     return (
-        <section className="mx-auto grid max-w-xl gap-6">
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                {hasToken ? 'Reset password' : 'Forgot password'}
-            </h1>
-
+        <AuthPageLayout title={pageConfig.title}>
             <form
-                className="grid gap-4 rounded border border-slate-200 bg-white p-5"
+                className={authPanelClassName}
                 noValidate
-                onKeyDown={enterSubmit.onKeyDown}
                 onSubmit={handleSubmit}
-                ref={formRef}
             >
                 {error ? <FormNotice tone="error">{error}</FormNotice> : null}
 
-                {hasToken ? (
+                {mode === 'reset' ? (
                     <>
                         <Field label="New password" required>
                             <PasswordInput
@@ -147,24 +198,17 @@ export default function ResetPasswordPage() {
                                 maxLength={PASSWORD_MAX_LENGTH}
                                 name="newPassword"
                                 onChange={(event) => {
-                                    const nextPassword = sanitizePasswordInput(
-                                        event.target.value
-                                    );
-                                    setPassword(nextPassword);
-                                    setError(
-                                        confirmPassword
-                                            ? getResetConfirmPasswordError(
-                                                  confirmPassword,
-                                                  nextPassword
-                                              )
-                                            : null
+                                    handlePasswordChange(
+                                        sanitizePasswordInput(
+                                            event.target.value
+                                        )
                                     );
                                 }}
                                 onToggle={() => {
-                                    setShowPassword((current) => !current);
+                                    togglePasswordVisibility('password');
                                 }}
                                 placeholder="Choose a new password"
-                                showPassword={showPassword}
+                                showPassword={passwordVisibility.password}
                                 value={password}
                             />
                             <PasswordRuleList rules={passwordRules} />
@@ -177,25 +221,19 @@ export default function ResetPasswordPage() {
                                 maxLength={PASSWORD_MAX_LENGTH}
                                 name="confirmPassword"
                                 onChange={(event) => {
-                                    const nextConfirmPassword =
+                                    handleConfirmPasswordChange(
                                         sanitizePasswordInput(
                                             event.target.value
-                                        );
-                                    setConfirmPassword(nextConfirmPassword);
-                                    setError(
-                                        getResetConfirmPasswordError(
-                                            nextConfirmPassword,
-                                            password
                                         )
                                     );
                                 }}
                                 onToggle={() => {
-                                    setShowConfirmPassword(
-                                        (current) => !current
-                                    );
+                                    togglePasswordVisibility('confirmPassword');
                                 }}
                                 placeholder="Re-enter your new password"
-                                showPassword={showConfirmPassword}
+                                showPassword={
+                                    passwordVisibility.confirmPassword
+                                }
                                 value={confirmPassword}
                             />
                         </Field>
@@ -207,13 +245,11 @@ export default function ResetPasswordPage() {
                             className={inputClassName(Boolean(error))}
                             maxLength={EMAIL_MAX_LENGTH}
                             name="email"
-                            onBlur={() => {
-                                const emailError = validateEmail(email);
-                                setError(emailError);
-                            }}
+                            onBlur={handleEmailBlur}
                             onChange={(event) => {
-                                setEmail(sanitizeEmail(event.target.value));
-                                setError(null);
+                                handleEmailChange(
+                                    sanitizeEmail(event.target.value)
+                                );
                             }}
                             placeholder="jane.doe@email.com"
                             type="email"
@@ -228,15 +264,52 @@ export default function ResetPasswordPage() {
                     type="submit"
                     variant="primary"
                 >
-                    {hasToken ? 'Reset password' : 'Send reset link'}
+                    {pageConfig.submitLabel}
                 </Button>
 
                 <Link className={textButtonClassName} to={signInPath}>
                     Back to sign in
                 </Link>
             </form>
-        </section>
+        </AuthPageLayout>
     );
+}
+
+function getResetFormError({
+    confirmPassword,
+    email,
+    isResetMode,
+    password,
+    passwordRulesMet,
+}: {
+    confirmPassword: string;
+    email: string;
+    isResetMode: boolean;
+    password: string;
+    passwordRulesMet: boolean;
+}) {
+    if (!isResetMode) {
+        return validateEmail(email);
+    }
+
+    if (!password) {
+        return 'Password is required';
+    }
+
+    const passwordError = PASSWORD_VALIDATOR.tryValidate(password).error?.message;
+    if (passwordError) {
+        return normalizeMessage(passwordError);
+    }
+
+    if (!passwordRulesMet) {
+        return 'Password requirements are not met';
+    }
+
+    if (!confirmPassword) {
+        return 'Confirm password is required';
+    }
+
+    return getResetConfirmPasswordError(confirmPassword, password);
 }
 
 function toResetError(error: unknown) {
@@ -256,30 +329,6 @@ function toResetError(error: unknown) {
         },
         (message) => message
     );
-}
-
-function canSubmitResetForm({
-    confirmPassword,
-    email,
-    hasToken,
-    password,
-    passwordRulesMet,
-}: {
-    confirmPassword: string;
-    email: string;
-    hasToken: boolean;
-    password: string;
-    passwordRulesMet: boolean;
-}) {
-    if (!hasToken) {
-        return !validateEmail(email);
-    }
-
-    if (!password || !confirmPassword || confirmPassword !== password) {
-        return false;
-    }
-
-    return !PASSWORD_VALIDATOR.tryValidate(password).error && passwordRulesMet;
 }
 
 function getResetConfirmPasswordError(
