@@ -5,12 +5,12 @@ import {
     type ReactNode,
 } from 'react';
 import clsx from 'clsx';
-import { FiLoader } from 'react-icons/fi';
+import { FaSpinner } from 'react-icons/fa6';
 
 type ButtonVariant = 'danger' | 'primary' | 'secondary' | 'text';
 
 export const textButtonClassName =
-    'inline-flex w-fit items-center gap-2 text-sm text-slate-600 underline-offset-4 outline-none transition-colors hover:text-slate-900 hover:underline focus-visible:text-slate-900 focus-visible:underline focus-visible:outline-none';
+    'inline-flex w-fit items-center gap-1.5 text-sm text-slate-600 underline-offset-4 outline-none transition-colors hover:text-slate-900 hover:underline focus-visible:text-slate-900 focus-visible:underline focus-visible:outline-none';
 
 export function Button({
     children,
@@ -38,7 +38,7 @@ export function Button({
         >
             <span
                 className={clsx(
-                    'inline-flex flex-nowrap items-center justify-center gap-2 leading-none whitespace-nowrap',
+                    'inline-flex flex-nowrap items-center justify-center gap-1.5 leading-none whitespace-nowrap',
                     loading ? 'opacity-0' : 'opacity-100'
                 )}
             >
@@ -49,7 +49,7 @@ export function Button({
                     aria-hidden="true"
                     className="pointer-events-none absolute inset-0 inline-flex items-center justify-center"
                 >
-                    <FiLoader
+                    <FaSpinner
                         aria-hidden="true"
                         className="block size-3.5 animate-spin"
                     />
