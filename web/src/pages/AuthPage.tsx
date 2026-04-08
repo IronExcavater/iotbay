@@ -95,6 +95,13 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
         firstName: values.firstName,
         lastName: values.lastName,
     });
+    const passwordRulesMet = passwordRules.every((rule) => rule.met);
+    const passwordAutoComplete = isSignUp
+        ? 'new-password'
+        : 'current-password';
+    const passwordPlaceholder = isSignUp
+        ? 'Choose a password'
+        : 'Enter your password';
     const pageCopy = getAuthPageCopy(mode, nextPath);
     const forgotPasswordPath = buildForgotPasswordPath({
         email: values.email,
@@ -107,6 +114,7 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
         // Reset the transient form state, but keep any forwarded email.
         setFieldErrors({});
         setFormError(null);
+        setIsSubmitting(false);
         setValues((current) =>
             createDefaultValues({ email: prefilledEmail || current.email })
         );
@@ -186,17 +194,130 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
         setValues((current) => setAddressField(current, name, value));
     }
 
-    function getValidationErrors(nextValues: FormValues = values) {
-        return validateAuthForm(nextValues, {
+    function handlePhoneBlur() {
+        setFieldError(
+            'phoneNumber',
+            values.phoneNumber.trim()
+                ? validatePhoneNumber(values.phoneNumber, values.phoneCountry)
+                : null
+        );
+    }
+
+    function validateCurrentForm() {
+        return validateAuthForm(values, {
             isSignUp,
-            passwordRulesMet: passwordRules.every((rule) => rule.met),
+            passwordRulesMet,
         });
+    }
+
+    async function submitSignUp() {
+        const result = await register(toRegisterInput(values));
+        downloadHtml(result.download);
+        resetForm();
+        navigate(buildSignupVerificationPath(result, nextPath));
+    }
+
+    async function submitSignIn() {
+        const authenticatedUser = await login({
+            email: values.email.trim(),
+            password: values.password,
+            userType: isStaff ? 'staff' : undefined,
+        });
+
+        navigate(resolvePostAuthPath(authenticatedUser, nextPath));
+    }
+
+    function renderSignUpFields() {
+        return (
+            <>
+                <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
+                    <Field
+                        error={fieldErrors.firstName}
+                        label="First name"
+                        required
+                    >
+                        <input
+                            autoComplete="given-name"
+                            className={inputClassName(
+                                Boolean(fieldErrors.firstName)
+                            )}
+                            maxLength={NAME_MAX_LENGTH}
+                            onBlur={() => {
+                                setFieldError(
+                                    'firstName',
+                                    validateFirstNameOnBlur(values.firstName)
+                                );
+                            }}
+                            onChange={(event) => {
+                                updateValues({
+                                    firstName: sanitizeFirstName(
+                                        event.target.value
+                                    ),
+                                });
+                            }}
+                            placeholder="Jane"
+                            value={values.firstName}
+                        />
+                    </Field>
+
+                    <Field
+                        error={fieldErrors.lastName}
+                        label="Last name"
+                        required
+                    >
+                        <input
+                            autoComplete="family-name"
+                            className={inputClassName(
+                                Boolean(fieldErrors.lastName)
+                            )}
+                            maxLength={NAME_MAX_LENGTH}
+                            onBlur={() => {
+                                setFieldError(
+                                    'lastName',
+                                    validateLastNameOnBlur(values.lastName)
+                                );
+                            }}
+                            onChange={(event) => {
+                                updateValues({
+                                    lastName: sanitizeLastName(
+                                        event.target.value
+                                    ),
+                                });
+                            }}
+                            placeholder="Doe"
+                            value={values.lastName}
+                        />
+                    </Field>
+                </div>
+
+                <PhoneField
+                    country={values.phoneCountry}
+                    error={fieldErrors.phoneNumber}
+                    label="Phone number"
+                    onBlur={handlePhoneBlur}
+                    onCountryChange={(phoneCountry) => {
+                        updateValues({ phoneCountry });
+                    }}
+                    onNumberChange={(phoneNumber) => {
+                        updateValues({ phoneNumber });
+                    }}
+                    value={values.phoneNumber}
+                />
+
+                <AddressFields
+                    countryCode={values.phoneCountry}
+                    errors={fieldErrors}
+                    onFieldChange={handleAddressFieldChange}
+                    values={values}
+                />
+            </>
+        );
     }
 
     async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
         event.preventDefault();
 
-        const nextFieldErrors = getValidationErrors();
+        const nextFieldErrors = validateCurrentForm();
         setFieldErrors(nextFieldErrors);
 
         if (Object.values(nextFieldErrors).some(Boolean)) {
@@ -209,19 +330,11 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
 
         try {
             if (isSignUp) {
-                const result = await register(toRegisterInput(values));
-                downloadHtml(result.download);
-                resetForm();
-                navigate(buildSignupVerificationPath(result, nextPath));
+                await submitSignUp();
                 return;
             }
 
-            const authenticatedUser = await login({
-                email: values.email.trim(),
-                password: values.password,
-                userType: isStaff ? 'staff' : undefined,
-            });
-            navigate(resolvePostAuthPath(authenticatedUser, nextPath));
+            await submitSignIn();
         } catch (error) {
             const nextErrorState = toAuthErrorState(error, isSignUp);
             setFieldErrors(nextErrorState.fieldErrors);
@@ -244,104 +357,7 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
                     <FormNotice tone="error">{formError}</FormNotice>
                 ) : null}
 
-                {isSignUp ? (
-                    <>
-                        <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
-                            <Field
-                                error={fieldErrors.firstName}
-                                label="First name"
-                                required
-                            >
-                                <input
-                                    autoComplete="given-name"
-                                    className={inputClassName(
-                                        Boolean(fieldErrors.firstName)
-                                    )}
-                                    maxLength={NAME_MAX_LENGTH}
-                                    onBlur={() => {
-                                        setFieldError(
-                                            'firstName',
-                                            validateFirstNameOnBlur(
-                                                values.firstName
-                                            )
-                                        );
-                                    }}
-                                    onChange={(event) => {
-                                        updateValues({
-                                            firstName: sanitizeFirstName(
-                                                event.target.value
-                                            ),
-                                        });
-                                    }}
-                                    placeholder="Jane"
-                                    value={values.firstName}
-                                />
-                            </Field>
-
-                            <Field
-                                error={fieldErrors.lastName}
-                                label="Last name"
-                                required
-                            >
-                                <input
-                                    autoComplete="family-name"
-                                    className={inputClassName(
-                                        Boolean(fieldErrors.lastName)
-                                    )}
-                                    maxLength={NAME_MAX_LENGTH}
-                                    onBlur={() => {
-                                        setFieldError(
-                                            'lastName',
-                                            validateLastNameOnBlur(
-                                                values.lastName
-                                            )
-                                        );
-                                    }}
-                                    onChange={(event) => {
-                                        updateValues({
-                                            lastName: sanitizeLastName(
-                                                event.target.value
-                                            ),
-                                        });
-                                    }}
-                                    placeholder="Doe"
-                                    value={values.lastName}
-                                />
-                            </Field>
-                        </div>
-
-                        <PhoneField
-                            country={values.phoneCountry}
-                            error={fieldErrors.phoneNumber}
-                            label="Phone number"
-                            onBlur={() => {
-                                setFieldError(
-                                    'phoneNumber',
-                                    values.phoneNumber.trim()
-                                        ? validatePhoneNumber(
-                                              values.phoneNumber,
-                                              values.phoneCountry
-                                          )
-                                        : null
-                                );
-                            }}
-                            onCountryChange={(phoneCountry) => {
-                                updateValues({ phoneCountry });
-                            }}
-                            onNumberChange={(phoneNumber) => {
-                                updateValues({ phoneNumber });
-                            }}
-                            value={values.phoneNumber}
-                        />
-
-                        <AddressFields
-                            countryCode={values.phoneCountry}
-                            errors={fieldErrors}
-                            onFieldChange={handleAddressFieldChange}
-                            values={values}
-                        />
-                    </>
-                ) : null}
+                {isSignUp && renderSignUpFields()}
 
                 <Field error={fieldErrors.email} label="Email" required>
                     <input
@@ -360,9 +376,7 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
 
                 <Field error={fieldErrors.password} label="Password" required>
                     <PasswordInput
-                        autoComplete={
-                            isSignUp ? 'new-password' : 'current-password'
-                        }
+                        autoComplete={passwordAutoComplete}
                         hasError={Boolean(fieldErrors.password)}
                         maxLength={PASSWORD_MAX_LENGTH}
                         name="password"
@@ -370,20 +384,13 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
                             if (!isSignUp || !values.password)
                                 return;
 
-                            setFieldError(
-                                'password',
-                                getValidationErrors().password
-                            );
+                            setFieldError('password', validateCurrentForm().password);
                         }}
                         onChange={handlePasswordChange}
                         onToggle={() => {
                             setShowPassword((current) => !current);
                         }}
-                        placeholder={
-                            isSignUp
-                                ? 'Choose a password'
-                                : 'Enter your password'
-                        }
+                        placeholder={passwordPlaceholder}
                         showPassword={showPassword}
                         value={values.password}
                     />
