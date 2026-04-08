@@ -87,11 +87,16 @@ export default function VerifyEmailPage() {
         setPendingAction(null);
         setShowPassword(false);
 
-        if (!hasToken) {
-            setScreen(queryEmail ? 'pending' : 'error');
-            setMessage(getPendingMessage(queryEmail, context));
+        if (hasToken)
             return;
-        }
+
+        setScreen(queryEmail ? 'pending' : 'error');
+        setMessage(getPendingMessage(queryEmail, context));
+    }, [context, hasToken, queryEmail]);
+
+    useEffect(() => {
+        if (!hasToken)
+            return;
 
         setScreen('verifying');
         setMessage('Verifying your email');
@@ -101,6 +106,9 @@ export default function VerifyEmailPage() {
         void authApi
             .verifyEmail(token)
             .then((user) => {
+                if (!isActive)
+                    return;
+
                 // The verification link may come from deep inside an auth flow,
                 // so finish on the originally requested destination when possible.
                 window.location.assign(resolvePostAuthPath(user, nextPath));
@@ -116,7 +124,7 @@ export default function VerifyEmailPage() {
         return () => {
             isActive = false;
         };
-    }, [context, hasToken, nextPath, queryEmail, token]);
+    }, [hasToken, nextPath, token]);
 
     function handleChangeEmailInput(nextValue: string) {
         setChangeEmail(nextValue);
