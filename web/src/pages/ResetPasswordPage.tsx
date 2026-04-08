@@ -42,10 +42,12 @@ export default function ResetPasswordPage() {
     );
 
     const isResetMode = Boolean(token);
+    const pageTitle = isResetMode ? 'Reset password' : 'Forgot password';
+    const submitLabel = isResetMode ? 'Reset password' : 'Send reset link';
     const [email, setEmail] = useState(initialEmail);
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [error, setError] = useState<string | null>(null);
+    const [formError, setFormError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -57,7 +59,7 @@ export default function ResetPasswordPage() {
         setEmail(initialEmail);
         setPassword('');
         setConfirmPassword('');
-        setError(null);
+        setFormError(null);
         setIsSubmitting(false);
         setShowPassword(false);
         setShowConfirmPassword(false);
@@ -67,16 +69,40 @@ export default function ResetPasswordPage() {
         setPassword(nextPassword);
 
         if (!confirmPassword) {
-            setError(null);
+            setFormError(null);
             return;
         }
 
-        setError(getResetConfirmPasswordError(confirmPassword, nextPassword));
+        setFormError(
+            getResetConfirmPasswordError(confirmPassword, nextPassword)
+        );
     }
 
     function handleConfirmPasswordChange(nextConfirmPassword: string) {
         setConfirmPassword(nextConfirmPassword);
-        setError(getResetConfirmPasswordError(nextConfirmPassword, password));
+        setFormError(
+            getResetConfirmPasswordError(nextConfirmPassword, password)
+        );
+    }
+
+    async function submitPasswordReset() {
+        await authApi.resetPassword({ password, token });
+        navigate(signInPath, {
+            replace: true,
+            state: { successMessage: 'Password reset successful' },
+        });
+    }
+
+    async function submitResetRequest() {
+        const result = await authApi.forgotPassword({
+            email: email.trim(),
+            userType,
+        });
+
+        downloadHtmlAndNotify(result?.download, showToast, {
+            downloadedMessage: 'Reset email downloaded',
+            sentMessage: 'Reset link sent if it exists',
+        });
     }
 
     async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
@@ -91,33 +117,22 @@ export default function ResetPasswordPage() {
         });
 
         if (validationError) {
-            setError(validationError);
+            setFormError(validationError);
             return;
         }
 
-        setError(null);
+        setFormError(null);
         setIsSubmitting(true);
 
         try {
             if (isResetMode) {
-                await authApi.resetPassword({ password, token });
-                navigate(signInPath, {
-                    replace: true,
-                    state: { successMessage: 'Password reset successful' },
-                });
+                await submitPasswordReset();
                 return;
             }
 
-            const result = await authApi.forgotPassword({
-                email: email.trim(),
-                userType,
-            });
-            downloadHtmlAndNotify(result?.download, showToast, {
-                downloadedMessage: 'Reset email downloaded',
-                sentMessage: 'Reset link sent if it exists',
-            });
+            await submitResetRequest();
         } catch (caughtError) {
-            setError(toResetError(caughtError));
+            setFormError(toResetError(caughtError));
         } finally {
             setIsSubmitting(false);
         }
@@ -125,21 +140,23 @@ export default function ResetPasswordPage() {
 
     return (
         <section className="mx-auto grid max-w-xl gap-6">
-            <PageHeader title={isResetMode ? 'Reset password' : 'Forgot password'} />
+            <PageHeader title={pageTitle} />
 
             <form
                 className="grid gap-4 rounded border border-slate-200 bg-white p-5"
                 noValidate
                 onSubmit={handleSubmit}
             >
-                {error ? <FormNotice tone="error">{error}</FormNotice> : null}
+                {formError ? (
+                    <FormNotice tone="error">{formError}</FormNotice>
+                ) : null}
 
                 {isResetMode ? (
                     <>
                         <Field label="New password" required>
                             <PasswordInput
                                 autoComplete="new-password"
-                                hasError={Boolean(error)}
+                                hasError={Boolean(formError)}
                                 maxLength={PASSWORD_MAX_LENGTH}
                                 name="newPassword"
                                 onChange={(event) => {
@@ -163,7 +180,7 @@ export default function ResetPasswordPage() {
                         <Field label="Confirm password" required>
                             <PasswordInput
                                 autoComplete="new-password"
-                                hasError={Boolean(error)}
+                                hasError={Boolean(formError)}
                                 maxLength={PASSWORD_MAX_LENGTH}
                                 name="confirmPassword"
                                 onChange={(event) => {
@@ -186,15 +203,15 @@ export default function ResetPasswordPage() {
                     <Field label="Email" required>
                         <input
                             autoComplete="email"
-                            className={inputClassName(Boolean(error))}
+                            className={inputClassName(Boolean(formError))}
                             maxLength={EMAIL_MAX_LENGTH}
                             name="email"
                             onBlur={() => {
-                                setError(validateEmail(email));
+                                setFormError(validateEmail(email));
                             }}
                             onChange={(event) => {
                                 setEmail(sanitizeEmail(event.target.value));
-                                setError(null);
+                                setFormError(null);
                             }}
                             placeholder="jane.doe@email.com"
                             type="email"
@@ -209,7 +226,7 @@ export default function ResetPasswordPage() {
                     type="submit"
                     variant="primary"
                 >
-                    {isResetMode ? 'Reset password' : 'Send reset link'}
+                    {submitLabel}
                 </Button>
 
                 <Link className={textButtonClassName} to={signInPath}>
