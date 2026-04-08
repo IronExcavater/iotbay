@@ -1,6 +1,5 @@
 import {
     useEffect,
-    useRef,
     useState,
     type ChangeEvent,
     type SubmitEvent,
@@ -9,25 +8,31 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 
 import { AddressFields } from '../addresses/AddressFields';
 import { setAddressField, type AddressFieldName } from '../addresses/form';
-import { useAuth } from '../auth/AuthProvider';
-import { resolvePostAuthPath } from '../auth/redirects';
 import {
-    parseAuthMode,
+    AuthPageLayout,
+    authPanelClassName,
+} from '../auth/AuthPageLayout';
+import { useAuth } from '../auth/AuthProvider';
+import {
     toAuthErrorState,
     toRegisterInput,
     type AuthFieldErrors as FieldErrors,
     type AuthFormValues as FormValues,
     validateAuthForm,
 } from '../auth/form';
+import { PasswordRuleList } from '../auth/PasswordRuleList';
+import { getBrowserPhoneCountry, validatePhoneNumber } from '../auth/phone';
+import {
+    buildForgotPasswordPath,
+    buildSignInPath,
+    buildSignUpPath,
+    resolvePostAuthPath,
+} from '../auth/redirects';
 import {
     EMAIL_MAX_LENGTH,
     getPasswordRules,
     NAME_MAX_LENGTH,
     PASSWORD_MAX_LENGTH,
-} from '../auth/validation';
-import { PasswordRuleList } from '../auth/PasswordRuleList';
-import { getBrowserPhoneCountry, validatePhoneNumber } from '../auth/phone';
-import {
     sanitizeEmail,
     sanitizeFirstName,
     sanitizeLastName,
@@ -42,11 +47,97 @@ import { FormNotice } from '../components/form/FormNotice';
 import { inputClassName } from '../components/form/Input';
 import { PasswordInput } from '../components/form/PasswordInput';
 import { PhoneField } from '../components/form/PhoneField';
-import { useEnterSubmit } from '../components/form/useEnterSubmit';
 import { useToast } from '../components/toast/ToastProvider';
 import { downloadHtml } from '../services/download';
 
-function createDefaultValues(): FormValues {
+type AuthPageMode = 'signin' | 'signup' | 'staff';
+type NameFieldName = 'firstName' | 'lastName';
+type PasswordFieldName = 'confirmPassword' | 'password';
+
+type AuthModeConfig = {
+    defaultNextPath: string;
+    passwordAutoComplete: string;
+    passwordPlaceholder: string;
+    submitLabel: string;
+    switchLink: {
+        label: string;
+        to: string;
+    };
+    title: string;
+    userType?: 'staff';
+};
+
+type NameFieldConfig = {
+    autoComplete: string;
+    label: string;
+    name: NameFieldName;
+    placeholder: string;
+    sanitize: (value: string) => string;
+    validate: (value: string) => string | null | undefined;
+};
+
+const AUTH_MODE_CONFIG: Record<AuthPageMode, AuthModeConfig> = {
+    signin: {
+        defaultNextPath: '/',
+        passwordAutoComplete: 'current-password',
+        passwordPlaceholder: 'Enter your password',
+        submitLabel: 'Sign in',
+        switchLink: {
+            label: "Don't have an account? Sign up",
+            to: buildSignUpPath(),
+        },
+        title: 'Sign in',
+    },
+    signup: {
+        defaultNextPath: '/',
+        passwordAutoComplete: 'new-password',
+        passwordPlaceholder: 'Choose a password',
+        submitLabel: 'Create account',
+        switchLink: {
+            label: 'Have an account? Sign in',
+            to: buildSignInPath(),
+        },
+        title: 'Sign up',
+    },
+    staff: {
+        defaultNextPath: '/admin',
+        passwordAutoComplete: 'current-password',
+        passwordPlaceholder: 'Enter your password',
+        submitLabel: 'Sign in',
+        switchLink: {
+            label: 'Not staff? Sign in here',
+            to: buildSignInPath(),
+        },
+        title: 'Staff sign in',
+        userType: 'staff',
+    },
+};
+
+const DEFAULT_PASSWORD_VISIBILITY: Record<PasswordFieldName, boolean> = {
+    confirmPassword: false,
+    password: false,
+};
+
+const SIGN_UP_NAME_FIELDS: readonly NameFieldConfig[] = [
+    {
+        autoComplete: 'given-name',
+        label: 'First name',
+        name: 'firstName',
+        placeholder: 'Jane',
+        sanitize: sanitizeFirstName,
+        validate: validateFirstNameOnBlur,
+    },
+    {
+        autoComplete: 'family-name',
+        label: 'Last name',
+        name: 'lastName',
+        placeholder: 'Doe',
+        sanitize: sanitizeLastName,
+        validate: validateLastNameOnBlur,
+    },
+];
+
+function createDefaultValues(overrides: Partial<FormValues> = {}): FormValues {
     return {
         addressLineOne: '',
         addressLineTwo: '',
@@ -61,11 +152,11 @@ function createDefaultValues(): FormValues {
         postcode: '',
         state: '',
         suburb: '',
+        ...overrides,
     };
 }
 
-export default function AuthPage() {
-    const formRef = useRef<HTMLFormElement | null>(null);
+export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
     const location = useLocation();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
@@ -75,55 +166,46 @@ export default function AuthPage() {
     const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
     const [formError, setFormError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [passwordVisibility, setPasswordVisibility] = useState(
+        DEFAULT_PASSWORD_VISIBILITY
+    );
 
-    const {
-        forgotPasswordPath,
-        isSignUp,
-        isStaffSignIn,
-        modeSwitchPath,
-        modeSwitchText,
-        nextPath,
-        prefilledEmail,
-        submitLabel,
-        title,
-    } = getAuthPageState(searchParams, values.email);
+    const modeConfig = AUTH_MODE_CONFIG[mode];
+    const isSignUp = mode === 'signup';
+    const prefilledEmail = searchParams.get('email')?.trim() ?? '';
+    const nextPath =
+        searchParams.get('next')?.trim() || modeConfig.defaultNextPath;
+    const forgotPasswordPath = buildForgotPasswordPath({
+        email: values.email,
+        userType: modeConfig.userType,
+    });
     const passwordRules = getPasswordRules(values.password, {
         email: values.email,
         firstName: values.firstName,
         lastName: values.lastName,
     });
-    const passwordRulesMet = passwordRules.every((rule) => rule.met);
     const validationOptions = {
         isSignUp,
-        passwordRulesMet,
+        passwordRulesMet: passwordRules.every((rule) => rule.met),
     };
-    const enterSubmit = useEnterSubmit({
-        canSubmit: () =>
-            !isSubmitting &&
-            Object.values(getValidationErrors()).every((error) => !error),
-        formRef,
-    });
 
-    // Query params drive which auth flow is active. When that changes, reset
-    // transient form state but keep any email carried across related flows.
     useEffect(() => {
         setFieldErrors({});
         setFormError(null);
-        setValues((current) => ({
-            ...createDefaultValues(),
-            email: prefilledEmail || current.email,
-        }));
-        setShowPassword(false);
-        setShowConfirmPassword(false);
-        if (typeof location.state?.successMessage === 'string') {
-            showToast(location.state.successMessage);
-            navigate(location.pathname + location.search, {
-                replace: true,
-                state: null,
-            });
+        setValues((current) =>
+            createDefaultValues({ email: prefilledEmail || current.email })
+        );
+        setPasswordVisibility(DEFAULT_PASSWORD_VISIBILITY);
+
+        if (typeof location.state?.successMessage !== 'string') {
+            return;
         }
+
+        showToast(location.state.successMessage);
+        navigate(location.pathname + location.search, {
+            replace: true,
+            state: null,
+        });
     }, [
         location.pathname,
         location.search,
@@ -144,37 +226,59 @@ export default function AuthPage() {
         }));
     }
 
-    function updateValues(patch: Partial<FormValues>) {
+    function patchValues(patch: Partial<FormValues>) {
         setValues((current) => ({
             ...current,
             ...patch,
         }));
     }
 
-    function syncConfirmPasswordError(confirmPassword: string, password: string) {
+    function togglePasswordVisibility(name: PasswordFieldName) {
+        setPasswordVisibility((current) => ({
+            ...current,
+            [name]: !current[name],
+        }));
+    }
+
+    function resetForm() {
+        setFieldErrors({});
+        setFormError(null);
+        setValues(createDefaultValues());
+        setPasswordVisibility(DEFAULT_PASSWORD_VISIBILITY);
+    }
+
+    function syncConfirmPasswordError(
+        confirmPassword: string,
+        password: string
+    ) {
         setFieldError(
             'confirmPassword',
             getConfirmPasswordError(confirmPassword, password)
         );
     }
 
-    function handleFirstNameBlur() {
-        setFieldError('firstName', validateFirstNameOnBlur(values.firstName));
-    }
-
-    function handleFirstNameChange(event: ChangeEvent<HTMLInputElement>) {
-        updateValues({
-            firstName: sanitizeFirstName(event.target.value),
+    function handleNameChange(
+        field: Pick<NameFieldConfig, 'name' | 'sanitize'>,
+        event: ChangeEvent<HTMLInputElement>
+    ) {
+        patchValues({
+            [field.name]: field.sanitize(event.target.value),
         });
     }
 
-    function handleLastNameBlur() {
-        setFieldError('lastName', validateLastNameOnBlur(values.lastName));
+    function handleNameBlur(
+        field: Pick<NameFieldConfig, 'name' | 'validate'>
+    ) {
+        setFieldError(field.name, field.validate(values[field.name]));
     }
 
-    function handleLastNameChange(event: ChangeEvent<HTMLInputElement>) {
-        updateValues({
-            lastName: sanitizeLastName(event.target.value),
+    function handleEmailBlur() {
+        setFieldError('email', validateEmail(values.email));
+    }
+
+    function handleEmailChange(event: ChangeEvent<HTMLInputElement>) {
+        patchValues({
+            email: sanitizeEmail(event.target.value),
         });
     }
 
@@ -187,26 +291,16 @@ export default function AuthPage() {
         );
     }
 
-    function handlePhoneCountryChange(country: FormValues['phoneCountry']) {
-        updateValues({ phoneCountry: country });
+    function handlePhoneCountryChange(phoneCountry: FormValues['phoneCountry']) {
+        patchValues({ phoneCountry });
     }
 
     function handlePhoneNumberChange(phoneNumber: string) {
-        updateValues({ phoneNumber });
+        patchValues({ phoneNumber });
     }
 
     function handleAddressFieldChange(name: AddressFieldName, value: string) {
         setValues((current) => setAddressField(current, name, value));
-    }
-
-    function handleEmailBlur() {
-        setFieldError('email', validateEmail(values.email));
-    }
-
-    function handleEmailChange(event: ChangeEvent<HTMLInputElement>) {
-        updateValues({
-            email: sanitizeEmail(event.target.value),
-        });
     }
 
     function handlePasswordBlur() {
@@ -218,11 +312,11 @@ export default function AuthPage() {
     }
 
     function handlePasswordChange(event: ChangeEvent<HTMLInputElement>) {
-        const nextPassword = sanitizePasswordInput(event.target.value);
-        updateValues({ password: nextPassword });
+        const password = sanitizePasswordInput(event.target.value);
+        patchValues({ password });
 
         if (isSignUp && values.confirmPassword) {
-            syncConfirmPasswordError(values.confirmPassword, nextPassword);
+            syncConfirmPasswordError(values.confirmPassword, password);
         }
     }
 
@@ -233,36 +327,16 @@ export default function AuthPage() {
     function handleConfirmPasswordChange(
         event: ChangeEvent<HTMLInputElement>
     ) {
-        const nextConfirmPassword = sanitizePasswordInput(event.target.value);
-        updateValues({ confirmPassword: nextConfirmPassword });
-        syncConfirmPasswordError(nextConfirmPassword, values.password);
+        const confirmPassword = sanitizePasswordInput(event.target.value);
+        patchValues({ confirmPassword });
+        syncConfirmPasswordError(confirmPassword, values.password);
     }
 
-    function togglePasswordVisibility() {
-        setShowPassword((current) => !current);
-    }
-
-    function toggleConfirmPasswordVisibility() {
-        setShowConfirmPassword((current) => !current);
-    }
-
-    function submitForm() {
-        formRef.current?.requestSubmit();
-    }
-
-    function resetForm() {
-        setFieldErrors({});
-        setFormError(null);
-        setValues(createDefaultValues());
-        setShowPassword(false);
-        setShowConfirmPassword(false);
-    }
-
-    const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
+    async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
         event.preventDefault();
+
         const nextFieldErrors = getValidationErrors();
         setFieldErrors(nextFieldErrors);
-
         if (Object.values(nextFieldErrors).some(Boolean)) {
             setFormError('Check the highlighted fields');
             return;
@@ -270,20 +344,22 @@ export default function AuthPage() {
 
         setFormError(null);
         setIsSubmitting(true);
+
         try {
             if (isSignUp) {
                 const result = await register(toRegisterInput(values));
                 downloadHtml(result.download);
                 resetForm();
                 navigate(buildSignupVerificationPath(result));
-            } else {
-                const authenticatedUser = await login({
-                    email: values.email.trim(),
-                    password: values.password,
-                    userType: isStaffSignIn ? 'staff' : undefined,
-                });
-                navigate(resolvePostAuthPath(authenticatedUser, nextPath));
+                return;
             }
+
+            const authenticatedUser = await login({
+                email: values.email.trim(),
+                password: values.password,
+                userType: modeConfig.userType,
+            });
+            navigate(resolvePostAuthPath(authenticatedUser, nextPath));
         } catch (error) {
             const nextErrorState = toAuthErrorState(error, isSignUp);
             setFieldErrors(nextErrorState.fieldErrors);
@@ -291,108 +367,66 @@ export default function AuthPage() {
         } finally {
             setIsSubmitting(false);
         }
-    };
-
-    const signUpFields = isSignUp ? (
-        <>
-            <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
-                <Field
-                    error={fieldErrors.firstName}
-                    label="First name"
-                    required
-                >
-                    <input
-                        autoComplete="given-name"
-                        className={inputClassName(Boolean(fieldErrors.firstName))}
-                        maxLength={NAME_MAX_LENGTH}
-                        onBlur={handleFirstNameBlur}
-                        onChange={handleFirstNameChange}
-                        placeholder="Jane"
-                        value={values.firstName}
-                    />
-                </Field>
-
-                <Field
-                    error={fieldErrors.lastName}
-                    label="Last name"
-                    required
-                >
-                    <input
-                        autoComplete="family-name"
-                        className={inputClassName(Boolean(fieldErrors.lastName))}
-                        maxLength={NAME_MAX_LENGTH}
-                        onBlur={handleLastNameBlur}
-                        onChange={handleLastNameChange}
-                        placeholder="Doe"
-                        value={values.lastName}
-                    />
-                </Field>
-            </div>
-
-            <PhoneField
-                country={values.phoneCountry}
-                error={fieldErrors.phoneNumber}
-                label="Phone number"
-                onBlur={handlePhoneBlur}
-                onCountryChange={handlePhoneCountryChange}
-                onNumberChange={handlePhoneNumberChange}
-                value={values.phoneNumber}
-            />
-
-            <AddressFields
-                countryCode={values.phoneCountry}
-                errors={fieldErrors}
-                onFieldChange={handleAddressFieldChange}
-                values={values}
-            />
-        </>
-    ) : null;
-
-    const confirmPasswordField = isSignUp ? (
-        <Field
-            error={fieldErrors.confirmPassword}
-            label="Confirm password"
-            required
-        >
-            <PasswordInput
-                autoComplete="new-password"
-                hasError={Boolean(fieldErrors.confirmPassword)}
-                maxLength={PASSWORD_MAX_LENGTH}
-                name="confirmPassword"
-                onBlur={handleConfirmPasswordBlur}
-                onChange={handleConfirmPasswordChange}
-                onToggle={toggleConfirmPasswordVisibility}
-                placeholder="Re-enter your password"
-                showPassword={showConfirmPassword}
-                value={values.confirmPassword}
-            />
-        </Field>
-    ) : null;
-
-    const forgotPasswordLink = isSignUp ? null : (
-        <Link className={textButtonClassName} to={forgotPasswordPath}>
-            Forgot password
-        </Link>
-    );
+    }
 
     return (
-        <section className="mx-auto grid max-w-xl gap-6">
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                {title}
-            </h1>
-
+        <AuthPageLayout title={modeConfig.title}>
             <form
-                className="grid gap-4 rounded border border-slate-200 bg-white p-5"
+                className={authPanelClassName}
                 noValidate
-                onKeyDown={enterSubmit.onKeyDown}
                 onSubmit={handleSubmit}
-                ref={formRef}
             >
                 {formError ? (
                     <FormNotice tone="error">{formError}</FormNotice>
                 ) : null}
 
-                {signUpFields}
+                {isSignUp ? (
+                    <>
+                        <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
+                            {SIGN_UP_NAME_FIELDS.map((field) => (
+                                <Field
+                                    error={fieldErrors[field.name]}
+                                    key={field.name}
+                                    label={field.label}
+                                    required
+                                >
+                                    <input
+                                        autoComplete={field.autoComplete}
+                                        className={inputClassName(
+                                            Boolean(fieldErrors[field.name])
+                                        )}
+                                        maxLength={NAME_MAX_LENGTH}
+                                        onBlur={() => {
+                                            handleNameBlur(field);
+                                        }}
+                                        onChange={(event) => {
+                                            handleNameChange(field, event);
+                                        }}
+                                        placeholder={field.placeholder}
+                                        value={values[field.name]}
+                                    />
+                                </Field>
+                            ))}
+                        </div>
+
+                        <PhoneField
+                            country={values.phoneCountry}
+                            error={fieldErrors.phoneNumber}
+                            label="Phone number"
+                            onBlur={handlePhoneBlur}
+                            onCountryChange={handlePhoneCountryChange}
+                            onNumberChange={handlePhoneNumberChange}
+                            value={values.phoneNumber}
+                        />
+
+                        <AddressFields
+                            countryCode={values.phoneCountry}
+                            errors={fieldErrors}
+                            onFieldChange={handleAddressFieldChange}
+                            values={values}
+                        />
+                    </>
+                ) : null}
 
                 <Field error={fieldErrors.email} label="Email" required>
                     <input
@@ -409,21 +443,17 @@ export default function AuthPage() {
 
                 <Field error={fieldErrors.password} label="Password" required>
                     <PasswordInput
-                        autoComplete={
-                            isSignUp ? 'new-password' : 'current-password'
-                        }
+                        autoComplete={modeConfig.passwordAutoComplete}
                         hasError={Boolean(fieldErrors.password)}
                         maxLength={PASSWORD_MAX_LENGTH}
                         name="password"
                         onBlur={handlePasswordBlur}
                         onChange={handlePasswordChange}
-                        onToggle={togglePasswordVisibility}
-                        placeholder={
-                            isSignUp
-                                ? 'Choose a password'
-                                : 'Enter your password'
-                        }
-                        showPassword={showPassword}
+                        onToggle={() => {
+                            togglePasswordVisibility('password');
+                        }}
+                        placeholder={modeConfig.passwordPlaceholder}
+                        showPassword={passwordVisibility.password}
                         value={values.password}
                     />
                     {isSignUp ? (
@@ -431,25 +461,50 @@ export default function AuthPage() {
                     ) : null}
                 </Field>
 
-                {confirmPasswordField}
-
-                {forgotPasswordLink}
+                {isSignUp ? (
+                    <Field
+                        error={fieldErrors.confirmPassword}
+                        label="Confirm password"
+                        required
+                    >
+                        <PasswordInput
+                            autoComplete="new-password"
+                            hasError={Boolean(fieldErrors.confirmPassword)}
+                            maxLength={PASSWORD_MAX_LENGTH}
+                            name="confirmPassword"
+                            onBlur={handleConfirmPasswordBlur}
+                            onChange={handleConfirmPasswordChange}
+                            onToggle={() => {
+                                togglePasswordVisibility('confirmPassword');
+                            }}
+                            placeholder="Re-enter your password"
+                            showPassword={passwordVisibility.confirmPassword}
+                            value={values.confirmPassword}
+                        />
+                    </Field>
+                ) : (
+                    <Link className={textButtonClassName} to={forgotPasswordPath}>
+                        Forgot password
+                    </Link>
+                )}
 
                 <Button
                     disabled={isSubmitting}
                     loading={isSubmitting}
-                    onClick={submitForm}
-                    type="button"
+                    type="submit"
                     variant="primary"
                 >
-                    {submitLabel}
+                    {modeConfig.submitLabel}
                 </Button>
 
-                <Link className={textButtonClassName} to={modeSwitchPath}>
-                    {modeSwitchText}
+                <Link
+                    className={textButtonClassName}
+                    to={modeConfig.switchLink.to}
+                >
+                    {modeConfig.switchLink.label}
                 </Link>
             </form>
-        </section>
+        </AuthPageLayout>
     );
 }
 
@@ -462,62 +517,6 @@ function getConfirmPasswordError(
     }
 
     return confirmPassword !== password ? 'Passwords do not match' : undefined;
-}
-
-function getAuthPageState(searchParams: URLSearchParams, email: string) {
-    // The auth screen serves customer sign-up, customer sign-in, and staff
-    // sign-in from one route, so this helper keeps the route-driven labels and
-    // links in one place.
-    const mode = parseAuthMode(searchParams.get('mode'));
-    const nextPath = searchParams.get('next')?.trim() || '/';
-    const prefilledEmail = searchParams.get('email')?.trim() ?? '';
-    const userType = searchParams.get('userType')?.trim() || '';
-    const isStaffSignIn = userType === 'staff';
-    const isSignUp = mode === 'signup' && !isStaffSignIn;
-    const forgotPasswordPath = buildForgotPasswordPath(email, isStaffSignIn);
-
-    let modeSwitchPath = '/auth?mode=signup';
-    let modeSwitchText = "Don't have an account? Sign up";
-    let submitLabel = 'Sign in';
-    let title = 'Sign in';
-
-    if (isStaffSignIn) {
-        modeSwitchPath = '/auth?mode=signin';
-        modeSwitchText = 'Not staff? Sign in here';
-        title = 'Staff sign in';
-    } else if (isSignUp) {
-        modeSwitchPath = '/auth?mode=signin';
-        modeSwitchText = 'Have an account? Sign in';
-        submitLabel = 'Create account';
-        title = 'Sign up';
-    }
-
-    return {
-        forgotPasswordPath,
-        isSignUp,
-        isStaffSignIn,
-        modeSwitchPath,
-        modeSwitchText,
-        nextPath,
-        prefilledEmail,
-        submitLabel,
-        title,
-    };
-}
-
-function buildForgotPasswordPath(email: string, isStaffSignIn: boolean) {
-    const query = new URLSearchParams();
-    const trimmedEmail = email.trim();
-
-    if (trimmedEmail) {
-        query.set('email', trimmedEmail);
-    }
-    if (isStaffSignIn) {
-        query.set('userType', 'staff');
-    }
-
-    const queryString = query.toString();
-    return queryString ? `/reset-password?${queryString}` : '/reset-password';
 }
 
 function buildSignupVerificationPath(result: {
