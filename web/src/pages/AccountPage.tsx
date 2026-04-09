@@ -153,6 +153,8 @@ export default function AccountPage() {
     const emailChanged = Boolean(
         user && values.email.trim().toLowerCase() !== user.email
     );
+    // Customers see the contact details they registered with, while staff see
+    // role-specific account metadata instead of customer-only fields.
     const isCustomer = user?.userType === 'customer';
     const isStaff = user?.userType === 'staff';
     const hasChanges = hasProfileChanges(values, initialValues);
@@ -194,6 +196,7 @@ export default function AccountPage() {
         if (!hasChanges)
             return;
 
+        // Validate the edited registration details before sending them to the backend.
         const nextFieldErrors = validateProfileForm(values, {
             hasChanges,
             isCustomer,
@@ -216,6 +219,8 @@ export default function AccountPage() {
             setFieldErrors({});
 
             if ('verification' in result) {
+                // Changing the saved email address signs the user out and moves
+                // them into the verification flow before the update is finalized.
                 downloadHtml(result.download);
                 navigate(
                     buildVerifyEmailPath({
@@ -233,7 +238,6 @@ export default function AccountPage() {
                 ...values,
                 currentPassword: '',
             };
-
             setValues(nextValues);
             setInitialValues(nextValues);
             showToast('Account updated');
@@ -359,6 +363,7 @@ export default function AccountPage() {
 
                     {isCustomer ? (
                         <section className="grid gap-4 border-t border-slate-200 pt-6">
+                            {/* Show the registered customer's saved contact details here. */}
                             <h3 className="text-sm font-semibold tracking-[0.08em] text-slate-700 uppercase">
                                 Contact
                             </h3>
@@ -387,6 +392,7 @@ export default function AccountPage() {
 
                     {isStaff ? (
                         <section className="grid gap-4 border-t border-slate-200 pt-6">
+                            {/* Staff accounts expose their saved role details instead of customer contact fields. */}
                             <h3 className="text-sm font-semibold tracking-[0.08em] text-slate-700 uppercase">
                                 Staff
                             </h3>
@@ -572,6 +578,8 @@ function validateProfileForm(
 ) {
     const fieldErrors: FieldErrors = {};
 
+    // Re-check the core registration fields so account updates follow the same
+    // basic validation rules as the original registration flow.
     const emailError = validateEmail(values.email);
     if (emailError) {
         fieldErrors.email = emailError;
@@ -599,6 +607,8 @@ function validateProfileForm(
     }
 
     if (hasChanges) {
+        // Require the current password before allowing saved registration
+        // details to be changed on an existing account.
         fieldErrors.currentPassword =
             validateRequired(
                 values.currentPassword,

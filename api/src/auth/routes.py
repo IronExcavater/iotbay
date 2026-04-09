@@ -100,6 +100,8 @@ def register() -> ResponseReturnValue:
 @auth_bp.post("/login")
 def login() -> ResponseReturnValue:
     auth_service = app_extension("auth_service", AuthService)
+    # Authenticate the submitted credentials first, then attach a new session
+    # cookie so subsequent requests can be matched back to this user.
     user = auth_service.authenticate(parse_request(LoginRequest))
     response = make_response(_user_payload(user), HTTPStatus.OK)
     _set_session_cookie(response, auth_service.start_session(user))
@@ -189,6 +191,8 @@ def update_me() -> ResponseReturnValue:
 @auth_bp.post("/logout")
 @login_required
 def logout() -> ResponseReturnValue:
+    # Remove the persisted session record for the current cookie and instruct
+    # the browser to drop the auth cookie as part of logout.
     app_extension("auth_service", AuthService).logout(request_session_token())
     response = make_response("", HTTPStatus.NO_CONTENT)
     _clear_session_cookie(response)

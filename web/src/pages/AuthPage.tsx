@@ -365,6 +365,8 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
                         className={inputClassName(Boolean(fieldErrors.email))}
                         maxLength={EMAIL_MAX_LENGTH}
                         onBlur={() => {
+                            // Validate the normalized email after the user leaves the field
+                            // so sign-up catches formatting issues early.
                             setFieldError('email', validateEmail(values.email));
                         }}
                         onChange={handleEmailChange}
