@@ -27,6 +27,8 @@ STAFF_PERMISSION_SUPERADMIN = "superadmin"
 
 USER_STATUS_UNVERIFIED = "unverified"
 USER_STATUS_ACTIVE = "active"
+# Disabled users remain stored in the database, but auth checks should treat
+# them as inactive so the account can no longer be used to sign in.
 USER_STATUS_DISABLED = "disabled"
 
 USER_TOKEN_PURPOSE_EMAIL_VERIFICATION = "email_verification"
