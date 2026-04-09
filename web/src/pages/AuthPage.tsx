@@ -322,6 +322,8 @@ export default function AuthPage() {
                         className={inputClassName(Boolean(fieldErrors.email))}
                         maxLength={EMAIL_MAX_LENGTH}
                         onBlur={() => {
+                            // Validate the normalized email after the user leaves the field
+                            // so sign-up catches formatting issues early.
                             setFieldError('email', validateEmail(values.email));
                         }}
                         onChange={(event) => {
@@ -347,6 +349,8 @@ export default function AuthPage() {
                             if (!isSignUp || !values.password) {
                                 return;
                             }
+                            // Reuse the full auth-form validation here so the sign-up password
+                            // respects the same strength and policy checks as form submission.
                             const passwordError = validateAuthForm(values, {
                                 isSignUp: true,
                                 passwordRulesMet: passwordRules.every(
@@ -364,6 +368,8 @@ export default function AuthPage() {
                                 password: nextPassword,
                             }));
                             if (isSignUp && values.confirmPassword) {
+                                // Keep confirm-password feedback in sync while the primary
+                                // password changes during registration.
                                 setFieldError(
                                     'confirmPassword',
                                     getConfirmPasswordError(

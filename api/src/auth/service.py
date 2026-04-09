@@ -163,6 +163,8 @@ class AuthService:
         )
 
     def authenticate(self, data: LoginRequest) -> User:
+        # Load the user record by email, then verify the submitted password
+        # against the stored password hash before allowing login.
         user = self.user_repository.select_user_by_email(email=data.email)
         if user is None or not verify_password(data.password, user.password_hash):
             raise AuthenticationError()
@@ -340,6 +342,8 @@ class AuthService:
     def start_session(self, user: User) -> str:
         session_token = new_session_token()
         now = UtcTime.now()
+        # Persist a hashed session token so future requests can authenticate
+        # without storing the raw session value in the database.
         self.user_repository.insert_user_session(
             user_id=user.user_id,
             session_token_hash=hash_session_token(session_token),
@@ -352,6 +356,8 @@ class AuthService:
         if session_token is None:
             return
 
+        # Logout deletes the matching stored session so the current cookie can
+        # no longer be used to load an authenticated user.
         self.user_repository.delete_user_session_by_token_hash(
             session_token_hash=hash_session_token(session_token)
         )

@@ -35,6 +35,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         async function loadSession() {
             try {
+                // Restore any existing logged-in session by asking the backend
+                // for the user attached to the current auth cookie.
                 const currentUser = await authApi.me();
                 if (isActive) {
                     setUser(currentUser);
@@ -66,12 +68,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: user !== null,
         isLoading,
         async login(input) {
+            // Login returns the authenticated user after the backend validates
+            // the submitted credentials and issues a fresh session cookie.
             const nextUser = await authApi.login(input);
             setUser(nextUser);
             return nextUser;
         },
         async logout() {
             try {
+                // Logout tells the backend to invalidate the stored session and
+                // clears the local authenticated user state regardless of outcome.
                 await authApi.logout();
             } catch (error) {
                 if (!(error instanceof BackendError) || error.status !== 401) {
@@ -88,6 +94,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 return result;
             }
 
+            // Refresh the in-memory authenticated user with the newly saved
+            // registration details returned from the backend.
             setUser(result);
             return result;
         },

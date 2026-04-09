@@ -402,6 +402,9 @@ class UserRepository(Repository):
         updated_at: str,
     ) -> User:
         with self.connect() as connection:
+            # Status changes keep the existing user record in the users table;
+            # account cancellation/deactivation can therefore mark the account
+            # inactive without deleting its database row.
             self.update_where(
                 connection,
                 "users",

@@ -98,6 +98,8 @@ export default function AccountPage() {
             return;
         }
 
+        // Populate the account form with the registered user's current details
+        // so they can review and edit the information they originally provided.
         const phoneCountry = user.phoneNumber
             ? inferPhoneCountry(user.phoneNumber)
             : getBrowserPhoneCountry();
@@ -129,6 +131,8 @@ export default function AccountPage() {
     const emailChanged = Boolean(
         user && values.email.trim().toLowerCase() !== user.email
     );
+    // Customers see the contact details they registered with, while staff see
+    // role-specific account metadata instead of customer-only fields.
     const isCustomer = user?.userType === 'customer';
     const isStaff = user?.userType === 'staff';
     const hasChanges = hasProfileChanges(values, initialValues);
@@ -156,10 +160,13 @@ export default function AccountPage() {
         event.preventDefault();
         setError(null);
 
+        // Skip the update request when the registered user has not changed any
+        // of their saved registration details on the account page.
         if (!hasChanges) {
             return;
         }
 
+        // Validate the edited registration details before sending them to the backend.
         const nextFieldErrors = validateProfileForm(values, {
             hasChanges,
             isCustomer,
@@ -172,6 +179,8 @@ export default function AccountPage() {
 
         setIsSubmitting(true);
         try {
+            // Submit the registered user's updated profile details, including
+            // customer contact data or staff-specific fields as applicable.
             const result = await updateMe({
                 ...(isCustomer ? toAddressInput(values) : {}),
                 currentPassword: hasChanges
@@ -188,6 +197,8 @@ export default function AccountPage() {
 
             setFieldErrors({});
             if ('verification' in result) {
+                // Changing the saved email address signs the user out and moves
+                // them into the verification flow before the update is finalized.
                 downloadHtml(result.download);
                 navigate(
                     `/verify-email?email=${encodeURIComponent(values.email.trim())}&context=account${isStaff ? '&userType=staff' : ''}${result.download ? '&downloaded=1' : ''}`
@@ -199,6 +210,7 @@ export default function AccountPage() {
                 ...values,
                 currentPassword: '',
             };
+            // Treat the saved form state as the new baseline after a successful update.
             setValues(nextValues);
             setInitialValues(nextValues);
             showToast('Account updated');
@@ -329,6 +341,7 @@ export default function AccountPage() {
 
                     {isCustomer ? (
                         <section className="grid gap-4 border-t border-slate-200 pt-6">
+                            {/* Show the registered customer's saved contact details here. */}
                             <h3 className="text-sm font-semibold tracking-[0.08em] text-slate-700 uppercase">
                                 Contact
                             </h3>
@@ -377,6 +390,7 @@ export default function AccountPage() {
 
                     {isStaff ? (
                         <section className="grid gap-4 border-t border-slate-200 pt-6">
+                            {/* Staff accounts expose their saved role details instead of customer contact fields. */}
                             <h3 className="text-sm font-semibold tracking-[0.08em] text-slate-700 uppercase">
                                 Staff
                             </h3>
@@ -565,6 +579,8 @@ function validateProfileForm(
 ) {
     const fieldErrors: FieldErrors = {};
 
+    // Re-check the core registration fields so account updates follow the same
+    // basic validation rules as the original registration flow.
     const emailError = validateEmail(values.email);
     if (emailError) {
         fieldErrors.email = emailError;
@@ -592,6 +608,8 @@ function validateProfileForm(
     }
 
     if (hasChanges) {
+        // Require the current password before allowing saved registration
+        // details to be changed on an existing account.
         fieldErrors.currentPassword =
             validateRequired(
                 values.currentPassword,
