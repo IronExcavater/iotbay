@@ -4,6 +4,7 @@
     "esbenp.prettier-vscode",
     "ms-python.python",
     "bradlc.vscode-tailwindcss",
-    "alexcvzz.vscode-sqlite"
+    "mtxr.sqltools",
+    "mtxr.sqltools-driver-sqlite"
   ]
 }

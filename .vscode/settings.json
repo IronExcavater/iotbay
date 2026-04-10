@@ -11,5 +11,14 @@
         "."
     ],
     "python.testing.pytestEnabled": false,
-    "python.testing.unittestEnabled": true
+    "python.testing.unittestEnabled": true,
+    "sqltools.useNodeRuntime": true,
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "database": "api/data/iotbay.sqlite3",
+            "name": "local-iotbay"
+        }
+    ]
 }
