@@ -22,7 +22,9 @@ python3 --version
 uv --version
 ```
 
-### 2. Create Your Local Environment File
+### 2. Create Your Local Environment File (Optional)
+
+The app can still run locally without the optional email or address integrations.
 
 Copy `.env.example` to `.env`:
 
@@ -36,7 +38,6 @@ Then open `.env` and set the values you need:
 - `IOTBAY_GOOGLE_MAPS_API_KEY`: optional, only needed for address suggestions
 - `IOTBAY_SMTP_*` and `IOTBAY_SENDER`: optional, only needed if you want real emails to send
 
-The app can still run locally without the optional email or address integrations.
 
 ### 3. Run First-Time Setup
 
@@ -60,13 +61,14 @@ If you are not sure whether your machine is set up correctly, just run all four 
 
 ### 4. Start The App
 
-Run the frontend and backend in separate terminals:
+Run the frontend and backend in separate terminals.
 
+Terminal 1:
 ```bash
-# Terminal 1
 npm run -w api dev
-
-# Terminal 2
+```
+Terminal 2:
+```bash
 npm run -w web dev
 ```
 
