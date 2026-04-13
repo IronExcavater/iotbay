@@ -20,5 +20,6 @@
             "database": "api/data/iotbay.sqlite3",
             "name": "local-iotbay"
         }
-    ]
+    ],
+    "svg.preview.background": "transparent"
 }
