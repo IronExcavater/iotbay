@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import clsx from 'clsx';
 
 export function FormNotice({
     children,
@@ -9,11 +10,10 @@ export function FormNotice({
 }) {
     return (
         <p
-            className={
-                tone === 'error'
-                    ? 'text-sm text-red-700'
-                    : 'text-sm text-emerald-700'
-            }
+            className={clsx(
+                'text-sm',
+                tone === 'error' ? 'text-red-700' : 'text-emerald-700'
+            )}
         >
             {children}
         </p>

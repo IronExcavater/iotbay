@@ -5,4 +5,7 @@ DELETE FROM staff;
 DELETE FROM customers;
 DELETE FROM addresses;
 DELETE FROM users;
+INSERT INTO users (user_id, email, password_hash, first_name, last_name, user_type, status) VALUES (X'BEFB1098A890400C98F4B4D8ED1A1AB3', 'iotbaysupperadmin@iotbay.local', 'pbkdf2_sha256$600000$82572a7be3b94423f872c87c2a4c84d0$86f9c85d5492542ab23ae2d29658d018b316956a224930d8e774be7e0f33f730', 'IoTBay', 'Superadmin', 'staff', 'active');
+INSERT INTO staff (user_id, designation, permission, staff_id) VALUES (X'BEFB1098A890400C98F4B4D8ED1A1AB3', 'Super Admin', 'superadmin', NULL);
+INSERT INTO entity_audit_log (entity_type, entity_id, created_at, created_by_user_id, updated_at, updated_by_user_id) VALUES ('user', X'BEFB1098A890400C98F4B4D8ED1A1AB3', '2026-04-13T04:39:02.382036+00:00', NULL, '2026-04-13T04:39:02.382036+00:00', NULL);
 COMMIT;

@@ -4,6 +4,9 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
     envDir: '..',
+    // Reuse the workspace env file so the web app can read the same local API
+    // access key value the backend loads from `.env`.
+    envPrefix: ['VITE_', 'IOTBAY_'],
     plugins: [react(), tailwindcss()],
     server: {
         port: 5173,

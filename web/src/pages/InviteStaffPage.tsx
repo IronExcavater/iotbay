@@ -1,14 +1,19 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 
 import { authApi } from '../auth/api';
-import { useAuth } from '../auth/AuthProvider';
 import {
+    assessDesignation,
+    assessEmail,
+    assessPermission,
+    assessStaffId,
+    sanitizeDesignation,
+    sanitizeEmail,
+    sanitizeStaffId,
     EMAIL_MAX_LENGTH,
     STAFF_DESIGNATION_MAX_LENGTH,
     STAFF_ID_MAX_LENGTH,
-} from '../auth/limits';
-import { sanitizeEmail, validateEmail } from '../auth/validation';
+} from '../auth/validation';
 import { Button } from '../components/form/Button';
 import { Field } from '../components/form/Field';
 import { FormNotice } from '../components/form/FormNotice';
@@ -16,6 +21,11 @@ import { inputClassName } from '../components/form/Input';
 import { useToast } from '../components/toast/ToastProvider';
 import { downloadHtmlAndNotify } from '../services/download';
 import { toErrorMessage } from '../services/http';
+import {
+    collectFieldErrors,
+    hasFieldErrors,
+    type FieldErrors,
+} from '../validation/forms';
 
 interface InviteStaffValues {
     designation: string;
@@ -23,6 +33,9 @@ interface InviteStaffValues {
     permission: string;
     staffId: string;
 }
+
+type InviteStaffFieldName = keyof InviteStaffValues;
+type InviteStaffFieldErrors = FieldErrors<InviteStaffFieldName>;
 
 const DEFAULT_VALUES: InviteStaffValues = {
     designation: '',
@@ -32,83 +45,56 @@ const DEFAULT_VALUES: InviteStaffValues = {
 };
 
 export default function InviteStaffPage() {
-    const { isAuthenticated, isLoading, logout, user } = useAuth();
     const { showToast } = useToast();
     const [values, setValues] = useState(DEFAULT_VALUES);
+    const [fieldErrors, setFieldErrors] = useState<InviteStaffFieldErrors>({});
     const [formError, setFormError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isClearingIneligibleSession, setIsClearingIneligibleSession] =
-        useState(false);
 
-    useEffect(() => {
+    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        setFormError(null);
+
+        const nextFieldErrors = collectFieldErrors<InviteStaffFieldName>({
+            designation: assessDesignation(values.designation),
+            email: assessEmail(values.email),
+            permission: assessPermission(values.permission, true),
+            staffId: assessStaffId(values.staffId),
+        });
+
+        setFieldErrors(nextFieldErrors);
+        if (hasFieldErrors(nextFieldErrors)) {
+            return;
+        }
+
+        const designation = assessDesignation(values.designation);
+        const email = assessEmail(values.email);
+        const permission = assessPermission(values.permission, true);
+        const staffId = assessStaffId(values.staffId);
+
         if (
-            isLoading ||
-            !isAuthenticated ||
-            !user ||
-            (user.userType === 'staff' && user.permission === 'superadmin') ||
-            isClearingIneligibleSession
+            !designation.value ||
+            !email.value ||
+            !permission.value ||
+            !staffId.value
         ) {
             return;
         }
 
-        setIsClearingIneligibleSession(true);
-        void logout().finally(() => {
-            setIsClearingIneligibleSession(false);
-        });
-    }, [isAuthenticated, isClearingIneligibleSession, isLoading, logout, user]);
-
-    if (!isLoading && !isAuthenticated && !isClearingIneligibleSession) {
-        return (
-            <Navigate
-                replace
-                to="/auth?mode=signin&userType=staff&next=/admin/invite-staff"
-            />
-        );
-    }
-
-    if (
-        !isLoading &&
-        isAuthenticated &&
-        (user?.userType !== 'staff' || user.permission !== 'superadmin')
-    ) {
-        return (
-            <p className="py-8 text-slate-500">
-                Redirecting to superadmin sign in
-            </p>
-        );
-    }
-
-    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-
-        const emailError = validateEmail(values.email);
-        if (emailError) {
-            setFormError(emailError);
-            return;
-        }
-        if (!values.staffId.trim()) {
-            setFormError('Staff ID is required');
-            return;
-        }
-        if (!values.designation.trim()) {
-            setFormError('Position is required');
-            return;
-        }
-
-        setFormError(null);
         setIsSubmitting(true);
         try {
             const result = await authApi.inviteStaff({
-                designation: values.designation.trim(),
-                email: values.email.trim(),
-                permission: values.permission,
-                staffId: values.staffId.trim().toUpperCase(),
+                designation: designation.value,
+                email: email.value,
+                permission: permission.value,
+                staffId: staffId.value,
             });
             downloadHtmlAndNotify(result.download, showToast, {
                 downloadedMessage: 'Staff invitation downloaded',
                 sentMessage: 'Staff invitation sent',
             });
             setValues(DEFAULT_VALUES);
+            setFieldErrors({});
         } catch (error) {
             setFormError(
                 toErrorMessage(error, 'Unable to invite staff member')
@@ -121,9 +107,9 @@ export default function InviteStaffPage() {
     return (
         <section className="mx-auto grid max-w-2xl gap-6">
             <header className="grid gap-2">
-                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
                     Invite staff
-                </h1>
+                </h2>
                 <p className="text-sm text-slate-600">
                     Send a staff registration link that lets the invited team
                     member finish creating their account.
@@ -136,10 +122,16 @@ export default function InviteStaffPage() {
                         <FormNotice tone="error">{formError}</FormNotice>
                     ) : null}
 
-                    <Field label="Staff email" required>
+                    <Field
+                        error={fieldErrors.email}
+                        label="Staff email"
+                        required
+                    >
                         <input
                             autoComplete="email"
-                            className={inputClassName(Boolean(formError))}
+                            className={inputClassName(
+                                Boolean(fieldErrors.email)
+                            )}
                             maxLength={EMAIL_MAX_LENGTH}
                             onChange={(event) => {
                                 setValues((current) => ({
@@ -153,15 +145,22 @@ export default function InviteStaffPage() {
                     </Field>
 
                     <div className="grid gap-4 sm:grid-cols-2">
-                        <Field label="Staff ID" required>
+                        <Field
+                            error={fieldErrors.staffId}
+                            label="Staff ID"
+                            required
+                        >
                             <input
-                                className={inputClassName(Boolean(formError))}
+                                className={inputClassName(
+                                    Boolean(fieldErrors.staffId)
+                                )}
                                 maxLength={STAFF_ID_MAX_LENGTH}
                                 onChange={(event) => {
                                     setValues((current) => ({
                                         ...current,
-                                        staffId:
-                                            event.target.value.toUpperCase(),
+                                        staffId: sanitizeStaffId(
+                                            event.target.value
+                                        ),
                                     }));
                                 }}
                                 placeholder="STF-001"
@@ -169,14 +168,22 @@ export default function InviteStaffPage() {
                             />
                         </Field>
 
-                        <Field label="Position" required>
+                        <Field
+                            error={fieldErrors.designation}
+                            label="Position"
+                            required
+                        >
                             <input
-                                className={inputClassName(Boolean(formError))}
+                                className={inputClassName(
+                                    Boolean(fieldErrors.designation)
+                                )}
                                 maxLength={STAFF_DESIGNATION_MAX_LENGTH}
                                 onChange={(event) => {
                                     setValues((current) => ({
                                         ...current,
-                                        designation: event.target.value,
+                                        designation: sanitizeDesignation(
+                                            event.target.value
+                                        ),
                                     }));
                                 }}
                                 placeholder="Store manager"
@@ -185,9 +192,15 @@ export default function InviteStaffPage() {
                         </Field>
                     </div>
 
-                    <Field label="Permission" required>
+                    <Field
+                        error={fieldErrors.permission}
+                        label="Permission"
+                        required
+                    >
                         <select
-                            className={inputClassName(false)}
+                            className={inputClassName(
+                                Boolean(fieldErrors.permission)
+                            )}
                             onChange={(event) => {
                                 setValues((current) => ({
                                     ...current,

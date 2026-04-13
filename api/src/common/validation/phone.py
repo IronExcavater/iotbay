@@ -12,15 +12,16 @@ DEFAULT_PHONE_COUNTRY = "AU"
 @dataclass(slots=True, frozen=True)
 class PhoneCountryValidator(StringValidator):
     def sanitize_input(self, value: str) -> str:
+        # slots=True dataclasses can break zero-arg super(), so call the base
+        # implementation explicitly.
         return (
-            super()
-            .sanitize_input(value)
+            StringValidator.sanitize_input(self, value)
             .replace(" ", "")
             .upper()[:PHONE_COUNTRY_LENGTH]
         )
 
     def validate(self, value: str, **context: object) -> str:
-        normalized = super().validate(value, **context)
+        normalized = StringValidator.validate(self, value, **context)
         if normalized and not re.fullmatch(r"[A-Z]{2}", normalized):
             self._fail("phoneCountry is invalid", code="PHONE_COUNTRY_INVALID")
         return normalized
@@ -31,7 +32,7 @@ class PhoneValidator(StringValidator):
     default_country: str = DEFAULT_PHONE_COUNTRY
 
     def sanitize_input(self, value: str) -> str:
-        normalized = super().sanitize_input(value)
+        normalized = StringValidator.sanitize_input(self, value)
         result = ""
 
         for character in normalized:
@@ -46,7 +47,7 @@ class PhoneValidator(StringValidator):
         return result
 
     def validate(self, value: str, **context: object) -> str:
-        normalized = super().validate(value, **context)
+        normalized = StringValidator.validate(self, value, **context)
         if not normalized:
             return normalized
 

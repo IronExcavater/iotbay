@@ -1,8 +1,11 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 
+import { ProtectedRoute } from '../auth/ProtectedRoute';
+import AdminLayout from '../layouts/AdminLayout';
 import SiteLayout from '../layouts/SiteLayout';
 import AccountPage from '../pages/AccountPage';
 import AdminPage from '../pages/AdminPage';
+import AdminProductsPage from '../pages/AdminProductsPage';
 import AdminUsersPage from '../pages/AdminUsersPage';
 import AuthPage from '../pages/AuthPage';
 import ErrorPage from '../pages/ErrorPage';
@@ -24,24 +27,82 @@ export const router = createBrowserRouter([
                 element: <HomePage />,
             },
             {
-                path: 'auth',
-                element: <AuthPage />,
+                element: <ProtectedRoute access="guest" />,
+                children: [
+                    {
+                        path: 'sign-in',
+                        element: <AuthPage mode="signin" />,
+                    },
+                    {
+                        path: 'sign-up',
+                        element: <AuthPage mode="signup" />,
+                    },
+                    {
+                        path: 'staff/sign-in',
+                        element: <AuthPage mode="staff" />,
+                    },
+                    {
+                        path: 'forgot-password',
+                        element: <ResetPasswordPage />,
+                    },
+                    {
+                        path: 'reset-password',
+                        element: <ResetPasswordPage />,
+                    },
+                    {
+                        path: 'verify-email',
+                        element: <VerifyEmailPage />,
+                    },
+                ],
             },
             {
-                path: 'reset-password',
-                element: <ResetPasswordPage />,
+                element: <ProtectedRoute />,
+                children: [
+                    {
+                        path: 'account',
+                        element: <AccountPage />,
+                    },
+                ],
             },
             {
-                path: 'verify-email',
-                element: <VerifyEmailPage />,
+                element: <ProtectedRoute access="staff" />,
+                children: [
+                    {
+                        path: 'admin',
+                        element: <AdminLayout />,
+                        children: [
+                            {
+                                index: true,
+                                element: <AdminPage />,
+                            },
+                            {
+                                path: 'products',
+                                element: <AdminProductsPage />,
+                            },
+                            {
+                                element: <ProtectedRoute access="superadmin" />,
+                                children: [
+                                    {
+                                        path: 'users',
+                                        element: <AdminUsersPage />,
+                                    },
+                                    {
+                                        path: 'users/invite-staff',
+                                        element: <InviteStaffPage />,
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                ],
             },
             {
-                path: 'account',
-                element: <AccountPage />,
+                path: 'admin/invite-staff',
+                element: <Navigate replace to="/admin/users/invite-staff" />,
             },
             {
-                path: 'admin',
-                element: <AdminPage />,
+                path: 'staff-register',
+                element: <StaffRegistrationPage />,
             },
             {
                 path: 'admin/users',

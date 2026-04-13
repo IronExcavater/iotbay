@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import clsx from 'clsx';
 import type { CountryCode } from 'libphonenumber-js';
+import { FaChevronDown, FaMagnifyingGlass } from 'react-icons/fa6';
 
 import {
     formatPhoneDisplay,
@@ -37,14 +39,20 @@ export function PhoneField({
     const inputRef = useRef<HTMLInputElement | null>(null);
     const searchInputRef = useRef<HTMLInputElement | null>(null);
     const rootRef = useRef<HTMLDivElement | null>(null);
+
+    const fieldLabel =
+        typeof label === 'string' || typeof label === 'number'
+            ? String(label)
+            : 'Phone number';
+
     const selectedOption =
         PHONE_COUNTRY_OPTIONS.find((option) => option.code === country) ??
         PHONE_COUNTRY_OPTIONS[0];
+
     const filteredOptions = useMemo(() => {
         const normalizedQuery = countrySearch.trim().toLowerCase();
-        if (!normalizedQuery) {
-            return PHONE_COUNTRY_OPTIONS;
-        }
+
+        if (!normalizedQuery) return PHONE_COUNTRY_OPTIONS;
 
         return PHONE_COUNTRY_OPTIONS.filter((option) =>
             [option.code, option.name, option.dialCode, option.dropdownLabel]
@@ -55,9 +63,7 @@ export function PhoneField({
     }, [countrySearch]);
 
     useEffect(() => {
-        if (!isFocused || inputRef.current === null) {
-            return;
-        }
+        if (!isFocused || inputRef.current === null) return;
 
         const length = inputRef.current.value.length;
         inputRef.current.setSelectionRange(length, length);
@@ -74,17 +80,19 @@ export function PhoneField({
 
     useEffect(() => {
         function handlePointerDown(event: MouseEvent) {
-            if (!rootRef.current?.contains(event.target as Node)) {
+            if (!rootRef.current?.contains(event.target as Node))
                 setIsCountryMenuOpen(false);
-            }
         }
 
         document.addEventListener('mousedown', handlePointerDown);
+
         return () => {
             document.removeEventListener('mousedown', handlePointerDown);
         };
     }, []);
 
+    // Keep the editing experience forgiving while preserving the cleaner
+    // read-only presentation when the field is not active.
     const displayValue = isFocused
         ? formatPhoneInput(value, country)
         : formatPhoneDisplay(value, country);
@@ -97,32 +105,55 @@ export function PhoneField({
             >
                 <div className="relative">
                     <button
-                        aria-expanded={isCountryMenuOpen}
-                        aria-haspopup="listbox"
-                        className={`${inputClassName(false)} flex cursor-pointer items-center justify-between gap-2 pr-3 text-left`}
+                        aria-label="Choose phone country"
+                        className={clsx(
+                            inputClassName(),
+                            'flex cursor-pointer items-center justify-between gap-2 pr-3 text-left'
+                        )}
                         onClick={() => {
                             setIsCountryMenuOpen((current) => !current);
                         }}
+                        title="Choose phone country"
                         type="button"
                     >
-                        <span className="truncate text-sm text-slate-900">
-                            {selectedOption.triggerLabel}
+                        <span className="inline-flex min-w-0 items-center gap-2.5 text-sm text-slate-900">
+                            <span className="shrink-0">
+                                {selectedOption.flag}
+                            </span>
+
+                            <span className="truncate">
+                                +{selectedOption.dialCode}
+                            </span>
                         </span>
+
                         <span
-                            className={`shrink-0 text-slate-500 transition-transform duration-200 ${isCountryMenuOpen ? 'rotate-180' : ''}`}
+                            className={clsx(
+                                'shrink-0 text-slate-500 transition-transform duration-200',
+                                isCountryMenuOpen && 'rotate-180'
+                            )}
                         >
-                            <ChevronDownIcon />
+                            <FaChevronDown aria-hidden="true" size={14} />
                         </span>
                     </button>
+
                     {isCountryMenuOpen ? (
                         <div className="absolute z-20 mt-1 w-72 overflow-hidden rounded border border-slate-200 bg-white shadow-lg">
                             <div className="sticky top-0 border-b border-slate-200 bg-white p-2">
                                 <div className="relative">
                                     <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
-                                        <SearchIcon />
+                                        <FaMagnifyingGlass
+                                            aria-hidden="true"
+                                            size={14}
+                                        />
                                     </span>
+
                                     <input
-                                        className={`${inputClassName(false)} py-2 pl-9`}
+                                        aria-label="Search countries"
+                                        autoComplete="off"
+                                        className={clsx(
+                                            inputClassName(),
+                                            'py-2 pl-9'
+                                        )}
                                         onChange={(event) => {
                                             setCountrySearch(
                                                 event.target.value
@@ -130,42 +161,48 @@ export function PhoneField({
                                         }}
                                         placeholder="Search country"
                                         ref={searchInputRef}
+                                        title="Search countries"
+                                        type="text"
                                         value={countrySearch}
                                     />
                                 </div>
                             </div>
-                            <div
-                                className="max-h-64 overflow-y-auto py-1"
-                                role="listbox"
-                            >
+
+                            <div className="max-h-64 overflow-y-auto py-1">
                                 {filteredOptions.map((option) => (
                                     <button
-                                        className={`flex w-full cursor-pointer items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-slate-50 ${option.code === country ? 'bg-slate-50' : ''}`}
+                                        className={clsx(
+                                            'flex w-full cursor-pointer items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-slate-50',
+                                            option.code === country &&
+                                                'bg-slate-50'
+                                        )}
                                         key={option.code}
-                                        onMouseDown={(event) => {
-                                            event.preventDefault();
+                                        onClick={() => {
                                             setIsCountryMenuOpen(false);
                                             onCountryChange(option.code);
-                                            if (value.trim()) {
-                                                onNumberChange(
-                                                    formatPhoneInput(
-                                                        value,
-                                                        option.code
-                                                    )
-                                                );
-                                            }
+
+                                            if (!value.trim()) return;
+
+                                            onNumberChange(
+                                                formatPhoneInput(
+                                                    value,
+                                                    option.code
+                                                )
+                                            );
                                         }}
-                                        role="option"
+                                        title={option.dropdownLabel}
                                         type="button"
                                     >
                                         <span className="truncate text-slate-900">
                                             {option.dropdownLabel}
                                         </span>
+
                                         <span className="shrink-0 text-slate-500">
                                             {option.code}
                                         </span>
                                     </button>
                                 ))}
+
                                 {filteredOptions.length === 0 ? (
                                     <div className="px-3 py-2 text-sm text-slate-500">
                                         No matches
@@ -177,64 +214,29 @@ export function PhoneField({
                 </div>
 
                 <input
+                    aria-label={fieldLabel}
                     className={inputClassName(Boolean(error))}
                     inputMode="tel"
                     maxLength={PHONE_NUMBER_MAX_LENGTH}
+                    onBlur={() => {
+                        setIsFocused(false);
+                        onBlur?.();
+                    }}
                     onChange={(event) => {
                         onNumberChange(
                             formatPhoneInput(event.target.value, country)
                         );
-                    }}
-                    onBlur={() => {
-                        setIsFocused(false);
-                        onBlur?.();
                     }}
                     onFocus={() => {
                         setIsFocused(true);
                     }}
                     placeholder="0412 345 678"
                     ref={inputRef}
+                    title={fieldLabel}
                     type="tel"
                     value={displayValue}
                 />
             </div>
         </Field>
-    );
-}
-
-function ChevronDownIcon() {
-    return (
-        <svg
-            aria-hidden="true"
-            fill="none"
-            height="16"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            viewBox="0 0 24 24"
-            width="16"
-        >
-            <path d="m6 9 6 6 6-6" />
-        </svg>
-    );
-}
-
-function SearchIcon() {
-    return (
-        <svg
-            aria-hidden="true"
-            fill="none"
-            height="16"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            viewBox="0 0 24 24"
-            width="16"
-        >
-            <circle cx="11" cy="11" r="7" />
-            <path d="m20 20-3.5-3.5" />
-        </svg>
     );
 }
