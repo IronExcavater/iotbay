@@ -59,10 +59,10 @@ export default function SiteNav() {
                     to="/"
                 >
                     <img
-                        alt="UTS"
+                        alt="IoTBay icon"
                         className="h-8 w-auto shrink-0"
                         loading="eager"
-                        src="/uts.png"
+                        src="/iotbay_icon.svg"
                     />
                     <span className="inline-block transition-[letter-spacing,transform] duration-200 ease-out group-hover:tracking-[0.24em] group-focus-visible:-translate-y-0.5 group-focus-visible:tracking-[0.24em]">
                         IoTBay
