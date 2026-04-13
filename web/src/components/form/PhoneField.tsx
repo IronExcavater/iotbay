@@ -1,10 +1,4 @@
-import {
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-    type ReactNode,
-} from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import type { CountryCode } from 'libphonenumber-js';
 import { FaChevronDown, FaMagnifyingGlass } from 'react-icons/fa6';
@@ -58,8 +52,7 @@ export function PhoneField({
     const filteredOptions = useMemo(() => {
         const normalizedQuery = countrySearch.trim().toLowerCase();
 
-        if (!normalizedQuery)
-            return PHONE_COUNTRY_OPTIONS;
+        if (!normalizedQuery) return PHONE_COUNTRY_OPTIONS;
 
         return PHONE_COUNTRY_OPTIONS.filter((option) =>
             [option.code, option.name, option.dialCode, option.dropdownLabel]
@@ -70,8 +63,7 @@ export function PhoneField({
     }, [countrySearch]);
 
     useEffect(() => {
-        if (!isFocused || inputRef.current === null)
-            return;
+        if (!isFocused || inputRef.current === null) return;
 
         const length = inputRef.current.value.length;
         inputRef.current.setSelectionRange(length, length);
@@ -163,7 +155,9 @@ export function PhoneField({
                                             'py-2 pl-9'
                                         )}
                                         onChange={(event) => {
-                                            setCountrySearch(event.target.value);
+                                            setCountrySearch(
+                                                event.target.value
+                                            );
                                         }}
                                         placeholder="Search country"
                                         ref={searchInputRef}
@@ -187,8 +181,7 @@ export function PhoneField({
                                             setIsCountryMenuOpen(false);
                                             onCountryChange(option.code);
 
-                                            if (!value.trim())
-                                                return;
+                                            if (!value.trim()) return;
 
                                             onNumberChange(
                                                 formatPhoneInput(

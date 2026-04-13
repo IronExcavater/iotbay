@@ -1,10 +1,10 @@
+import { useEffect, useState, type ChangeEvent, type SubmitEvent } from 'react';
 import {
-    useEffect,
-    useState,
-    type ChangeEvent,
-    type SubmitEvent,
-} from 'react';
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+    Link,
+    useLocation,
+    useNavigate,
+    useSearchParams,
+} from 'react-router-dom';
 
 import { AddressFields } from '../addresses/AddressFields';
 import { setAddressField, type AddressFieldName } from '../addresses/form';
@@ -76,7 +76,9 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
     const [searchParams] = useSearchParams();
     const { login, register } = useAuth();
     const { showToast } = useToast();
-    const [values, setValues] = useState<FormValues>(() => createDefaultValues());
+    const [values, setValues] = useState<FormValues>(() =>
+        createDefaultValues()
+    );
     const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
     const [formError, setFormError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -96,9 +98,7 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
         lastName: values.lastName,
     });
     const passwordRulesMet = passwordRules.every((rule) => rule.met);
-    const passwordAutoComplete = isSignUp
-        ? 'new-password'
-        : 'current-password';
+    const passwordAutoComplete = isSignUp ? 'new-password' : 'current-password';
     const passwordPlaceholder = isSignUp
         ? 'Choose a password'
         : 'Enter your password';
@@ -121,8 +121,7 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
         setShowPassword(false);
         setShowConfirmPassword(false);
 
-        if (typeof location.state?.successMessage !== 'string')
-            return;
+        if (typeof location.state?.successMessage !== 'string') return;
 
         showToast(location.state.successMessage);
         navigate(location.pathname + location.search, {
@@ -170,8 +169,7 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
         const password = sanitizePasswordInput(event.target.value);
         updateValues({ password });
 
-        if (!isSignUp || !values.confirmPassword)
-            return;
+        if (!isSignUp || !values.confirmPassword) return;
 
         setFieldError(
             'confirmPassword',
@@ -179,9 +177,7 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
         );
     }
 
-    function handleConfirmPasswordChange(
-        event: ChangeEvent<HTMLInputElement>
-    ) {
+    function handleConfirmPasswordChange(event: ChangeEvent<HTMLInputElement>) {
         const confirmPassword = sanitizePasswordInput(event.target.value);
         updateValues({ confirmPassword });
         setFieldError(
@@ -383,10 +379,12 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
                         maxLength={PASSWORD_MAX_LENGTH}
                         name="password"
                         onBlur={() => {
-                            if (!isSignUp || !values.password)
-                                return;
+                            if (!isSignUp || !values.password) return;
 
-                            setFieldError('password', validateCurrentForm().password);
+                            setFieldError(
+                                'password',
+                                validateCurrentForm().password
+                            );
                         }}
                         onChange={handlePasswordChange}
                         onToggle={() => {
@@ -432,7 +430,10 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
                         />
                     </Field>
                 ) : (
-                    <Link className={textButtonClassName} to={forgotPasswordPath}>
+                    <Link
+                        className={textButtonClassName}
+                        to={forgotPasswordPath}
+                    >
                         Forgot password
                     </Link>
                 )}
@@ -446,7 +447,10 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
                     {pageCopy.submitLabel}
                 </Button>
 
-                <Link className={textButtonClassName} to={pageCopy.switchLink.to}>
+                <Link
+                    className={textButtonClassName}
+                    to={pageCopy.switchLink.to}
+                >
                     {pageCopy.switchLink.label}
                 </Link>
             </form>
@@ -491,16 +495,18 @@ function getConfirmPasswordError(
     confirmPassword: string,
     password: string
 ): string | undefined {
-    if (!confirmPassword)
-        return 'Confirm password is required';
+    if (!confirmPassword) return 'Confirm password is required';
 
     return confirmPassword !== password ? 'Passwords do not match' : undefined;
 }
 
-function buildSignupVerificationPath(result: {
-    download?: { filename: string; html: string };
-    verification: { email: string };
-}, nextPath: string) {
+function buildSignupVerificationPath(
+    result: {
+        download?: { filename: string; html: string };
+        verification: { email: string };
+    },
+    nextPath: string
+) {
     return buildVerifyEmailPath({
         context: 'signup',
         downloaded: Boolean(result.download),

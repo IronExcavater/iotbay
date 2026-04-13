@@ -107,7 +107,7 @@ function ToastItem({
                 isVisible && !isLeaving
                     ? 'translate-y-0 opacity-100'
                     : '-translate-y-2 opacity-0',
-                'ring-1 ring-white/10',
+                'ring-1 ring-white/10'
             )}
         >
             <p className="min-w-0 flex-1 text-sm">{children}</p>

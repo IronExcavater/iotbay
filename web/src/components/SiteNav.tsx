@@ -11,7 +11,9 @@ export default function SiteNav() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement | null>(null);
 
-    const profileLabel = user ? `${user.firstName} ${user.lastName}` : 'Profile';
+    const profileLabel = user
+        ? `${user.firstName} ${user.lastName}`
+        : 'Profile';
     const menuLabel = isMenuOpen ? 'Close account menu' : 'Open account menu';
     const showStaffPortal = user?.userType === 'staff';
 
@@ -20,17 +22,14 @@ export default function SiteNav() {
     }
 
     useEffect(() => {
-        if (!isMenuOpen)
-            return;
+        if (!isMenuOpen) return;
 
         function handlePointerDown(event: MouseEvent) {
-            if (!menuRef.current?.contains(event.target as Node))
-                closeMenu();
+            if (!menuRef.current?.contains(event.target as Node)) closeMenu();
         }
 
         function handleKeyDown(event: KeyboardEvent) {
-            if (event.key === 'Escape')
-                closeMenu();
+            if (event.key === 'Escape') closeMenu();
         }
 
         window.addEventListener('mousedown', handlePointerDown);

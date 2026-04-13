@@ -131,8 +131,7 @@ export function AddressFields({
         : searchValue.trim();
 
     useEffect(() => {
-        if (showDetails || activeField !== 'search')
-            setSearchValue('');
+        if (showDetails || activeField !== 'search') setSearchValue('');
     }, [activeField, showDetails]);
 
     useEffect(() => {
@@ -164,8 +163,7 @@ export function AddressFields({
                 suggestionsCacheRef.current.set(cacheKey, items);
                 setSuggestions(items);
             } catch (error) {
-                if (controller.signal.aborted)
-                    return;
+                if (controller.signal.aborted) return;
 
                 if (
                     error instanceof BackendError &&
@@ -183,12 +181,7 @@ export function AddressFields({
             controller.abort();
             window.clearTimeout(timeoutId);
         };
-    }, [
-        activeField,
-        query,
-        suggestionCountry,
-        suggestionLanguage,
-    ]);
+    }, [activeField, query, suggestionCountry, suggestionLanguage]);
 
     async function handleSuggestionSelect(suggestion: AddressSuggestion) {
         setSuggestions([]);
@@ -235,8 +228,7 @@ export function AddressFields({
             const activeElement = document.activeElement;
 
             if (!rootRef.current?.contains(activeElement)) {
-                if (activeField === 'search')
-                    void applyCollapsedSearchValue();
+                if (activeField === 'search') void applyCollapsedSearchValue();
 
                 setActiveField(null);
             }
@@ -246,11 +238,9 @@ export function AddressFields({
     async function applyCollapsedSearchValue() {
         const normalized = searchValue.trim();
 
-        if (!normalized)
-            return;
+        if (!normalized) return;
 
-        if (autoResolvedQueryRef.current === normalized)
-            return;
+        if (autoResolvedQueryRef.current === normalized) return;
 
         const [suggestion] = suggestions;
 
@@ -265,8 +255,7 @@ export function AddressFields({
     }
 
     function getSuggestionPanel(fieldName: SearchFieldName) {
-        if (activeField !== fieldName || suggestions.length === 0)
-            return null;
+        if (activeField !== fieldName || suggestions.length === 0) return null;
 
         return (
             <AddressSuggestionPanel
@@ -300,8 +289,7 @@ export function AddressFields({
                         onFocus={() => {
                             setActiveField('search');
                             setSearchValue((current) => {
-                                if (current)
-                                    return current;
+                                if (current) return current;
 
                                 return values.addressLineOne.trim();
                             });
@@ -385,11 +373,7 @@ export function AddressFields({
                         name="address-level1"
                         onBlur={handleAddressBlur}
                         onChange={(value) => {
-                            handleSanitizedFieldChange(
-                                'state',
-                                value,
-                                'State'
-                            );
+                            handleSanitizedFieldChange('state', value, 'State');
                         }}
                         onFocus={() => {
                             setActiveField('state');
@@ -585,8 +569,7 @@ function getAddressPlaceholders(countryCode?: string, language = 'en') {
 }
 
 function resolveRegionName(countryCode: string | undefined, language: string) {
-    if (!countryCode)
-        return undefined;
+    if (!countryCode) return undefined;
 
     try {
         return (
