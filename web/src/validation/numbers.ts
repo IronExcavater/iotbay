@@ -61,7 +61,7 @@ export class MoneyValidator extends NumberValidator<string> {
         super(fieldName, { min: 0, max: options.maxCents });
     }
 
-    formatInput(value: string) {
+    override formatInput(value: string) {
         const sanitized = value.replace(/[^\d.,]/g, '');
         const separatorIndex = sanitized.search(/[.,]/);
         if (separatorIndex < 0) {

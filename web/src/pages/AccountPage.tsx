@@ -20,12 +20,17 @@ import {
 } from '../auth/phone';
 import { buildVerifyEmailPath } from '../auth/redirects';
 import {
+    assessDesignation,
+    assessPermission,
+    assessStaffId,
     EMAIL_MAX_LENGTH,
     NAME_MAX_LENGTH,
+    sanitizeDesignation,
     sanitizeEmail,
     sanitizeFirstName,
     sanitizeLastName,
     sanitizePasswordInput,
+    sanitizeStaffId,
     STAFF_DESIGNATION_MAX_LENGTH,
     validateEmail,
     validateFirstName,
@@ -44,6 +49,7 @@ import { PhoneField } from '../components/form/PhoneField';
 import { useToast } from '../components/toast/ToastProvider';
 import { downloadHtml } from '../services/download';
 import { backendErrorMessage, resolveBackendError } from '../services/http';
+import { collectFieldErrors } from '../validation/forms';
 
 interface ProfileValues {
     addressLineOne: string;
@@ -202,6 +208,7 @@ export default function AccountPage() {
         const nextFieldErrors = validateProfileForm(values, {
             hasChanges,
             isCustomer,
+            isStaff,
         });
 
         setFieldErrors(nextFieldErrors);
@@ -407,8 +414,9 @@ export default function AccountPage() {
                                         onChange={(event) => {
                                             setValues((current) => ({
                                                 ...current,
-                                                staffId:
-                                                    event.target.value.toUpperCase(),
+                                                staffId: sanitizeStaffId(
+                                                    event.target.value
+                                                ),
                                             }));
                                         }}
                                         placeholder="STF-001"
@@ -427,7 +435,10 @@ export default function AccountPage() {
                                         maxLength={STAFF_DESIGNATION_MAX_LENGTH}
                                         onChange={(event) => {
                                             updateValues({
-                                                designation: event.target.value,
+                                                designation:
+                                                    sanitizeDesignation(
+                                                        event.target.value
+                                                    ),
                                             });
                                         }}
                                         placeholder="Store manager"
@@ -590,9 +601,11 @@ function validateProfileForm(
     {
         hasChanges,
         isCustomer,
+        isStaff,
     }: {
         hasChanges: boolean;
         isCustomer: boolean;
+        isStaff: boolean;
     }
 ) {
     const fieldErrors: FieldErrors = {};
@@ -623,6 +636,17 @@ function validateProfileForm(
     }
     if (isCustomer) {
         Object.assign(fieldErrors, validateAddressValues(values));
+    }
+
+    if (isStaff) {
+        Object.assign(
+            fieldErrors,
+            collectFieldErrors<keyof ProfileValues>({
+                designation: assessDesignation(values.designation, false),
+                permission: assessPermission(values.permission),
+                staffId: assessStaffId(values.staffId, false),
+            })
+        );
     }
 
     if (hasChanges) {

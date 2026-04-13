@@ -10,9 +10,9 @@ export const DEFAULT_PHONE_COUNTRY: CountryCode = 'AU';
 export const PHONE_COUNTRY_LENGTH = 2;
 
 export class PhoneCountryValidator extends StringValidator {
-    override sanitizeInput(value: string) {
+    override sanitizeInput(value: string, context?: Record<string, unknown>) {
         return super
-            .sanitizeInput(value)
+            .sanitizeInput(value, context)
             .replace(/[^A-Za-z]/g, '')
             .toUpperCase()
             .slice(0, PHONE_COUNTRY_LENGTH);
@@ -35,8 +35,8 @@ export class PhoneValidator extends StringValidator {
         super(options);
     }
 
-    override sanitizeInput(value: string) {
-        const normalized = super.sanitizeInput(value);
+    override sanitizeInput(value: string, context?: Record<string, unknown>) {
+        const normalized = super.sanitizeInput(value, context);
         let result = '';
 
         for (const character of normalized) {
@@ -75,9 +75,8 @@ export class PhoneValidator extends StringValidator {
         return parsed.number;
     }
 
-    override formatInput(value: string, country?: CountryCode) {
-        void country;
-        return this.sanitizeInput(value);
+    override formatInput(value: string, context?: Record<string, unknown>) {
+        return this.sanitizeInput(value, context);
     }
 
     formatStored(value?: string | null) {

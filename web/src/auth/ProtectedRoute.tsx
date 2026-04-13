@@ -4,11 +4,16 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthProvider';
 import {
     buildSignInPath,
+    canAccessSuperadmin,
     canAccessStaffPortal,
     resolvePostAuthPath,
 } from './redirects';
 
-export type ProtectedRouteAccess = 'authenticated' | 'guest' | 'staff';
+export type ProtectedRouteAccess =
+    | 'authenticated'
+    | 'guest'
+    | 'staff'
+    | 'superadmin';
 
 interface ProtectedRouteProps {
     access?: ProtectedRouteAccess;
@@ -46,14 +51,24 @@ export function ProtectedRoute({
                 replace
                 to={buildSignInPath({
                     nextPath: requestedPath,
-                    userType: access === 'staff' ? 'staff' : undefined,
+                    userType:
+                        access === 'staff' || access === 'superadmin'
+                            ? 'staff'
+                            : undefined,
                 })}
             />
         );
     }
 
-    if (access === 'staff' && !canAccessStaffPortal(user)) {
+    if (
+        (access === 'staff' || access === 'superadmin') &&
+        !canAccessStaffPortal(user)
+    ) {
         return <Navigate replace to="/account" />;
+    }
+
+    if (access === 'superadmin' && !canAccessSuperadmin(user)) {
+        return <Navigate replace to="/admin" />;
     }
 
     return content;

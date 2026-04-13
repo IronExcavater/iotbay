@@ -6,13 +6,14 @@ import {
     normalizeMessage,
     resolveBackendError,
 } from '../services/http';
+import { collectFieldErrors } from '../validation/forms';
 import type { RegisterInput } from './api';
 import { validatePhoneNumber } from './phone';
 import {
-    PASSWORD_VALIDATOR,
-    validateEmail,
-    validateFirstName,
-    validateLastName,
+    assessEmail,
+    assessFirstName,
+    assessLastName,
+    assessPassword,
 } from './validation';
 
 export interface AuthFormValues {
@@ -46,22 +47,21 @@ export function validateAuthForm(
 ) {
     // Sign-in and sign-up share one screen, but sign-up needs the extra field
     // set and stronger client-side validation before the request is sent.
-    const fieldErrors: AuthFieldErrors = {};
-    const emailError = validateEmail(values.email);
-    if (emailError) {
-        fieldErrors.email = emailError;
-    }
+    const email = assessEmail(values.email);
+    const fieldErrors: AuthFieldErrors = collectFieldErrors<AuthFieldName>({
+        email,
+    });
 
     if (!values.password) {
         fieldErrors.password = 'Password is required';
     } else if (isSignUp) {
-        const passwordError = PASSWORD_VALIDATOR.tryValidate(values.password, {
+        const password = assessPassword(values.password, {
             email: values.email,
             firstName: values.firstName,
             lastName: values.lastName,
-        }).error?.message;
-        if (passwordError) {
-            fieldErrors.password = normalizeMessage(passwordError);
+        });
+        if (password.error) {
+            fieldErrors.password = normalizeMessage(password.error);
         } else if (!passwordRulesMet) {
             fieldErrors.password = 'Password requirements are not met';
         }
@@ -71,15 +71,13 @@ export function validateAuthForm(
         return fieldErrors;
     }
 
-    const firstNameError = validateFirstName(values.firstName);
-    if (firstNameError) {
-        fieldErrors.firstName = firstNameError;
-    }
-
-    const lastNameError = validateLastName(values.lastName);
-    if (lastNameError) {
-        fieldErrors.lastName = lastNameError;
-    }
+    Object.assign(
+        fieldErrors,
+        collectFieldErrors<AuthFieldName>({
+            firstName: assessFirstName(values.firstName),
+            lastName: assessLastName(values.lastName),
+        })
+    );
 
     const phoneNumberError = values.phoneNumber.trim()
         ? validatePhoneNumber(values.phoneNumber, values.phoneCountry)

@@ -10,6 +10,7 @@ import {
 } from '../validation/strings';
 import {
     AddressValidator,
+    ChoiceValidator,
     EmailValidator,
     NameValidator,
 } from '../validation/textual';
@@ -50,6 +51,47 @@ const PASSWORD_INPUT_VALIDATOR = new StringValidator({
     asciiOnly: true,
     printableAsciiOnly: true,
 });
+const DESIGNATION_VALIDATOR = new StringValidator({
+    fieldName: 'Position',
+    required: true,
+    maxLength: STAFF_DESIGNATION_MAX_LENGTH,
+    asciiOnly: true,
+    printableAsciiOnly: true,
+});
+const STAFF_ID_VALIDATOR = new StringValidator({
+    fieldName: 'Staff ID',
+    required: true,
+    maxLength: STAFF_ID_MAX_LENGTH,
+    asciiOnly: true,
+    printableAsciiOnly: true,
+    uppercase: true,
+});
+const OPTIONAL_STAFF_ID_VALIDATOR = new StringValidator({
+    fieldName: 'Staff ID',
+    maxLength: STAFF_ID_MAX_LENGTH,
+    asciiOnly: true,
+    printableAsciiOnly: true,
+    uppercase: true,
+});
+const OPTIONAL_DESIGNATION_VALIDATOR = new StringValidator({
+    fieldName: 'Position',
+    maxLength: STAFF_DESIGNATION_MAX_LENGTH,
+    asciiOnly: true,
+    printableAsciiOnly: true,
+});
+const OPTIONAL_PERMISSION_VALIDATOR = new ChoiceValidator(
+    {
+        fieldName: 'Permission',
+    },
+    ['admin', 'superadmin']
+);
+const REQUIRED_PERMISSION_VALIDATOR = new ChoiceValidator(
+    {
+        fieldName: 'Permission',
+        required: true,
+    },
+    ['admin', 'superadmin']
+);
 export const PASSWORD_VALIDATOR = new PasswordValidator({
     fieldName: 'password',
     required: true,
@@ -83,6 +125,14 @@ export function sanitizePasswordInput(value: string) {
     return PASSWORD_INPUT_VALIDATOR.formatInput(value);
 }
 
+export function sanitizeStaffId(value: string) {
+    return OPTIONAL_STAFF_ID_VALIDATOR.formatInput(value);
+}
+
+export function sanitizeDesignation(value: string) {
+    return OPTIONAL_DESIGNATION_VALIDATOR.formatInput(value);
+}
+
 export function getPasswordRules(
     password: string,
     context: {
@@ -98,17 +148,57 @@ export function getPasswordRules(
     });
 }
 
+export function assessEmail(value: string) {
+    return EMAIL_VALIDATOR.assess(value);
+}
+
+export function assessFirstName(value: string) {
+    return FIRST_NAME_VALIDATOR.assess(value);
+}
+
+export function assessLastName(value: string) {
+    return LAST_NAME_VALIDATOR.assess(value);
+}
+
+export function assessPassword(
+    value: string,
+    context: {
+        email?: string;
+        firstName?: string;
+        lastName?: string;
+    } = {}
+) {
+    return PASSWORD_VALIDATOR.assess(value, context);
+}
+
+export function assessStaffId(value: string, required = true) {
+    return (required ? STAFF_ID_VALIDATOR : OPTIONAL_STAFF_ID_VALIDATOR).assess(
+        value
+    );
+}
+
+export function assessDesignation(value: string, required = true) {
+    return (
+        required ? DESIGNATION_VALIDATOR : OPTIONAL_DESIGNATION_VALIDATOR
+    ).assess(value);
+}
+
+export function assessPermission(value: string, required = false) {
+    return (
+        required ? REQUIRED_PERMISSION_VALIDATOR : OPTIONAL_PERMISSION_VALIDATOR
+    ).assess(value);
+}
+
 export function validateEmail(value: string): string | null {
-    const result = EMAIL_VALIDATOR.tryValidate(value);
-    return result.error?.message ?? null;
+    return assessEmail(value).error;
 }
 
 export function validateFirstName(value: string): string | null {
-    return FIRST_NAME_VALIDATOR.tryValidate(value).error?.message ?? null;
+    return assessFirstName(value).error;
 }
 
 export function validateLastName(value: string): string | null {
-    return LAST_NAME_VALIDATOR.tryValidate(value).error?.message ?? null;
+    return assessLastName(value).error;
 }
 
 export function validateFirstNameOnBlur(value: string): string | null {
@@ -131,7 +221,7 @@ export function validateAddressField(
         printableAsciiOnly: true,
         required,
     });
-    return validator.tryValidate(value).error?.message ?? null;
+    return validator.assess(value).error;
 }
 
 export function sanitizeAddressField(value: string, fieldName: string) {

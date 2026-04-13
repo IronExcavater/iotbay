@@ -22,9 +22,9 @@ export class ChoiceValidator extends StringValidator {
 }
 
 export class EmailValidator extends StringValidator {
-    override sanitizeInput(value: string) {
+    override sanitizeInput(value: string, context?: Record<string, unknown>) {
         return super
-            .sanitizeInput(value)
+            .sanitizeInput(value, context)
             .replace(/\s+/g, '')
             .replace(/[^A-Za-z0-9.!#$%&'*+/=?^_`{|}~@-]/g, '')
             .toLowerCase();
@@ -40,8 +40,8 @@ export class EmailValidator extends StringValidator {
 }
 
 export class NameValidator extends StringValidator {
-    override sanitizeInput(value: string) {
-        return super.sanitizeInput(value).replace(/[^A-Za-z' -]/g, '');
+    override sanitizeInput(value: string, context?: Record<string, unknown>) {
+        return super.sanitizeInput(value, context).replace(/[^A-Za-z' -]/g, '');
     }
 
     override validate(value: string) {
@@ -56,9 +56,9 @@ export class NameValidator extends StringValidator {
 }
 
 export class AddressValidator extends StringValidator {
-    override sanitizeInput(value: string) {
+    override sanitizeInput(value: string, context?: Record<string, unknown>) {
         return super
-            .sanitizeInput(value)
+            .sanitizeInput(value, context)
             .replace(/[^A-Za-z0-9 /#.,:&'()-]/g, '');
     }
 }

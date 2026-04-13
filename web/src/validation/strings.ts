@@ -28,7 +28,8 @@ export class StringValidator extends Validator<string, string> {
         super();
     }
 
-    sanitizeInput(value: string) {
+    sanitizeInput(value: string, context?: Record<string, unknown>) {
+        void context;
         let normalized = value;
         if (this.options.asciiOnly) {
             normalized = [...normalized]
@@ -52,8 +53,8 @@ export class StringValidator extends Validator<string, string> {
         return normalized;
     }
 
-    formatInput(value: string) {
-        return this.sanitizeInput(value);
+    override formatInput(value: string, context?: Record<string, unknown>) {
+        return this.sanitizeInput(value, context);
     }
 
     validate(value: string) {
