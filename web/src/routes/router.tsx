@@ -3,6 +3,7 @@ import { createBrowserRouter } from 'react-router-dom';
 import SiteLayout from '../layouts/SiteLayout';
 import AccountPage from '../pages/AccountPage';
 import AdminPage from '../pages/AdminPage';
+import AdminUsersPage from '../pages/AdminUsersPage';
 import AuthPage from '../pages/AuthPage';
 import ErrorPage from '../pages/ErrorPage';
 import HomePage from '../pages/HomePage';
@@ -39,6 +40,10 @@ export const router = createBrowserRouter([
             {
                 path: 'admin',
                 element: <AdminPage />,
+            },
+            {
+                path: 'admin/users',
+                element: <AdminUsersPage />,
             },
             {
                 path: '*',

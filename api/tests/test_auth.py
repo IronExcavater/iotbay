@@ -12,7 +12,11 @@ from src.users.models import (
 )
 from src.users.repository import UserRepository
 from tests.helpers.test_case import AppTestCase
-from tests.helpers.test_session import create_staff_test_session, create_test_session
+from tests.helpers.test_session import (
+    create_staff_test_session,
+    create_superadmin_test_session,
+    create_test_session,
+)
 from werkzeug.test import TestResponse
 
 
@@ -860,6 +864,45 @@ class AuthRouteTestCase(AppTestCase):
         self.assertEqual(
             response.get_json(),
             {"error": "authentication is required"},
+        )
+
+    def test_superadmin_can_list_registered_users(self) -> None:
+        create_superadmin_test_session(self.client)
+        repository = extension_from(
+            self.client.application,
+            "user_repository",
+            UserRepository,
+        )
+        repository.insert_user(
+            email="customer.list@example.com",
+            password_hash=hash_password("CustomerList9$"),
+            first_name="List",
+            last_name="Customer",
+            user_type=USER_TYPE_CUSTOMER,
+            status=USER_STATUS_ACTIVE,
+        )
+
+        response = self.client.get("/api/admin/users")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertIsNotNone(payload)
+        emails = {item["email"] for item in payload["items"]}
+        self.assertIn("sam.superadmin@example.com", emails)
+        self.assertIn("customer.list@example.com", emails)
+
+    def test_admin_cannot_list_registered_users(self) -> None:
+        create_staff_test_session(self.client)
+
+        response = self.client.get("/api/admin/users")
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.get_json(),
+            {
+                "code": "STAFF_PERMISSION_REQUIRED",
+                "error": "staff permission is required",
+            },
         )
 
     def test_register_replaces_existing_unverified_user_details(self) -> None:
