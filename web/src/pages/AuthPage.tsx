@@ -312,16 +312,14 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
 
     async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
         event.preventDefault();
+        setFormError(null);
 
         const nextFieldErrors = validateCurrentForm();
         setFieldErrors(nextFieldErrors);
 
         if (Object.values(nextFieldErrors).some(Boolean)) {
-            setFormError('Check the highlighted fields');
             return;
         }
-
-        setFormError(null);
         setIsSubmitting(true);
 
         try {

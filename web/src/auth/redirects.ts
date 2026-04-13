@@ -79,6 +79,12 @@ export function canAccessStaffPortal(user: RedirectUser | null | undefined) {
     return Boolean(user?.userType === 'staff' && user.permission);
 }
 
+export function canAccessSuperadmin(user: RedirectUser | null | undefined) {
+    return Boolean(
+        user?.userType === 'staff' && user.permission === 'superadmin'
+    );
+}
+
 export function resolvePostAuthPath(
     user: RedirectUser,
     nextPath?: string | null

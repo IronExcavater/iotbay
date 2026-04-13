@@ -5,11 +5,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authApi } from '../auth/api';
 import { normalizeNextPath, resolvePostAuthPath } from '../auth/redirects';
 import {
+    assessEmail,
     EMAIL_MAX_LENGTH,
     PASSWORD_MAX_LENGTH,
     sanitizeEmail,
     sanitizePasswordInput,
-    validateEmail,
 } from '../auth/validation';
 import { Button } from '../components/form/Button';
 import { Field } from '../components/form/Field';
@@ -24,8 +24,14 @@ import {
     backendErrorMessage,
     resolveBackendError,
 } from '../services/http';
+import {
+    collectFieldErrors,
+    hasFieldErrors,
+    type FieldErrors,
+} from '../validation/forms';
 
 type VerificationScreen = 'error' | 'pending' | 'verifying';
+type VerificationFieldName = 'email' | 'password';
 
 export default function VerifyEmailPage() {
     const navigate = useNavigate();
@@ -59,6 +65,9 @@ export default function VerifyEmailPage() {
     const [pendingAction, setPendingAction] = useState<
         'change' | 'resend' | null
     >(null);
+    const [fieldErrors, setFieldErrors] = useState<
+        FieldErrors<VerificationFieldName>
+    >({});
     const [formError, setFormError] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
 
@@ -90,11 +99,14 @@ export default function VerifyEmailPage() {
         setEmail(queryEmail);
         setChangeEmail('');
         setPassword('');
+        setFieldErrors({});
         setFormError(null);
         setPendingAction(null);
         setShowPassword(false);
 
-        if (hasToken) return;
+        if (hasToken) {
+            return;
+        }
 
         setScreen(queryEmail ? 'pending' : 'error');
         setMessage(getPendingMessage(queryEmail, context));
@@ -113,8 +125,6 @@ export default function VerifyEmailPage() {
             .then((user) => {
                 if (!isActive) return;
 
-                // The verification link may come from deep inside an auth flow,
-                // so finish on the originally requested destination when possible.
                 window.location.assign(resolvePostAuthPath(user, nextPath));
             })
             .catch((error: unknown) => {
@@ -131,12 +141,17 @@ export default function VerifyEmailPage() {
 
     function handleChangeEmailInput(nextValue: string) {
         setChangeEmail(nextValue);
+        setFieldErrors((current) => ({
+            ...current,
+            email: undefined,
+        }));
         setFormError(null);
     }
 
     async function handleResend() {
         if (!email || isResending) return;
 
+        setFieldErrors({});
         setFormError(null);
         setPendingAction('resend');
 
@@ -150,7 +165,9 @@ export default function VerifyEmailPage() {
                 sentMessage: 'Verification email sent',
             });
         } catch (error) {
-            setFormError(toVerificationError(error));
+            const nextState = toVerificationErrorState(error);
+            setFieldErrors(nextState.fieldErrors);
+            setFormError(nextState.formError);
         } finally {
             setPendingAction(null);
         }
@@ -158,25 +175,35 @@ export default function VerifyEmailPage() {
 
     async function handleChangeEmail(event: SubmitEvent<HTMLFormElement>) {
         event.preventDefault();
+        setFormError(null);
 
-        const validationError = validatePendingEmailForm({
+        if (!email) {
+            setFormError('Verification details are missing');
+            return;
+        }
+
+        const nextFieldErrors = validatePendingEmailForm({
             currentEmail: email,
             nextEmail,
             password,
         });
 
-        if (validationError) {
-            setFormError(validationError);
+        setFieldErrors(nextFieldErrors);
+        if (hasFieldErrors(nextFieldErrors)) {
             return;
         }
 
-        setFormError(null);
+        const normalizedEmail = assessEmail(nextEmail).value;
+        if (!normalizedEmail) {
+            return;
+        }
+
         setPendingAction('change');
 
         try {
             const result = await authApi.changePendingEmail({
                 currentEmail: email,
-                email: nextEmail,
+                email: normalizedEmail,
                 password,
                 userType,
             });
@@ -187,11 +214,14 @@ export default function VerifyEmailPage() {
             setEmail(result.verification.email);
             setChangeEmail('');
             setPassword('');
+            setFieldErrors({});
             setShowPassword(false);
             setScreen('pending');
             setMessage(getPendingMessage(result.verification.email, context));
         } catch (error) {
-            setFormError(toVerificationError(error));
+            const nextState = toVerificationErrorState(error);
+            setFieldErrors(nextState.fieldErrors);
+            setFormError(nextState.formError);
         } finally {
             setPendingAction(null);
         }
@@ -262,12 +292,26 @@ export default function VerifyEmailPage() {
                             </p>
                         </div>
 
-                        <Field label="New email" required>
+                        <Field
+                            error={fieldErrors.email}
+                            label="New email"
+                            required
+                        >
                             <input
                                 autoComplete="email"
-                                className={inputClassName(Boolean(formError))}
+                                className={inputClassName(
+                                    Boolean(fieldErrors.email)
+                                )}
                                 maxLength={EMAIL_MAX_LENGTH}
                                 name="email"
+                                onBlur={() => {
+                                    setFieldErrors((current) => ({
+                                        ...current,
+                                        email:
+                                            assessEmail(nextEmail).error ??
+                                            undefined,
+                                    }));
+                                }}
                                 onChange={(event) => {
                                     handleChangeEmailInput(
                                         sanitizeEmail(event.target.value)
@@ -282,22 +326,39 @@ export default function VerifyEmailPage() {
                         <section className="grid min-h-18 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
                             {hasChangedEmail ? (
                                 <Field
-                                    hint="Required to change it"
+                                    error={fieldErrors.password}
+                                    hint={
+                                        fieldErrors.password
+                                            ? undefined
+                                            : 'Required to change it'
+                                    }
                                     label="Password"
                                     metaPlacement="inline"
                                     required
                                 >
                                     <PasswordInput
                                         autoComplete="current-password"
-                                        hasError={Boolean(formError)}
+                                        hasError={Boolean(fieldErrors.password)}
                                         maxLength={PASSWORD_MAX_LENGTH}
                                         name="currentPassword"
+                                        onBlur={() => {
+                                            setFieldErrors((current) => ({
+                                                ...current,
+                                                password: password
+                                                    ? undefined
+                                                    : 'Password is required',
+                                            }));
+                                        }}
                                         onChange={(event) => {
                                             setPassword(
                                                 sanitizePasswordInput(
                                                     event.target.value
                                                 )
                                             );
+                                            setFieldErrors((current) => ({
+                                                ...current,
+                                                password: undefined,
+                                            }));
                                             setFormError(null);
                                         }}
                                         onToggle={() => {
@@ -358,30 +419,45 @@ function validatePendingEmailForm({
     nextEmail: string;
     password: string;
 }) {
-    if (!currentEmail) return 'Verification details are missing';
+    if (!currentEmail) {
+        return {};
+    }
 
-    const emailError = validateEmail(nextEmail);
-
-    if (emailError) return emailError;
-
-    if (!password) return 'Password is required';
-
-    return null;
+    return collectFieldErrors<VerificationFieldName>({
+        email: assessEmail(nextEmail),
+        password: password ? null : 'Password is required',
+    });
 }
 
-function toVerificationError(error: unknown) {
-    return resolveBackendError<string>(
+function toVerificationErrorState(error: unknown) {
+    return resolveBackendError<{
+        fieldErrors: FieldErrors<VerificationFieldName>;
+        formError: string | null;
+    }>(
         error,
         {
-            EMAIL_EXISTS: (backendError) =>
-                backendErrorMessage(backendError.code),
-            EMAIL_VERIFICATION_PENDING: (backendError) =>
-                backendErrorMessage(backendError.code),
-            INVALID_CREDENTIALS: (backendError) =>
-                backendErrorMessage(backendError.code),
-            STAFF_ACCOUNT_REQUIRED: (backendError) =>
-                backendErrorMessage(backendError.code),
+            EMAIL_EXISTS: (backendError) => ({
+                fieldErrors: { email: backendErrorMessage(backendError.code) },
+                formError: null,
+            }),
+            EMAIL_VERIFICATION_PENDING: (backendError) => ({
+                fieldErrors: { email: backendErrorMessage(backendError.code) },
+                formError: null,
+            }),
+            INVALID_CREDENTIALS: (backendError) => ({
+                fieldErrors: {
+                    password: backendErrorMessage(backendError.code),
+                },
+                formError: null,
+            }),
+            STAFF_ACCOUNT_REQUIRED: (backendError) => ({
+                fieldErrors: {},
+                formError: backendErrorMessage(backendError.code),
+            }),
         },
-        (message) => message
+        (formError) => ({
+            fieldErrors: {},
+            formError,
+        })
     );
 }

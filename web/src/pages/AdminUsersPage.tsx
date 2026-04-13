@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
-import { useAuth } from '../auth/AuthProvider';
 import { Button } from '../components/form/Button';
 import { inputClassName } from '../components/form/Input';
 import { toErrorMessage } from '../services/http';
@@ -9,26 +8,12 @@ import type { ManagedUser } from '../users/api';
 import { usersApi } from '../users/api';
 
 export default function AdminUsersPage() {
-    const { isAuthed, isLoading, logout, user } = useAuth();
-    const [isClearingIneligibleSession, setIsClearingIneligibleSession] =
-        useState(false);
     const [users, setUsers] = useState<ManagedUser[]>([]);
     const [isLoadingUsers, setIsLoadingUsers] = useState(true);
     const [usersError, setUsersError] = useState<string | null>(null);
     const [search, setSearch] = useState('');
 
     useEffect(() => {
-        if (
-            isLoading ||
-            !isAuthed ||
-            !user ||
-            user.userType !== 'staff' ||
-            user.permission !== 'superadmin' ||
-            isClearingIneligibleSession
-        ) {
-            return;
-        }
-
         const abortController = new AbortController();
 
         async function loadUsers() {
@@ -50,45 +35,7 @@ export default function AdminUsersPage() {
 
         void loadUsers();
         return () => abortController.abort();
-    }, [isAuthed, isClearingIneligibleSession, isLoading, user]);
-
-    useEffect(() => {
-        if (
-            isLoading ||
-            !isAuthed ||
-            !user ||
-            (user.userType === 'staff' && user.permission === 'superadmin') ||
-            isClearingIneligibleSession
-        ) {
-            return;
-        }
-
-        setIsClearingIneligibleSession(true);
-        void logout().finally(() => {
-            setIsClearingIneligibleSession(false);
-        });
-    }, [isAuthed, isClearingIneligibleSession, isLoading, logout, user]);
-
-    if (!isLoading && !isAuthed && !isClearingIneligibleSession) {
-        return (
-            <Navigate
-                replace
-                to="/auth?mode=signin&userType=staff&next=/admin/users"
-            />
-        );
-    }
-
-    if (
-        !isLoading &&
-        isAuthed &&
-        (user?.userType !== 'staff' || user.permission !== 'superadmin')
-    ) {
-        return (
-            <p className="py-8 text-slate-500">
-                Redirecting to superadmin sign in
-            </p>
-        );
-    }
+    }, []);
 
     const normalizedSearch = search.trim().toLowerCase();
     const filteredUsers = users.filter((managedUser) => {
@@ -112,22 +59,22 @@ export default function AdminUsersPage() {
         <section className="grid gap-6">
             <header className="grid gap-3 sm:flex sm:items-end sm:justify-between">
                 <div className="grid gap-2">
-                    <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                    <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
                         Manage users
-                    </h1>
+                    </h2>
                     <p className="text-sm text-slate-600">
                         Review registered customers and staff accounts.
                     </p>
                 </div>
                 <div className="flex gap-3">
-                    <Link to="/admin/invite-staff">
+                    <Link to="/admin/users/invite-staff">
                         <Button type="button" variant="primary">
                             Invite staff
                         </Button>
                     </Link>
                     <Link to="/admin">
                         <Button type="button" variant="secondary">
-                            Back to staff portal
+                            Back to admin
                         </Button>
                     </Link>
                 </div>

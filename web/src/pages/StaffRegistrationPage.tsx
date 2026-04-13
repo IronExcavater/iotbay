@@ -1,26 +1,31 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { authApi, type User } from '../auth/api';
 import { PasswordRuleList } from '../auth/PasswordRuleList';
 import {
+    assessFirstName,
+    assessLastName,
+    assessPassword,
     sanitizeFirstName,
     sanitizeLastName,
     sanitizePasswordInput,
-    validateFirstName,
-    validateLastName,
     EMAIL_MAX_LENGTH,
     NAME_MAX_LENGTH,
     PASSWORD_MAX_LENGTH,
     getPasswordRules,
-    PASSWORD_VALIDATOR,
 } from '../auth/validation';
 import { Button } from '../components/form/Button';
 import { Field } from '../components/form/Field';
 import { FormNotice } from '../components/form/FormNotice';
 import { inputClassName } from '../components/form/Input';
 import { PasswordInput } from '../components/form/PasswordInput';
-import { toErrorMessage } from '../services/http';
+import { normalizeMessage, toErrorMessage } from '../services/http';
+import {
+    collectFieldErrors,
+    hasFieldErrors,
+    type FieldErrors,
+} from '../validation/forms';
 
 interface StaffRegistrationValues {
     confirmPassword: string;
@@ -28,6 +33,8 @@ interface StaffRegistrationValues {
     lastName: string;
     password: string;
 }
+
+type StaffRegistrationFieldName = keyof StaffRegistrationValues | 'email';
 
 const DEFAULT_VALUES: StaffRegistrationValues = {
     confirmPassword: '',
@@ -37,12 +44,14 @@ const DEFAULT_VALUES: StaffRegistrationValues = {
 };
 
 export default function StaffRegistrationPage() {
-    const formRef = useRef<HTMLFormElement | null>(null);
     const [searchParams] = useSearchParams();
     const [invitation, setInvitation] = useState<User | null>(null);
     const [isLoadingInvitation, setIsLoadingInvitation] = useState(true);
     const [invitationError, setInvitationError] = useState<string | null>(null);
     const [values, setValues] = useState(DEFAULT_VALUES);
+    const [fieldErrors, setFieldErrors] = useState<
+        FieldErrors<StaffRegistrationFieldName>
+    >({});
     const [formError, setFormError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -87,50 +96,46 @@ export default function StaffRegistrationPage() {
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
+        setFormError(null);
 
         if (!invitation) {
             setFormError('Staff invitation details are missing');
             return;
         }
 
-        const firstNameError = validateFirstName(values.firstName);
-        if (firstNameError) {
-            setFormError(firstNameError);
-            return;
-        }
-        const lastNameError = validateLastName(values.lastName);
-        if (lastNameError) {
-            setFormError(lastNameError);
-            return;
-        }
-        const passwordError = PASSWORD_VALIDATOR.tryValidate(values.password, {
-            email: invitation.email,
-            firstName: values.firstName,
-            lastName: values.lastName,
-        }).error?.message;
-        if (passwordError) {
-            setFormError(passwordError);
-            return;
-        }
-        if (passwordRules.some((rule) => !rule.met)) {
-            setFormError('Password requirements are not met');
-            return;
-        }
-        if (!values.confirmPassword) {
-            setFormError('Confirm password is required');
-            return;
-        }
-        if (values.confirmPassword !== values.password) {
-            setFormError('Passwords do not match');
+        const nextFieldErrors = collectFieldErrors<StaffRegistrationFieldName>({
+            confirmPassword: getConfirmPasswordError(
+                values.confirmPassword,
+                values.password
+            ),
+            firstName: assessFirstName(values.firstName),
+            lastName: assessLastName(values.lastName),
+            password: getPasswordError({
+                email: invitation.email,
+                firstName: values.firstName,
+                lastName: values.lastName,
+                password: values.password,
+                passwordRulesMet: passwordRules.every((rule) => rule.met),
+            }),
+        });
+
+        setFieldErrors(nextFieldErrors);
+        if (hasFieldErrors(nextFieldErrors)) {
             return;
         }
 
-        setFormError(null);
+        const firstName = assessFirstName(values.firstName);
+        const lastName = assessLastName(values.lastName);
+
+        if (!firstName.value || !lastName.value) {
+            return;
+        }
+
         setIsSubmitting(true);
         try {
             await authApi.completeStaffInvitation({
-                firstName: values.firstName.trim(),
-                lastName: values.lastName.trim(),
+                firstName: firstName.value,
+                lastName: lastName.value,
                 password: values.password,
                 token,
             });
@@ -201,16 +206,16 @@ export default function StaffRegistrationPage() {
                             <FormNotice tone="error">{formError}</FormNotice>
                         ) : null}
 
-                        <form
-                            className="grid gap-4"
-                            onSubmit={handleSubmit}
-                            ref={formRef}
-                        >
+                        <form className="grid gap-4" onSubmit={handleSubmit}>
                             <div className="grid gap-4 sm:grid-cols-2">
-                                <Field label="First name" required>
+                                <Field
+                                    error={fieldErrors.firstName}
+                                    label="First name"
+                                    required
+                                >
                                     <input
                                         className={inputClassName(
-                                            Boolean(formError)
+                                            Boolean(fieldErrors.firstName)
                                         )}
                                         maxLength={NAME_MAX_LENGTH}
                                         onChange={(event) => {
@@ -226,10 +231,14 @@ export default function StaffRegistrationPage() {
                                     />
                                 </Field>
 
-                                <Field label="Last name" required>
+                                <Field
+                                    error={fieldErrors.lastName}
+                                    label="Last name"
+                                    required
+                                >
                                     <input
                                         className={inputClassName(
-                                            Boolean(formError)
+                                            Boolean(fieldErrors.lastName)
                                         )}
                                         maxLength={NAME_MAX_LENGTH}
                                         onChange={(event) => {
@@ -255,10 +264,14 @@ export default function StaffRegistrationPage() {
                                 />
                             </Field>
 
-                            <Field label="Password" required>
+                            <Field
+                                error={fieldErrors.password}
+                                label="Password"
+                                required
+                            >
                                 <PasswordInput
                                     autoComplete="new-password"
-                                    hasError={Boolean(formError)}
+                                    hasError={Boolean(fieldErrors.password)}
                                     maxLength={PASSWORD_MAX_LENGTH}
                                     onChange={(event) => {
                                         setValues((current) => ({
@@ -278,10 +291,16 @@ export default function StaffRegistrationPage() {
                                 <PasswordRuleList rules={passwordRules} />
                             </Field>
 
-                            <Field label="Confirm password" required>
+                            <Field
+                                error={fieldErrors.confirmPassword}
+                                label="Confirm password"
+                                required
+                            >
                                 <PasswordInput
                                     autoComplete="new-password"
-                                    hasError={Boolean(formError)}
+                                    hasError={Boolean(
+                                        fieldErrors.confirmPassword
+                                    )}
                                     maxLength={PASSWORD_MAX_LENGTH}
                                     onChange={(event) => {
                                         setValues((current) => ({
@@ -317,4 +336,42 @@ export default function StaffRegistrationPage() {
             </section>
         </section>
     );
+}
+
+function getPasswordError({
+    email,
+    firstName,
+    lastName,
+    password,
+    passwordRulesMet,
+}: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    password: string;
+    passwordRulesMet: boolean;
+}) {
+    if (!password) {
+        return 'Password is required';
+    }
+
+    const assessment = assessPassword(password, {
+        email,
+        firstName,
+        lastName,
+    });
+
+    if (assessment.error) {
+        return normalizeMessage(assessment.error);
+    }
+
+    return passwordRulesMet ? null : 'Password requirements are not met';
+}
+
+function getConfirmPasswordError(confirmPassword: string, password: string) {
+    if (!confirmPassword) {
+        return 'Confirm password is required';
+    }
+
+    return confirmPassword !== password ? 'Passwords do not match' : null;
 }

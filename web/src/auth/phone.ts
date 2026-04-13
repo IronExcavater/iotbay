@@ -67,17 +67,17 @@ export function getBrowserPhoneCountry(): CountryCode {
 }
 
 export function formatPhoneInput(value: string, country: CountryCode) {
-    return PHONE_VALIDATOR.formatInput(value, country);
+    return PHONE_VALIDATOR.formatInput(value, { phoneCountry: country });
 }
 
 export function validatePhoneNumber(value: string, country: CountryCode) {
-    const error = PHONE_VALIDATOR.tryValidate(value, {
+    const result = PHONE_VALIDATOR.assess(value, {
         phoneCountry: country,
-    }).error;
-    return error
+    });
+    return result.issue
         ? backendErrorMessage(
-              error.code,
-              `${error.message.charAt(0).toUpperCase()}${error.message.slice(1)}`
+              result.issue.code,
+              `${result.issue.message.charAt(0).toUpperCase()}${result.issue.message.slice(1)}`
           )
         : null;
 }
@@ -91,8 +91,8 @@ export function normalizeComparablePhoneNumber(
     }
 
     return (
-        PHONE_VALIDATOR.tryValidate(value, { phoneCountry: country }).value ??
-        PHONE_VALIDATOR.formatInput(value, country)
+        PHONE_VALIDATOR.assess(value, { phoneCountry: country }).value ??
+        PHONE_VALIDATOR.formatInput(value, { phoneCountry: country })
     );
 }
 
@@ -117,7 +117,9 @@ export function formatStoredPhoneNumber(value?: string | null) {
 }
 
 export function formatPhoneDisplay(value: string, country: CountryCode) {
-    const sanitized = PHONE_VALIDATOR.formatInput(value, country);
+    const sanitized = PHONE_VALIDATOR.formatInput(value, {
+        phoneCountry: country,
+    });
     return formatPhonePresentation(sanitized, country);
 }
 
@@ -137,7 +139,7 @@ export function toEditablePhoneNumber(
         return parsed.nationalNumber;
     }
 
-    return PHONE_VALIDATOR.formatInput(value, country);
+    return PHONE_VALIDATOR.formatInput(value, { phoneCountry: country });
 }
 
 function countryFlag(country: string) {

@@ -1,9 +1,11 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 
 import { ProtectedRoute } from '../auth/ProtectedRoute';
+import AdminLayout from '../layouts/AdminLayout';
 import SiteLayout from '../layouts/SiteLayout';
 import AccountPage from '../pages/AccountPage';
 import AdminPage from '../pages/AdminPage';
+import AdminProductsPage from '../pages/AdminProductsPage';
 import AdminUsersPage from '../pages/AdminUsersPage';
 import AuthPage from '../pages/AuthPage';
 import ErrorPage from '../pages/ErrorPage';
@@ -67,17 +69,36 @@ export const router = createBrowserRouter([
                 children: [
                     {
                         path: 'admin',
-                        element: <AdminPage />,
+                        element: <AdminLayout />,
+                        children: [
+                            {
+                                index: true,
+                                element: <AdminPage />,
+                            },
+                            {
+                                path: 'products',
+                                element: <AdminProductsPage />,
+                            },
+                            {
+                                element: <ProtectedRoute access="superadmin" />,
+                                children: [
+                                    {
+                                        path: 'users',
+                                        element: <AdminUsersPage />,
+                                    },
+                                    {
+                                        path: 'users/invite-staff',
+                                        element: <InviteStaffPage />,
+                                    },
+                                ],
+                            },
+                        ],
                     },
                 ],
             },
             {
-                path: 'admin/users',
-                element: <AdminUsersPage />,
-            },
-            {
                 path: 'admin/invite-staff',
-                element: <InviteStaffPage />,
+                element: <Navigate replace to="/admin/users/invite-staff" />,
             },
             {
                 path: 'staff-register',
