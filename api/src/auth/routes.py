@@ -18,11 +18,13 @@ from src.auth.session import (
     login_required,
     request_session_token,
     session_cookie_name,
+    staff_permission_required,
 )
 from src.common.app import app_bool, app_extension, app_int
 from src.common.web import parse_request, request_locale
 from src.emails.service import DeliveredEmailArtifact
-from src.users.models import User
+from src.users.models import STAFF_PERMISSION_SUPERADMIN, User
+from src.users.repository import UserRepository
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -166,6 +168,14 @@ def reset_password() -> ResponseReturnValue:
 @login_required
 def me() -> ResponseReturnValue:
     return _user_payload(current_authenticated_user()), HTTPStatus.OK
+
+
+@auth_bp.get("/admin/users")
+@staff_permission_required(STAFF_PERMISSION_SUPERADMIN)
+def list_users() -> ResponseReturnValue:
+    repository = app_extension("user_repository", UserRepository)
+    users = [user.to_dict() for user in repository.list_users()]
+    return {"items": users}, HTTPStatus.OK
 
 
 @auth_bp.patch("/me")

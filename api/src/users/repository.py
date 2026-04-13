@@ -15,7 +15,7 @@ from src.users.models import (
     UserSession,
     UserToken,
 )
-from src.users.queries import SELECT_USER
+from src.users.queries import LIST_USERS, SELECT_USER
 
 
 class DuplicateEmailError(ApiError):
@@ -252,6 +252,11 @@ class UserRepository(Repository):
             "WHERE users.email = ?",
             (email,),
         )
+
+    def list_users(self) -> list[User]:
+        with self.connect() as connection:
+            rows = connection.execute(LIST_USERS, (ENTITY_TYPE_USER,)).fetchall()
+        return [User.from_row(row) for row in rows]
 
     def select_user_by_id(self, *, user_id: bytes) -> User | None:
         return self._select_user(

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthProvider';
 import { Button } from '../components/form/Button';
@@ -234,6 +234,16 @@ export default function AdminPage() {
                 <p className="text-sm text-slate-600">
                     Manage the product catalogue
                 </p>
+                {user?.permission === 'superadmin' ? (
+                    <div>
+                        <Link
+                            className="text-sm font-medium text-slate-700 underline-offset-4 hover:text-slate-950 hover:underline"
+                            to="/admin/users"
+                        >
+                            Manage registered users
+                        </Link>
+                    </div>
+                ) : null}
             </header>
 
             <section className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(18rem,1fr)]">
