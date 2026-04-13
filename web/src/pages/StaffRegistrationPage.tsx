@@ -2,19 +2,18 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { authApi, type User } from '../auth/api';
-import {
-    EMAIL_MAX_LENGTH,
-    NAME_MAX_LENGTH,
-    PASSWORD_MAX_LENGTH,
-} from '../auth/limits';
 import { PasswordRuleList } from '../auth/PasswordRuleList';
-import { getPasswordRules, PASSWORD_VALIDATOR } from '../auth/passwordRules';
 import {
     sanitizeFirstName,
     sanitizeLastName,
     sanitizePasswordInput,
     validateFirstName,
     validateLastName,
+    EMAIL_MAX_LENGTH,
+    NAME_MAX_LENGTH,
+    PASSWORD_MAX_LENGTH,
+    getPasswordRules,
+    PASSWORD_VALIDATOR,
 } from '../auth/validation';
 import { Button } from '../components/form/Button';
 import { Field } from '../components/form/Field';
