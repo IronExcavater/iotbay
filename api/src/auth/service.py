@@ -5,7 +5,9 @@ from urllib.parse import urlencode
 from src.addresses.service import AddressService
 from src.auth.requests import (
     ChangePendingEmailRequest,
+    CompleteStaffInvitationRequest,
     ForgotPasswordRequest,
+    InviteStaffRequest,
     LoginRequest,
     RegisterRequest,
     ResendVerificationRequest,
@@ -28,7 +30,9 @@ from src.users.models import (
     USER_STATUS_UNVERIFIED,
     USER_TOKEN_PURPOSE_EMAIL_VERIFICATION,
     USER_TOKEN_PURPOSE_PASSWORD_RESET,
+    USER_TOKEN_PURPOSE_STAFF_INVITATION,
     USER_TYPE_CUSTOMER,
+    USER_TYPE_STAFF,
     User,
     UserDetails,
     build_user_details,
@@ -80,6 +84,15 @@ class InvalidEmailVerificationTokenError(ApiError):
             "verification link is invalid or expired",
             HTTPStatus.BAD_REQUEST,
             code="INVALID_EMAIL_VERIFICATION_TOKEN",
+        )
+
+
+class InvalidStaffInvitationTokenError(ApiError):
+    def __init__(self) -> None:
+        super().__init__(
+            "staff invitation link is invalid or expired",
+            HTTPStatus.BAD_REQUEST,
+            code="INVALID_STAFF_INVITATION_TOKEN",
         )
 
 
@@ -162,6 +175,35 @@ class AuthService:
             artifact=self._send_verification(user, locale=locale),
         )
 
+    def invite_staff(
+        self,
+        data: InviteStaffRequest,
+        *,
+        locale: str,
+    ) -> VerificationDelivery:
+        existing_user = self.user_repository.select_user_by_email(email=data.email)
+        if existing_user is not None and (
+            existing_user.user_type != USER_TYPE_STAFF
+            or not existing_user.needs_email_verification
+        ):
+            raise DuplicateEmailError()
+
+        user = self.user_repository.upsert_user(
+            email=data.email,
+            password_hash=hash_password(new_token()),
+            first_name=existing_user.first_name if existing_user else "Invited",
+            last_name=existing_user.last_name if existing_user else "Staff",
+            user_type=USER_TYPE_STAFF,
+            status=USER_STATUS_UNVERIFIED,
+            staff_id=data.staff_id,
+            designation=data.designation,
+            permission=data.permission or None,
+        )
+        return VerificationDelivery(
+            email=user.email,
+            artifact=self._send_staff_invitation(user, locale=locale),
+        )
+
     def authenticate(self, data: LoginRequest) -> User:
         # Load the user record by email, then verify the submitted password
         # against the stored password hash before allowing login.
@@ -190,6 +232,13 @@ class AuthService:
         )
         self.user_repository.delete_user_token_by_hash(token_hash=token_hash)
         return updated_user
+
+    def invited_staff(self, token: str) -> User:
+        return self._require_user_token(
+            token_hash=hash_token(token),
+            purpose=USER_TOKEN_PURPOSE_STAFF_INVITATION,
+            error=InvalidStaffInvitationTokenError(),
+        )
 
     def request_password_reset(
         self,
@@ -294,6 +343,7 @@ class AuthService:
                 email=data.email,
                 first_name=data.first_name,
                 last_name=data.last_name,
+                staff_id=data.staff_id,
                 designation=data.designation,
                 permission=data.permission,
                 details=details,
@@ -307,6 +357,7 @@ class AuthService:
             address_line_two=details.address_line_two,
             phone_number=details.phone_number,
             validated_address=details.validated_address,
+            staff_id=data.staff_id or None,
             designation=data.designation or None,
             permission=data.permission or None,
             status=USER_STATUS_UNVERIFIED if email_changed else None,
@@ -320,6 +371,37 @@ class AuthService:
             email=updated_user.email,
             artifact=self._send_verification(updated_user, locale=locale),
         )
+
+    def complete_staff_invitation(
+        self,
+        data: CompleteStaffInvitationRequest,
+    ) -> User:
+        user = self._require_user_token(
+            token_hash=hash_token(data.token),
+            purpose=USER_TOKEN_PURPOSE_STAFF_INVITATION,
+            error=InvalidStaffInvitationTokenError(),
+        )
+        validate_user_password(
+            data.password,
+            email=user.email,
+            first_name=data.first_name,
+            last_name=data.last_name,
+        )
+        updated_user = self.user_repository.update_user(
+            user_id=user.user_id,
+            email=user.email,
+            first_name=data.first_name,
+            last_name=data.last_name,
+            staff_id=user.staff_id,
+            designation=user.designation,
+            permission=user.permission,
+            status=USER_STATUS_ACTIVE,
+            updated_at=UtcTime.now().iso,
+        )
+        self.user_repository.delete_user_token_by_hash(
+            token_hash=hash_token(data.token)
+        )
+        return updated_user
 
     def _user_details(
         self,
@@ -376,6 +458,28 @@ class AuthService:
         return self.email_service.send_verification_link(
             email=user.email,
             verification_url=self._token_url("/verify-email", token),
+            expires_at=expires_at,
+            locale=locale,
+        )
+
+    def _send_staff_invitation(
+        self,
+        user: User,
+        *,
+        locale: str,
+    ) -> DeliveredEmailArtifact:
+        token, expires_at = self._issue_user_token(
+            user=user,
+            purpose=USER_TOKEN_PURPOSE_STAFF_INVITATION,
+            lifetime_seconds=self.verification_lifetime_seconds,
+        )
+        return self.email_service.send_staff_invitation_link(
+            email=user.email,
+            registration_url=self._token_url(
+                "/staff-register",
+                token,
+                user_type=USER_TYPE_STAFF,
+            ),
             expires_at=expires_at,
             locale=locale,
         )
