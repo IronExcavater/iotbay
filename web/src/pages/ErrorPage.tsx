@@ -1,15 +1,17 @@
 import { isRouteErrorResponse, Link, useRouteError } from 'react-router-dom';
 
+import { PageHeader } from '../components/PageHeader';
+
 export default function ErrorPage() {
     const error = useRouteError();
     const details = getErrorDetails(error);
 
     return (
         <section className="mx-auto grid max-w-3xl gap-4">
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                {details.title}
-            </h1>
+            <PageHeader title={details.title} />
+
             <p className="text-base text-slate-600">{details.message}</p>
+
             <div>
                 <Link
                     className="inline-flex rounded border border-slate-300 px-3 py-2 text-sm hover:bg-slate-100"

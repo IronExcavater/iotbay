@@ -10,15 +10,18 @@ import { BackendError } from '../services/http';
 import {
     authApi,
     type LoginInput,
+    type RegisterInput,
+    type RegisterResult,
     type UpdateProfileInput,
     type VerificationResult,
     type User,
 } from './api';
 
 interface AuthContextValue {
-    isAuthenticated: boolean;
+    isAuthed: boolean;
     isLoading: boolean;
     login: (input: LoginInput) => Promise<User>;
+    register: (input: RegisterInput) => Promise<RegisterResult>;
     logout: () => Promise<void>;
     updateMe: (input: UpdateProfileInput) => Promise<User | VerificationResult>;
     user: User | null;
@@ -35,37 +38,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         async function loadSession() {
             try {
-                // Restore any existing logged-in session by asking the backend
-                // for the user attached to the current auth cookie.
+                // The backend cookie is the source of truth for the session, so
+                // app startup always asks the API for the current user.
                 const currentUser = await authApi.me();
-                if (isActive) {
-                    setUser(currentUser);
-                }
-            } catch (error) {
-                if (
-                    isActive &&
-                    error instanceof BackendError &&
-                    error.status === 401
-                ) {
-                    setUser(null);
-                } else if (isActive) {
-                    setUser(null);
-                }
+
+                if (isActive) setUser(currentUser);
+            } catch {
+                if (isActive) setUser(null);
             } finally {
-                if (isActive) {
-                    setIsLoading(false);
-                }
+                if (isActive) setIsLoading(false);
             }
         }
 
         void loadSession();
+
         return () => {
             isActive = false;
         };
     }, []);
 
     const value: AuthContextValue = {
-        isAuthenticated: user !== null,
+        isAuthed: user !== null,
         isLoading,
         async login(input) {
             // Login returns the authenticated user after the backend validates
@@ -74,22 +67,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(nextUser);
             return nextUser;
         },
+        async register(input) {
+            return authApi.register(input);
+        },
         async logout() {
             try {
                 // Logout tells the backend to invalidate the stored session and
                 // clears the local authenticated user state regardless of outcome.
                 await authApi.logout();
             } catch (error) {
-                if (!(error instanceof BackendError) || error.status !== 401) {
+                if (!(error instanceof BackendError) || error.status !== 401)
                     throw error;
-                }
             } finally {
                 setUser(null);
             }
         },
         async updateMe(input) {
             const result = await authApi.updateMe(input);
+
             if ('verification' in result) {
+                // Changing email starts a new verification flow, so the old
+                // session is cleared until the new address is confirmed.
                 setUser(null);
                 return result;
             }
@@ -109,8 +107,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
     const context = useContext(AuthContext);
-    if (context === null) {
+
+    if (context === null)
         throw new Error('useAuth must be used within AuthProvider');
-    }
+
     return context;
 }

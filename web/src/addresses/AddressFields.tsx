@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import clsx from 'clsx';
+import { FaChevronDown } from 'react-icons/fa6';
 
 import { sanitizeAddressField } from '../auth/validation';
 import { Button } from '../components/form/Button';
@@ -18,449 +20,6 @@ interface AddressFieldsProps {
     errors: AddressFieldErrors;
     onFieldChange: (name: AddressFieldName, value: string) => void;
     values: AddressFormValues;
-}
-
-export function AddressFields({
-    countryCode,
-    errors,
-    onFieldChange,
-    values,
-}: AddressFieldsProps) {
-    const rootRef = useRef<HTMLDivElement | null>(null);
-    const autoResolvedQueryRef = useRef('');
-    const suggestionsCacheRef = useRef(new Map<string, AddressSuggestion[]>());
-    const browserLocale = useMemo(() => getBrowserAddressLocale(), []);
-    const placeholders = getAddressPlaceholders(
-        countryCode ?? browserLocale.country,
-        browserLocale.language
-    );
-    const collapsedPlaceholder = buildCollapsedAddressPlaceholder(placeholders);
-    const collapsedAddressValue = buildCollapsedAddressValue(values);
-    const [searchValue, setSearchValue] = useState('');
-    const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
-    const [showDetails, setShowDetails] = useState(false);
-    const [activeField, setActiveField] = useState<SearchFieldName | null>(
-        null
-    );
-    const query = showDetails
-        ? buildSuggestionQuery(values)
-        : searchValue.trim();
-
-    useEffect(() => {
-        if (showDetails || activeField !== 'search') {
-            setSearchValue('');
-        }
-    }, [activeField, showDetails]);
-
-    useEffect(() => {
-        if (!activeField || query.length < 3) {
-            setSuggestions([]);
-            return;
-        }
-
-        const controller = new AbortController();
-        const timeoutId = window.setTimeout(async () => {
-            try {
-                const cacheKey = [
-                    countryCode ?? browserLocale.country ?? '',
-                    browserLocale.language ?? '',
-                    query,
-                ].join('|');
-                const cachedItems = suggestionsCacheRef.current.get(cacheKey);
-                if (cachedItems) {
-                    setSuggestions(cachedItems);
-                    return;
-                }
-
-                const items = await addressApi.suggest(query, {
-                    country: countryCode ?? browserLocale.country,
-                    language: browserLocale.language,
-                    signal: controller.signal,
-                });
-                suggestionsCacheRef.current.set(cacheKey, items);
-                setSuggestions(items);
-            } catch (error) {
-                if (controller.signal.aborted) {
-                    return;
-                }
-                if (
-                    error instanceof BackendError &&
-                    error.code === 'ADDRESS_LOOKUP_UNAVAILABLE'
-                ) {
-                    setSuggestions([]);
-                    return;
-                }
-                setSuggestions([]);
-            } finally {
-                // no-op: suggestion UI does not show a loading indicator
-            }
-        }, SEARCH_DEBOUNCE_MS);
-
-        return () => {
-            controller.abort();
-            window.clearTimeout(timeoutId);
-        };
-    }, [
-        browserLocale.country,
-        browserLocale.language,
-        countryCode,
-        activeField,
-        query,
-    ]);
-
-    async function handleSuggestionSelect(suggestion: AddressSuggestion) {
-        setSuggestions([]);
-        setActiveField(null);
-        setSearchValue('');
-
-        try {
-            const address = await addressApi.resolve(suggestion.id, {
-                country: countryCode ?? browserLocale.country,
-                language: browserLocale.language,
-            });
-            const nextValues = {
-                ...values,
-                addressLineOne: address.addressLineOne,
-                addressLineTwo: '',
-                country: address.country,
-                postcode: address.postcode,
-                state: address.state,
-                suburb: address.suburb,
-            };
-            onFieldChange('addressLineOne', nextValues.addressLineOne);
-            onFieldChange('addressLineTwo', '');
-            onFieldChange('suburb', nextValues.suburb);
-            onFieldChange('state', nextValues.state);
-            onFieldChange('postcode', nextValues.postcode);
-            onFieldChange('country', nextValues.country);
-        } catch {
-            setSuggestions([]);
-        }
-    }
-
-    function handleFieldChange(name: AddressFieldName, value: string) {
-        onFieldChange(name, value);
-    }
-
-    function handleSearchFieldChange(value: string) {
-        const sanitized = sanitizeAddressField(value, 'Address');
-        setSearchValue(sanitized);
-        onFieldChange('addressLineOne', sanitized);
-    }
-
-    function handleAddressBlur() {
-        window.setTimeout(() => {
-            const activeElement = document.activeElement;
-            if (!rootRef.current?.contains(activeElement)) {
-                if (activeField === 'search') {
-                    void applyCollapsedSearchValue();
-                }
-                setActiveField(null);
-            }
-        }, 100);
-    }
-
-    async function applyCollapsedSearchValue() {
-        const normalized = searchValue.trim();
-        if (!normalized) {
-            return;
-        }
-
-        if (autoResolvedQueryRef.current === normalized) {
-            return;
-        }
-
-        const [suggestion] = suggestions;
-        if (suggestions.length === 1 && suggestion) {
-            autoResolvedQueryRef.current = normalized;
-            await handleSuggestionSelect(suggestion);
-            return;
-        }
-
-        if (!hasStructuredAddress(values)) {
-            onFieldChange('addressLineOne', normalized);
-        }
-    }
-
-    function renderSuggestionPanel(fieldName: SearchFieldName) {
-        if (activeField !== fieldName) {
-            return null;
-        }
-
-        if (suggestions.length === 0) {
-            return null;
-        }
-
-        return (
-            <div className="absolute z-10 mt-1 grid w-full gap-1 rounded border border-slate-200 bg-white p-1 shadow-lg">
-                {suggestions.map((suggestion) => (
-                    <button
-                        className="grid gap-0.5 rounded px-3 py-2 text-left text-sm hover:bg-slate-50"
-                        key={suggestion.id}
-                        onMouseDown={(event) => {
-                            event.preventDefault();
-                            void handleSuggestionSelect(suggestion);
-                        }}
-                        type="button"
-                    >
-                        <span className="font-medium text-slate-900">
-                            {suggestion.label}
-                        </span>
-                        {suggestion.subtitle ? (
-                            <span className="text-slate-500">
-                                {suggestion.subtitle}
-                            </span>
-                        ) : null}
-                    </button>
-                ))}
-            </div>
-        );
-    }
-
-    return (
-        <div className="grid gap-1" ref={rootRef}>
-            {!showDetails ? (
-                <>
-                    <HiddenAutofillFields
-                        onFieldChange={handleFieldChange}
-                        values={values}
-                    />
-                    <Field error={errors.addressLineOne} label="Address">
-                        <div className="relative">
-                            <input
-                                autoComplete="section-address shipping address-line1"
-                                className={inputClassName(
-                                    Boolean(errors.addressLineOne)
-                                )}
-                                name="address-line1"
-                                onBlur={handleAddressBlur}
-                                onChange={(event) => {
-                                    handleSearchFieldChange(event.target.value);
-                                }}
-                                onFocus={() => {
-                                    setActiveField('search');
-                                    setSearchValue((current) => {
-                                        if (current) {
-                                            return current;
-                                        }
-                                        return values.addressLineOne.trim();
-                                    });
-                                }}
-                                placeholder={collapsedPlaceholder}
-                                value={
-                                    activeField === 'search'
-                                        ? searchValue
-                                        : collapsedAddressValue
-                                }
-                            />
-                            {renderSuggestionPanel('search')}
-                        </div>
-                    </Field>
-                </>
-            ) : null}
-
-            {showDetails ? (
-                <div className="grid gap-4">
-                    <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
-                        <Field
-                            error={errors.addressLineOne}
-                            label="Address line 1"
-                        >
-                            <div className="relative">
-                                <input
-                                    autoComplete="section-address shipping address-line1"
-                                    className={inputClassName(
-                                        Boolean(errors.addressLineOne)
-                                    )}
-                                    name="address-line1"
-                                    onBlur={handleAddressBlur}
-                                    onChange={(event) => {
-                                        handleFieldChange(
-                                            'addressLineOne',
-                                            sanitizeAddressField(
-                                                event.target.value,
-                                                'Address line 1'
-                                            )
-                                        );
-                                    }}
-                                    onFocus={() => {
-                                        setActiveField('addressLineOne');
-                                    }}
-                                    placeholder="12 Harbour Road"
-                                    value={values.addressLineOne}
-                                />
-                                {renderSuggestionPanel('addressLineOne')}
-                            </div>
-                        </Field>
-
-                        <Field label="Address line 2">
-                            <input
-                                autoComplete="section-address shipping address-line2"
-                                className={inputClassName(false)}
-                                name="address-line2"
-                                onChange={(event) => {
-                                    handleFieldChange(
-                                        'addressLineTwo',
-                                        sanitizeAddressField(
-                                            event.target.value,
-                                            'Address line 2'
-                                        )
-                                    );
-                                }}
-                                placeholder="Apartment 4B"
-                                value={values.addressLineTwo}
-                            />
-                        </Field>
-                    </div>
-
-                    <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
-                        <Field error={errors.suburb} label="Suburb">
-                            <div className="relative">
-                                <input
-                                    autoComplete="section-address shipping address-level2"
-                                    className={inputClassName(
-                                        Boolean(errors.suburb)
-                                    )}
-                                    name="address-level2"
-                                    onBlur={handleAddressBlur}
-                                    onChange={(event) => {
-                                        handleFieldChange(
-                                            'suburb',
-                                            sanitizeAddressField(
-                                                event.target.value,
-                                                'Suburb'
-                                            )
-                                        );
-                                    }}
-                                    onFocus={() => {
-                                        setActiveField('suburb');
-                                    }}
-                                    placeholder={placeholders.suburb}
-                                    value={values.suburb}
-                                />
-                                {renderSuggestionPanel('suburb')}
-                            </div>
-                        </Field>
-
-                        <Field error={errors.state} label="State">
-                            <div className="relative">
-                                <input
-                                    autoComplete="section-address shipping address-level1"
-                                    className={inputClassName(
-                                        Boolean(errors.state)
-                                    )}
-                                    name="address-level1"
-                                    onBlur={handleAddressBlur}
-                                    onChange={(event) => {
-                                        handleFieldChange(
-                                            'state',
-                                            sanitizeAddressField(
-                                                event.target.value,
-                                                'State'
-                                            )
-                                        );
-                                    }}
-                                    onFocus={() => {
-                                        setActiveField('state');
-                                    }}
-                                    placeholder={placeholders.state}
-                                    value={values.state}
-                                />
-                                {renderSuggestionPanel('state')}
-                            </div>
-                        </Field>
-                    </div>
-
-                    <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
-                        <Field error={errors.postcode} label="Postcode">
-                            <div className="relative">
-                                <input
-                                    autoComplete="section-address shipping postal-code"
-                                    className={inputClassName(
-                                        Boolean(errors.postcode)
-                                    )}
-                                    name="postal-code"
-                                    onBlur={handleAddressBlur}
-                                    onChange={(event) => {
-                                        handleFieldChange(
-                                            'postcode',
-                                            sanitizeAddressField(
-                                                event.target.value,
-                                                'Postcode'
-                                            )
-                                        );
-                                    }}
-                                    onFocus={() => {
-                                        setActiveField('postcode');
-                                    }}
-                                    placeholder={placeholders.postcode}
-                                    value={values.postcode}
-                                />
-                                {renderSuggestionPanel('postcode')}
-                            </div>
-                        </Field>
-
-                        <Field error={errors.country} label="Country">
-                            <div className="relative">
-                                <input
-                                    autoComplete="section-address shipping country-name"
-                                    className={inputClassName(
-                                        Boolean(errors.country)
-                                    )}
-                                    name="country"
-                                    onBlur={handleAddressBlur}
-                                    onChange={(event) => {
-                                        handleFieldChange(
-                                            'country',
-                                            sanitizeAddressField(
-                                                event.target.value,
-                                                'Country'
-                                            )
-                                        );
-                                    }}
-                                    onFocus={() => {
-                                        setActiveField('country');
-                                    }}
-                                    placeholder={placeholders.country}
-                                    value={values.country}
-                                />
-                                {renderSuggestionPanel('country')}
-                            </div>
-                        </Field>
-                    </div>
-                </div>
-            ) : null}
-
-            <Button
-                className="self-start whitespace-nowrap"
-                onClick={() => {
-                    setActiveField(null);
-                    setSuggestions([]);
-                    setShowDetails((current) => !current);
-                }}
-                type="button"
-                variant="text"
-            >
-                <svg
-                    aria-hidden="true"
-                    className={`h-4 w-4 shrink-0 transition-transform duration-200 ease-out ${showDetails ? 'rotate-180' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="1.75"
-                    viewBox="0 0 24 24"
-                >
-                    <path d="m6 9 6 6 6-6" />
-                </svg>
-                <span className="whitespace-nowrap">
-                    {showDetails
-                        ? 'Hide address details'
-                        : 'Show address details'}
-                </span>
-            </Button>
-        </div>
-    );
 }
 
 type SearchFieldName =
@@ -535,6 +94,466 @@ const PLACEHOLDERS: Record<string, AddressPlaceholders> = {
     },
 };
 
+export function AddressFields({
+    countryCode,
+    errors,
+    onFieldChange,
+    values,
+}: AddressFieldsProps) {
+    const rootRef = useRef<HTMLDivElement | null>(null);
+    const autoResolvedQueryRef = useRef('');
+    const suggestionsCacheRef = useRef(new Map<string, AddressSuggestion[]>());
+    const browserLocale = useMemo(() => getBrowserAddressLocale(), []);
+    const suggestionCountry = countryCode ?? browserLocale.country;
+    const suggestionLanguage = browserLocale.language;
+
+    const placeholders = getAddressPlaceholders(
+        suggestionCountry,
+        suggestionLanguage
+    );
+    const collapsedPlaceholder = buildCollapsedAddressPlaceholder(placeholders);
+
+    const [searchValue, setSearchValue] = useState('');
+    const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
+    const [showDetails, setShowDetails] = useState(false);
+    const [activeField, setActiveField] = useState<SearchFieldName | null>(
+        null
+    );
+
+    const collapsedAddressValue = buildCollapsedAddressValue(values);
+    const isSearchActive = activeField === 'search';
+    const searchInputValue = isSearchActive
+        ? searchValue
+        : collapsedAddressValue;
+
+    const query = showDetails
+        ? buildSuggestionQuery(values)
+        : searchValue.trim();
+
+    useEffect(() => {
+        if (showDetails || activeField !== 'search') setSearchValue('');
+    }, [activeField, showDetails]);
+
+    useEffect(() => {
+        if (!activeField || query.length < 3) {
+            setSuggestions([]);
+            return;
+        }
+
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(async () => {
+            try {
+                const cacheKey = [
+                    suggestionCountry ?? '',
+                    suggestionLanguage ?? '',
+                    query,
+                ].join('|');
+                const cachedItems = suggestionsCacheRef.current.get(cacheKey);
+
+                if (cachedItems) {
+                    setSuggestions(cachedItems);
+                    return;
+                }
+
+                const items = await addressApi.suggest(query, {
+                    country: suggestionCountry,
+                    language: suggestionLanguage,
+                    signal: controller.signal,
+                });
+                suggestionsCacheRef.current.set(cacheKey, items);
+                setSuggestions(items);
+            } catch (error) {
+                if (controller.signal.aborted) return;
+
+                if (
+                    error instanceof BackendError &&
+                    error.code === 'ADDRESS_LOOKUP_UNAVAILABLE'
+                ) {
+                    setSuggestions([]);
+                    return;
+                }
+
+                setSuggestions([]);
+            }
+        }, SEARCH_DEBOUNCE_MS);
+
+        return () => {
+            controller.abort();
+            window.clearTimeout(timeoutId);
+        };
+    }, [activeField, query, suggestionCountry, suggestionLanguage]);
+
+    async function handleSuggestionSelect(suggestion: AddressSuggestion) {
+        setSuggestions([]);
+        setActiveField(null);
+        setSearchValue('');
+
+        try {
+            const address = await addressApi.resolve(suggestion.id, {
+                country: suggestionCountry,
+                language: suggestionLanguage,
+            });
+
+            onFieldChange('addressLineOne', address.addressLineOne);
+            onFieldChange('addressLineTwo', '');
+            onFieldChange('suburb', address.suburb);
+            onFieldChange('state', address.state);
+            onFieldChange('postcode', address.postcode);
+            onFieldChange('country', address.country);
+        } catch {
+            setSuggestions([]);
+        }
+    }
+
+    function handleFieldChange(name: AddressFieldName, value: string) {
+        onFieldChange(name, value);
+    }
+
+    function handleSanitizedFieldChange(
+        name: AddressFieldName,
+        value: string,
+        label: string
+    ) {
+        handleFieldChange(name, sanitizeAddressField(value, label));
+    }
+
+    function handleSearchFieldChange(value: string) {
+        const sanitized = sanitizeAddressField(value, 'Address');
+        setSearchValue(sanitized);
+        onFieldChange('addressLineOne', sanitized);
+    }
+
+    function handleAddressBlur() {
+        window.setTimeout(() => {
+            const activeElement = document.activeElement;
+
+            if (!rootRef.current?.contains(activeElement)) {
+                if (activeField === 'search') void applyCollapsedSearchValue();
+
+                setActiveField(null);
+            }
+        }, 100);
+    }
+
+    async function applyCollapsedSearchValue() {
+        const normalized = searchValue.trim();
+
+        if (!normalized) return;
+
+        if (autoResolvedQueryRef.current === normalized) return;
+
+        const [suggestion] = suggestions;
+
+        if (suggestions.length === 1 && suggestion) {
+            autoResolvedQueryRef.current = normalized;
+            await handleSuggestionSelect(suggestion);
+            return;
+        }
+
+        if (!hasStructuredAddress(values))
+            onFieldChange('addressLineOne', normalized);
+    }
+
+    function getSuggestionPanel(fieldName: SearchFieldName) {
+        if (activeField !== fieldName || suggestions.length === 0) return null;
+
+        return (
+            <AddressSuggestionPanel
+                onSelect={handleSuggestionSelect}
+                suggestions={suggestions}
+            />
+        );
+    }
+
+    function handleDetailsToggle() {
+        setActiveField(null);
+        setSuggestions([]);
+        setShowDetails((current) => !current);
+    }
+
+    function renderCollapsedField() {
+        return (
+            <>
+                <HiddenAutofillFields
+                    onFieldChange={handleSanitizedFieldChange}
+                    values={values}
+                />
+
+                <Field error={errors.addressLineOne} label="Address">
+                    <AddressInputField
+                        autoComplete="section-address shipping address-line1"
+                        error={errors.addressLineOne}
+                        name="address-line1"
+                        onBlur={handleAddressBlur}
+                        onChange={handleSearchFieldChange}
+                        onFocus={() => {
+                            setActiveField('search');
+                            setSearchValue((current) => {
+                                if (current) return current;
+
+                                return values.addressLineOne.trim();
+                            });
+                        }}
+                        panel={getSuggestionPanel('search')}
+                        placeholder={collapsedPlaceholder}
+                        value={searchInputValue}
+                    />
+                </Field>
+            </>
+        );
+    }
+
+    function renderDetailedFields() {
+        return (
+            <div className="grid gap-4">
+                <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
+                    <AddressInputField
+                        autoComplete="section-address shipping address-line1"
+                        error={errors.addressLineOne}
+                        label="Address line 1"
+                        name="address-line1"
+                        onBlur={handleAddressBlur}
+                        onChange={(value) => {
+                            handleSanitizedFieldChange(
+                                'addressLineOne',
+                                value,
+                                'Address line 1'
+                            );
+                        }}
+                        onFocus={() => {
+                            setActiveField('addressLineOne');
+                        }}
+                        panel={getSuggestionPanel('addressLineOne')}
+                        placeholder="12 Harbour Road"
+                        value={values.addressLineOne}
+                    />
+
+                    <AddressInputField
+                        autoComplete="section-address shipping address-line2"
+                        label="Address line 2"
+                        name="address-line2"
+                        onChange={(value) => {
+                            handleSanitizedFieldChange(
+                                'addressLineTwo',
+                                value,
+                                'Address line 2'
+                            );
+                        }}
+                        placeholder="Apartment 4B"
+                        value={values.addressLineTwo}
+                    />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
+                    <AddressInputField
+                        autoComplete="section-address shipping address-level2"
+                        error={errors.suburb}
+                        label="Suburb"
+                        name="address-level2"
+                        onBlur={handleAddressBlur}
+                        onChange={(value) => {
+                            handleSanitizedFieldChange(
+                                'suburb',
+                                value,
+                                'Suburb'
+                            );
+                        }}
+                        onFocus={() => {
+                            setActiveField('suburb');
+                        }}
+                        panel={getSuggestionPanel('suburb')}
+                        placeholder={placeholders.suburb}
+                        value={values.suburb}
+                    />
+
+                    <AddressInputField
+                        autoComplete="section-address shipping address-level1"
+                        error={errors.state}
+                        label="State"
+                        name="address-level1"
+                        onBlur={handleAddressBlur}
+                        onChange={(value) => {
+                            handleSanitizedFieldChange('state', value, 'State');
+                        }}
+                        onFocus={() => {
+                            setActiveField('state');
+                        }}
+                        panel={getSuggestionPanel('state')}
+                        placeholder={placeholders.state}
+                        value={values.state}
+                    />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
+                    <AddressInputField
+                        autoComplete="section-address shipping postal-code"
+                        error={errors.postcode}
+                        label="Postcode"
+                        name="postal-code"
+                        onBlur={handleAddressBlur}
+                        onChange={(value) => {
+                            handleSanitizedFieldChange(
+                                'postcode',
+                                value,
+                                'Postcode'
+                            );
+                        }}
+                        onFocus={() => {
+                            setActiveField('postcode');
+                        }}
+                        panel={getSuggestionPanel('postcode')}
+                        placeholder={placeholders.postcode}
+                        value={values.postcode}
+                    />
+
+                    <AddressInputField
+                        autoComplete="section-address shipping country-name"
+                        error={errors.country}
+                        label="Country"
+                        name="country"
+                        onBlur={handleAddressBlur}
+                        onChange={(value) => {
+                            handleSanitizedFieldChange(
+                                'country',
+                                value,
+                                'Country'
+                            );
+                        }}
+                        onFocus={() => {
+                            setActiveField('country');
+                        }}
+                        panel={getSuggestionPanel('country')}
+                        placeholder={placeholders.country}
+                        value={values.country}
+                    />
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="grid gap-1" ref={rootRef}>
+            {!showDetails && renderCollapsedField()}
+
+            {showDetails && renderDetailedFields()}
+
+            <Button
+                className="self-start whitespace-nowrap"
+                onClick={handleDetailsToggle}
+                type="button"
+                variant="text"
+            >
+                <FaChevronDown
+                    aria-hidden="true"
+                    className={clsx(
+                        'h-4 w-4 shrink-0 transition-transform duration-200 ease-out',
+                        showDetails && 'rotate-180'
+                    )}
+                />
+
+                <span className="whitespace-nowrap">
+                    {showDetails
+                        ? 'Hide address details'
+                        : 'Show address details'}
+                </span>
+            </Button>
+        </div>
+    );
+}
+
+interface AddressInputFieldProps {
+    autoComplete: string;
+    error?: string;
+    label?: ReactNode;
+    name: string;
+    onBlur?: () => void;
+    onChange: (value: string) => void;
+    onFocus?: () => void;
+    panel?: ReactNode;
+    placeholder: string;
+    value: string;
+}
+
+function AddressInputField({
+    autoComplete,
+    error,
+    label,
+    name,
+    onBlur,
+    onChange,
+    onFocus,
+    panel,
+    placeholder,
+    value,
+}: AddressInputFieldProps) {
+    const input = (
+        <input
+            autoComplete={autoComplete}
+            className={inputClassName(Boolean(error))}
+            name={name}
+            onBlur={onBlur}
+            onChange={(event) => {
+                onChange(event.target.value);
+            }}
+            onFocus={onFocus}
+            placeholder={placeholder}
+            value={value}
+        />
+    );
+
+    return (
+        <Field error={error} label={label}>
+            {panel ? (
+                <div className="relative">
+                    {input}
+                    {panel}
+                </div>
+            ) : (
+                input
+            )}
+        </Field>
+    );
+}
+
+function AddressSuggestionPanel({
+    onSelect,
+    suggestions,
+}: {
+    onSelect: (suggestion: AddressSuggestion) => Promise<void>;
+    suggestions: AddressSuggestion[];
+}) {
+    return (
+        <div className="absolute z-10 mt-1 grid w-full gap-1 rounded border border-slate-200 bg-white p-1 shadow-lg">
+            {suggestions.map((suggestion) => (
+                <button
+                    className="grid gap-0.5 rounded px-3 py-2 text-left text-sm hover:bg-slate-50"
+                    key={suggestion.id}
+                    onMouseDown={(event) => {
+                        event.preventDefault();
+                        void onSelect(suggestion);
+                    }}
+                    title={
+                        suggestion.subtitle
+                            ? `${suggestion.label}, ${suggestion.subtitle}`
+                            : suggestion.label
+                    }
+                    type="button"
+                >
+                    <span className="font-medium text-slate-900">
+                        {suggestion.label}
+                    </span>
+
+                    {suggestion.subtitle ? (
+                        <span className="text-slate-500">
+                            {suggestion.subtitle}
+                        </span>
+                    ) : null}
+                </button>
+            ))}
+        </div>
+    );
+}
+
 function getAddressPlaceholders(countryCode?: string, language = 'en') {
     const normalizedCountryCode = countryCode?.trim().toUpperCase();
     const matchedPlaceholders =
@@ -550,9 +569,7 @@ function getAddressPlaceholders(countryCode?: string, language = 'en') {
 }
 
 function resolveRegionName(countryCode: string | undefined, language: string) {
-    if (!countryCode) {
-        return undefined;
-    }
+    if (!countryCode) return undefined;
 
     try {
         return (
@@ -620,9 +637,16 @@ function HiddenAutofillFields({
     onFieldChange,
     values,
 }: {
-    onFieldChange: (name: AddressFieldName, value: string) => void;
+    onFieldChange: (
+        name: AddressFieldName,
+        value: string,
+        label: string
+    ) => void;
     values: AddressFormValues;
 }) {
+    // Browsers and password managers often know how to autofill the standard
+    // address fields but not the collapsed search UI, so mirror those fields
+    // off-screen and feed the values back into the real form state.
     return (
         <div aria-hidden="true" className="sr-only">
             <input
@@ -631,59 +655,49 @@ function HiddenAutofillFields({
                 onChange={(event) => {
                     onFieldChange(
                         'addressLineTwo',
-                        sanitizeAddressField(
-                            event.target.value,
-                            'Address line 2'
-                        )
+                        event.target.value,
+                        'Address line 2'
                     );
                 }}
                 tabIndex={-1}
                 value={values.addressLineTwo}
             />
+
             <input
                 autoComplete="section-address shipping address-level2"
                 name="address-level2"
                 onChange={(event) => {
-                    onFieldChange(
-                        'suburb',
-                        sanitizeAddressField(event.target.value, 'Suburb')
-                    );
+                    onFieldChange('suburb', event.target.value, 'Suburb');
                 }}
                 tabIndex={-1}
                 value={values.suburb}
             />
+
             <input
                 autoComplete="section-address shipping address-level1"
                 name="address-level1"
                 onChange={(event) => {
-                    onFieldChange(
-                        'state',
-                        sanitizeAddressField(event.target.value, 'State')
-                    );
+                    onFieldChange('state', event.target.value, 'State');
                 }}
                 tabIndex={-1}
                 value={values.state}
             />
+
             <input
                 autoComplete="section-address shipping postal-code"
                 name="postal-code"
                 onChange={(event) => {
-                    onFieldChange(
-                        'postcode',
-                        sanitizeAddressField(event.target.value, 'Postcode')
-                    );
+                    onFieldChange('postcode', event.target.value, 'Postcode');
                 }}
                 tabIndex={-1}
                 value={values.postcode}
             />
+
             <input
                 autoComplete="section-address shipping country-name"
                 name="country"
                 onChange={(event) => {
-                    onFieldChange(
-                        'country',
-                        sanitizeAddressField(event.target.value, 'Country')
-                    );
+                    onFieldChange('country', event.target.value, 'Country');
                 }}
                 tabIndex={-1}
                 value={values.country}

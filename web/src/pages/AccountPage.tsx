@@ -1,20 +1,16 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useState, type SubmitEvent } from 'react';
 import type { CountryCode } from 'libphonenumber-js';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 import { AddressFields } from '../addresses/AddressFields';
 import {
     setAddressField,
+    type AddressFieldName,
     toAddressInput,
     validateAddressValues,
 } from '../addresses/form';
+import type { UpdateProfileInput, User } from '../auth/api';
 import { useAuth } from '../auth/AuthProvider';
-import {
-    EMAIL_MAX_LENGTH,
-    NAME_MAX_LENGTH,
-    STAFF_DESIGNATION_MAX_LENGTH,
-    STAFF_ID_MAX_LENGTH,
-} from '../auth/limits';
 import {
     getBrowserPhoneCountry,
     inferPhoneCountry,
@@ -22,17 +18,27 @@ import {
     toEditablePhoneNumber,
     validatePhoneNumber,
 } from '../auth/phone';
+import { buildVerifyEmailPath } from '../auth/redirects';
 import {
+    assessDesignation,
+    assessPermission,
+    assessStaffId,
+    EMAIL_MAX_LENGTH,
+    NAME_MAX_LENGTH,
+    sanitizeDesignation,
     sanitizeEmail,
     sanitizeFirstName,
     sanitizeLastName,
     sanitizePasswordInput,
+    sanitizeStaffId,
+    STAFF_DESIGNATION_MAX_LENGTH,
     validateEmail,
     validateFirstName,
     validateFirstNameOnBlur,
     validateLastName,
     validateLastNameOnBlur,
     validateRequired,
+    STAFF_ID_MAX_LENGTH,
 } from '../auth/validation';
 import { Button } from '../components/form/Button';
 import { Field } from '../components/form/Field';
@@ -40,10 +46,10 @@ import { FormNotice } from '../components/form/FormNotice';
 import { inputClassName } from '../components/form/Input';
 import { PasswordInput } from '../components/form/PasswordInput';
 import { PhoneField } from '../components/form/PhoneField';
-import { useEnterSubmit } from '../components/form/useEnterSubmit';
 import { useToast } from '../components/toast/ToastProvider';
 import { downloadHtml } from '../services/download';
 import { backendErrorMessage, resolveBackendError } from '../services/http';
+import { collectFieldErrors } from '../validation/forms';
 
 interface ProfileValues {
     addressLineOne: string;
@@ -83,10 +89,58 @@ const DEFAULT_VALUES: ProfileValues = {
     suburb: '',
 };
 
+function toProfileValues(user: User): ProfileValues {
+    const phoneCountry = user.phoneNumber
+        ? inferPhoneCountry(user.phoneNumber)
+        : getBrowserPhoneCountry();
+
+    return {
+        addressLineOne: user.addressLineOne ?? '',
+        addressLineTwo: user.addressLineTwo ?? '',
+        country: user.country ?? '',
+        currentPassword: '',
+        designation: user.designation ?? '',
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        postcode: user.postcode ?? '',
+        permission: user.permission ?? '',
+        phoneCountry,
+        phoneNumber: toEditablePhoneNumber(user.phoneNumber, phoneCountry),
+        state: user.state ?? '',
+        suburb: user.suburb ?? '',
+        staffId: user.staffId ?? '',
+    };
+}
+
+function toProfileUpdateInput(
+    values: ProfileValues,
+    {
+        hasChanges,
+        isCustomer,
+        isStaff,
+    }: {
+        hasChanges: boolean;
+        isCustomer: boolean;
+        isStaff: boolean;
+    }
+): UpdateProfileInput {
+    return {
+        ...(isCustomer ? toAddressInput(values) : {}),
+        currentPassword: hasChanges ? values.currentPassword : undefined,
+        designation: isStaff ? values.designation.trim() : '',
+        email: values.email.trim(),
+        firstName: values.firstName.trim(),
+        lastName: values.lastName.trim(),
+        permission: isStaff ? values.permission : '',
+        phoneCountry: isCustomer ? values.phoneCountry : '',
+        phoneNumber: isCustomer ? values.phoneNumber.trim() : '',
+    };
+}
+
 export default function AccountPage() {
-    const formRef = useRef<HTMLFormElement | null>(null);
     const navigate = useNavigate();
-    const { isAuthenticated, isLoading, updateMe, user } = useAuth();
+    const { updateMe, user } = useAuth();
     const { showToast } = useToast();
     const [values, setValues] = useState<ProfileValues>(DEFAULT_VALUES);
     const [initialValues, setInitialValues] =
@@ -97,40 +151,13 @@ export default function AccountPage() {
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
 
     useEffect(() => {
-        if (!user) {
-            return;
-        }
+        if (!user) return;
 
-        // Populate the account form with the registered user's current details
-        // so they can review and edit the information they originally provided.
-        const phoneCountry = user.phoneNumber
-            ? inferPhoneCountry(user.phoneNumber)
-            : getBrowserPhoneCountry();
+        const nextValues = toProfileValues(user);
 
-        const nextValues = {
-            addressLineOne: user.addressLineOne ?? '',
-            addressLineTwo: user.addressLineTwo ?? '',
-            country: user.country ?? '',
-            currentPassword: '',
-            designation: user.designation ?? '',
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            postcode: user.postcode ?? '',
-            permission: user.permission ?? '',
-            phoneCountry,
-            phoneNumber: toEditablePhoneNumber(user.phoneNumber, phoneCountry),
-            staffId: user.staffId ?? '',
-            state: user.state ?? '',
-            suburb: user.suburb ?? '',
-        };
         setValues(nextValues);
         setInitialValues(nextValues);
     }, [user]);
-
-    if (!isLoading && !isAuthenticated) {
-        return <Navigate replace to="/auth?mode=signin" />;
-    }
 
     const emailChanged = Boolean(
         user && values.email.trim().toLowerCase() !== user.email
@@ -140,18 +167,9 @@ export default function AccountPage() {
     const isCustomer = user?.userType === 'customer';
     const isStaff = user?.userType === 'staff';
     const hasChanges = hasProfileChanges(values, initialValues);
-    const enterSubmit = useEnterSubmit({
-        canSubmit: () =>
-            hasChanges &&
-            !isSubmitting &&
-            Object.values(
-                validateProfileForm(values, {
-                    hasChanges,
-                    isCustomer,
-                })
-            ).every((error) => !error),
-        formRef,
-    });
+    const currentPasswordHint = emailChanged
+        ? 'Changing your email will require verification'
+        : 'Required to save changes';
 
     function setFieldError(name: keyof FieldErrors, message?: string | null) {
         setFieldErrors((current) => ({
@@ -160,53 +178,66 @@ export default function AccountPage() {
         }));
     }
 
-    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    function updateValues(patch: Partial<ProfileValues>) {
+        setValues((current) => ({
+            ...current,
+            ...patch,
+        }));
+    }
+
+    function handleAddressFieldChange(name: AddressFieldName, value: string) {
+        setValues((current) => setAddressField(current, name, value));
+    }
+
+    function handlePhoneBlur() {
+        setFieldError(
+            'phoneNumber',
+            values.phoneNumber.trim()
+                ? validatePhoneNumber(values.phoneNumber, values.phoneCountry)
+                : null
+        );
+    }
+
+    async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
         event.preventDefault();
         setError(null);
 
-        // Skip the update request when the registered user has not changed any
-        // of their saved registration details on the account page.
-        if (!hasChanges) {
-            return;
-        }
+        if (!hasChanges) return;
 
         // Validate the edited registration details before sending them to the backend.
         const nextFieldErrors = validateProfileForm(values, {
             hasChanges,
             isCustomer,
+            isStaff,
         });
 
         setFieldErrors(nextFieldErrors);
-        if (Object.values(nextFieldErrors).some(Boolean)) {
-            return;
-        }
+        if (Object.values(nextFieldErrors).some(Boolean)) return;
 
         setIsSubmitting(true);
         try {
-            // Submit the registered user's updated profile details, including
-            // customer contact data or staff-specific fields as applicable.
-            const result = await updateMe({
-                ...(isCustomer ? toAddressInput(values) : {}),
-                currentPassword: hasChanges
-                    ? values.currentPassword
-                    : undefined,
-                designation: isStaff ? values.designation.trim() : '',
-                email: values.email.trim(),
-                firstName: values.firstName.trim(),
-                lastName: values.lastName.trim(),
-                permission: isStaff ? values.permission : '',
-                phoneCountry: isCustomer ? values.phoneCountry : '',
-                phoneNumber: isCustomer ? values.phoneNumber.trim() : '',
-                staffId: isStaff ? values.staffId.trim() : '',
-            });
+            const result = await updateMe(
+                toProfileUpdateInput(values, {
+                    hasChanges,
+                    isCustomer,
+                    isStaff,
+                })
+            );
 
             setFieldErrors({});
+
             if ('verification' in result) {
                 // Changing the saved email address signs the user out and moves
                 // them into the verification flow before the update is finalized.
                 downloadHtml(result.download);
                 navigate(
-                    `/verify-email?email=${encodeURIComponent(values.email.trim())}&context=account${isStaff ? '&userType=staff' : ''}${result.download ? '&downloaded=1' : ''}`
+                    buildVerifyEmailPath({
+                        context: 'account',
+                        downloaded: Boolean(result.download),
+                        email: values.email.trim(),
+                        nextPath: '/account',
+                        userType: isStaff ? 'staff' : undefined,
+                    })
                 );
                 return;
             }
@@ -239,12 +270,7 @@ export default function AccountPage() {
                     <h2 className="text-lg font-semibold">Manage details</h2>
                 </div>
 
-                <form
-                    className="mt-5 grid gap-6"
-                    onKeyDown={enterSubmit.onKeyDown}
-                    onSubmit={handleSubmit}
-                    ref={formRef}
-                >
+                <form className="mt-5 grid gap-6" onSubmit={handleSubmit}>
                     {error ? (
                         <FormNotice tone="error">{error}</FormNotice>
                     ) : null}
@@ -273,12 +299,11 @@ export default function AccountPage() {
                                         );
                                     }}
                                     onChange={(event) => {
-                                        setValues((current) => ({
-                                            ...current,
+                                        updateValues({
                                             firstName: sanitizeFirstName(
                                                 event.target.value
                                             ),
-                                        }));
+                                        });
                                     }}
                                     placeholder="Jane"
                                     value={values.firstName}
@@ -304,12 +329,11 @@ export default function AccountPage() {
                                         );
                                     }}
                                     onChange={(event) => {
-                                        setValues((current) => ({
-                                            ...current,
+                                        updateValues({
                                             lastName: sanitizeLastName(
                                                 event.target.value
                                             ),
-                                        }));
+                                        });
                                     }}
                                     placeholder="Doe"
                                     value={values.lastName}
@@ -330,12 +354,11 @@ export default function AccountPage() {
                                     );
                                 }}
                                 onChange={(event) => {
-                                    setValues((current) => ({
-                                        ...current,
+                                    updateValues({
                                         email: sanitizeEmail(
                                             event.target.value
                                         ),
-                                    }));
+                                    });
                                 }}
                                 placeholder="jane.doe@email.com"
                                 type="email"
@@ -354,28 +377,12 @@ export default function AccountPage() {
                                 country={values.phoneCountry}
                                 error={fieldErrors.phoneNumber}
                                 label="Phone number"
-                                onBlur={() => {
-                                    setFieldError(
-                                        'phoneNumber',
-                                        values.phoneNumber.trim()
-                                            ? validatePhoneNumber(
-                                                  values.phoneNumber,
-                                                  values.phoneCountry
-                                              )
-                                            : null
-                                    );
-                                }}
+                                onBlur={handlePhoneBlur}
                                 onCountryChange={(country) => {
-                                    setValues((current) => ({
-                                        ...current,
-                                        phoneCountry: country,
-                                    }));
+                                    updateValues({ phoneCountry: country });
                                 }}
                                 onNumberChange={(value) => {
-                                    setValues((current) => ({
-                                        ...current,
-                                        phoneNumber: value,
-                                    }));
+                                    updateValues({ phoneNumber: value });
                                 }}
                                 value={values.phoneNumber}
                             />
@@ -383,11 +390,7 @@ export default function AccountPage() {
                             <AddressFields
                                 countryCode={values.phoneCountry}
                                 errors={fieldErrors}
-                                onFieldChange={(name, value) => {
-                                    setValues((current) =>
-                                        setAddressField(current, name, value)
-                                    );
-                                }}
+                                onFieldChange={handleAddressFieldChange}
                                 values={values}
                             />
                         </section>
@@ -412,8 +415,9 @@ export default function AccountPage() {
                                         onChange={(event) => {
                                             setValues((current) => ({
                                                 ...current,
-                                                staffId:
-                                                    event.target.value.toUpperCase(),
+                                                staffId: sanitizeStaffId(
+                                                    event.target.value
+                                                ),
                                             }));
                                         }}
                                         placeholder="STF-001"
@@ -431,10 +435,12 @@ export default function AccountPage() {
                                         )}
                                         maxLength={STAFF_DESIGNATION_MAX_LENGTH}
                                         onChange={(event) => {
-                                            setValues((current) => ({
-                                                ...current,
-                                                designation: event.target.value,
-                                            }));
+                                            updateValues({
+                                                designation:
+                                                    sanitizeDesignation(
+                                                        event.target.value
+                                                    ),
+                                            });
                                         }}
                                         placeholder="Store manager"
                                         value={values.designation}
@@ -446,15 +452,16 @@ export default function AccountPage() {
                                     label="Permission"
                                 >
                                     <select
+                                        aria-label="Permission"
                                         className={inputClassName(
                                             Boolean(fieldErrors.permission)
                                         )}
                                         onChange={(event) => {
-                                            setValues((current) => ({
-                                                ...current,
+                                            updateValues({
                                                 permission: event.target.value,
-                                            }));
+                                            });
                                         }}
+                                        title="Permission"
                                         value={values.permission}
                                     >
                                         <option value="">
@@ -474,11 +481,7 @@ export default function AccountPage() {
                         {hasChanges ? (
                             <Field
                                 error={fieldErrors.currentPassword}
-                                hint={
-                                    emailChanged
-                                        ? 'Changing your email will require verification'
-                                        : 'Required to save changes'
-                                }
+                                hint={currentPasswordHint}
                                 label="Password"
                                 metaPlacement="inline"
                                 required
@@ -488,10 +491,12 @@ export default function AccountPage() {
                                     hasError={Boolean(
                                         fieldErrors.currentPassword
                                     )}
+                                    name="currentPassword"
                                     onBlur={() => {
                                         if (!hasChanges) {
                                             return;
                                         }
+
                                         setFieldError(
                                             'currentPassword',
                                             validateRequired(
@@ -501,13 +506,12 @@ export default function AccountPage() {
                                         );
                                     }}
                                     onChange={(event) => {
-                                        setValues((current) => ({
-                                            ...current,
+                                        updateValues({
                                             currentPassword:
                                                 sanitizePasswordInput(
                                                     event.target.value
                                                 ),
-                                        }));
+                                        });
                                     }}
                                     onToggle={() => {
                                         setShowCurrentPassword(
@@ -598,9 +602,11 @@ function validateProfileForm(
     {
         hasChanges,
         isCustomer,
+        isStaff,
     }: {
         hasChanges: boolean;
         isCustomer: boolean;
+        isStaff: boolean;
     }
 ) {
     const fieldErrors: FieldErrors = {};
@@ -631,6 +637,17 @@ function validateProfileForm(
     }
     if (isCustomer) {
         Object.assign(fieldErrors, validateAddressValues(values));
+    }
+
+    if (isStaff) {
+        Object.assign(
+            fieldErrors,
+            collectFieldErrors<keyof ProfileValues>({
+                designation: assessDesignation(values.designation, false),
+                permission: assessPermission(values.permission),
+                staffId: assessStaffId(values.staffId, false),
+            })
+        );
     }
 
     if (hasChanges) {

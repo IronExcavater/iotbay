@@ -1,0 +1,41 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Api",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run -w api dev",
+      "presentation": {
+        "hidden": true
+      }
+    },
+    {
+      "name": "Web",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run -w web dev",
+      "presentation": {
+        "hidden": true
+      }
+    },
+    {
+      "name": "Browser",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/web"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Dev",
+      "configurations": [
+        "Api",
+        "Web",
+        "Browser"
+      ],
+      "stopAll": true
+    }
+  ]
+}

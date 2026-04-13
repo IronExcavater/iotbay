@@ -1,5 +1,7 @@
 type HttpMethod = 'DELETE' | 'GET' | 'PATCH' | 'POST';
 
+const apiKey = readEnvString('IOTBAY_API_KEY');
+
 interface RequestOptions<TBody> {
     body?: TBody;
     method?: HttpMethod;
@@ -23,6 +25,8 @@ type BackendErrorResolver<T> = (error: BackendError) => T;
 const BACKEND_ERROR_MESSAGES: Record<string, string> = {
     ADDRESS_INVALID: 'Invalid address',
     ADDRESS_LOOKUP_UNAVAILABLE: 'Address lookup unavailable',
+    API_KEY_INVALID: 'App access denied',
+    API_KEY_REQUIRED: 'App access missing',
     CURRENT_PASSWORD_INCORRECT: 'Incorrect password',
     CURRENT_PASSWORD_REQUIRED: 'Password required',
     EMAIL_EXISTS: 'Email already used',
@@ -149,6 +153,11 @@ export function deleteJson(path: string, signal?: AbortSignal) {
     });
 }
 
+function readEnvString(name: string) {
+    const value = (import.meta.env as Record<string, unknown>)[name];
+    return typeof value === 'string' ? value.trim() : '';
+}
+
 async function requestJson<TResponse>(
     path: string,
     options: RequestOptions<unknown> = {}
@@ -168,16 +177,30 @@ function buildRequestInit<TBody>({
     method = 'GET',
     signal,
 }: RequestOptions<TBody>): RequestInit {
+    // The backend authenticates browser sessions with an HttpOnly cookie, so
+    // every request must opt in to sending and receiving credentials.
     return {
         body: body === undefined ? undefined : JSON.stringify(body),
         credentials: 'include',
-        headers:
-            body === undefined
-                ? undefined
-                : { 'Content-Type': 'application/json' },
+        headers: buildHeaders(body),
         method,
         signal,
     };
+}
+
+function buildHeaders(body: unknown) {
+    const headers: Record<string, string> = {};
+
+    if (body !== undefined) {
+        headers['Content-Type'] = 'application/json';
+    }
+    if (apiKey) {
+        // The web app and API share the same workspace .env file in local
+        // development, so the browser forwards the configured access key too.
+        headers['x-api-key'] = apiKey;
+    }
+
+    return Object.keys(headers).length > 0 ? headers : undefined;
 }
 
 async function readPayload(response: Response): Promise<unknown> {
