@@ -33,9 +33,8 @@ export default function ResetPasswordPage() {
     const { showToast } = useToast();
     const initialEmail = searchParams.get('email')?.trim() ?? '';
     const token = searchParams.get('token')?.trim() ?? '';
-    const userType = searchParams.get('userType')?.trim() === 'staff'
-        ? 'staff'
-        : undefined;
+    const userType =
+        searchParams.get('userType')?.trim() === 'staff' ? 'staff' : undefined;
     const nextPath = normalizeNextPath(
         searchParams.get('next'),
         userType === 'staff' ? '/admin' : '/'
@@ -191,7 +190,9 @@ export default function ResetPasswordPage() {
                                     );
                                 }}
                                 onToggle={() => {
-                                    setShowConfirmPassword((current) => !current);
+                                    setShowConfirmPassword(
+                                        (current) => !current
+                                    );
                                 }}
                                 placeholder="Re-enter your new password"
                                 showPassword={showConfirmPassword}
@@ -250,22 +251,18 @@ function getResetFormError({
     password: string;
     passwordRulesMet: boolean;
 }) {
-    if (!isResetMode)
-        return validateEmail(email);
+    if (!isResetMode) return validateEmail(email);
 
-    if (!password)
-        return 'Password is required';
+    if (!password) return 'Password is required';
 
-    const passwordError = PASSWORD_VALIDATOR.tryValidate(password).error?.message;
+    const passwordError =
+        PASSWORD_VALIDATOR.tryValidate(password).error?.message;
 
-    if (passwordError)
-        return normalizeMessage(passwordError);
+    if (passwordError) return normalizeMessage(passwordError);
 
-    if (!passwordRulesMet)
-        return 'Password requirements are not met';
+    if (!passwordRulesMet) return 'Password requirements are not met';
 
-    if (!confirmPassword)
-        return 'Confirm password is required';
+    if (!confirmPassword) return 'Confirm password is required';
 
     return getResetConfirmPasswordError(confirmPassword, password);
 }
@@ -293,8 +290,7 @@ function getResetConfirmPasswordError(
     confirmPassword: string,
     password: string
 ) {
-    if (!confirmPassword)
-        return null;
+    if (!confirmPassword) return null;
 
     return confirmPassword !== password ? 'Passwords do not match' : null;
 }

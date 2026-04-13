@@ -18,16 +18,16 @@ export default function HomePage() {
             try {
                 const items = await productApi.list(abortController.signal);
 
-                if (abortController.signal.aborted)
-                    return;
+                if (abortController.signal.aborted) return;
 
                 setProducts(items);
                 setProductsError(null);
             } catch (error) {
-                if (abortController.signal.aborted)
-                    return;
+                if (abortController.signal.aborted) return;
 
-                setProductsError(toErrorMessage(error, 'Unable to load products'));
+                setProductsError(
+                    toErrorMessage(error, 'Unable to load products')
+                );
             } finally {
                 if (!abortController.signal.aborted)
                     setIsLoadingProducts(false);

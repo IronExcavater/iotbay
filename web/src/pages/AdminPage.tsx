@@ -64,7 +64,9 @@ export default function AdminPage() {
     const [fieldErrors, setFieldErrors] = useState<ProductFieldErrors>({});
     const [formError, setFormError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [editingProductId, setEditingProductId] = useState<string | null>(null);
+    const [editingProductId, setEditingProductId] = useState<string | null>(
+        null
+    );
 
     const isEditing = Boolean(editingProductId);
     const formTitle = isEditing ? 'Edit product' : 'Create product';
@@ -77,16 +79,16 @@ export default function AdminPage() {
             try {
                 const items = await productApi.list(abortController.signal);
 
-                if (abortController.signal.aborted)
-                    return;
+                if (abortController.signal.aborted) return;
 
                 setProducts(items);
                 setProductsError(null);
             } catch (error) {
-                if (abortController.signal.aborted)
-                    return;
+                if (abortController.signal.aborted) return;
 
-                setProductsError(toErrorMessage(error, 'Unable to load products'));
+                setProductsError(
+                    toErrorMessage(error, 'Unable to load products')
+                );
             } finally {
                 if (!abortController.signal.aborted)
                     setIsLoadingProducts(false);
@@ -141,8 +143,7 @@ export default function AdminPage() {
     function parsePriceOrSetError() {
         const parsedPrice = parseAudInput(formValues.price);
 
-        if (parsedPrice.cents !== null)
-            return parsedPrice.cents;
+        if (parsedPrice.cents !== null) return parsedPrice.cents;
 
         setFieldErrors((current) => ({
             ...current,
@@ -230,8 +231,7 @@ export default function AdminPage() {
     }
 
     async function handleDelete(product: Product) {
-        if (!window.confirm(`Delete ${product.name}?`))
-            return;
+        if (!window.confirm(`Delete ${product.name}?`)) return;
 
         try {
             await productApi.remove(product.id);
@@ -239,8 +239,7 @@ export default function AdminPage() {
                 current.filter((item) => item.id !== product.id)
             );
 
-            if (editingProductId === product.id)
-                resetForm();
+            if (editingProductId === product.id) resetForm();
         } catch (error) {
             setFormError(toErrorMessage(error, 'Unable to delete product'));
         }
@@ -253,13 +252,11 @@ export default function AdminPage() {
         const nextFieldErrors = validateProductForm(formValues);
         setFieldErrors(nextFieldErrors);
 
-        if (Object.keys(nextFieldErrors).length > 0)
-            return;
+        if (Object.keys(nextFieldErrors).length > 0) return;
 
         const priceCents = parsePriceOrSetError();
 
-        if (priceCents === null)
-            return;
+        if (priceCents === null) return;
 
         setIsSubmitting(true);
 
@@ -322,7 +319,9 @@ export default function AdminPage() {
 
                         <Field error={fieldErrors.name} label="Name" required>
                             <input
-                                className={inputClassName(Boolean(fieldErrors.name))}
+                                className={inputClassName(
+                                    Boolean(fieldErrors.name)
+                                )}
                                 maxLength={PRODUCT_NAME_MAX_LENGTH}
                                 onChange={(event) => {
                                     updateFormValue(
@@ -339,7 +338,9 @@ export default function AdminPage() {
 
                         <Field error={fieldErrors.code} label="Code" required>
                             <input
-                                className={inputClassName(Boolean(fieldErrors.code))}
+                                className={inputClassName(
+                                    Boolean(fieldErrors.code)
+                                )}
                                 maxLength={PRODUCT_CODE_MAX_LENGTH}
                                 onChange={(event) => {
                                     updateFormValue(
@@ -357,13 +358,17 @@ export default function AdminPage() {
                         <Field
                             error={fieldErrors.price}
                             hint={
-                                fieldErrors.price ? undefined : 'Enter Australian dollars'
+                                fieldErrors.price
+                                    ? undefined
+                                    : 'Enter Australian dollars'
                             }
                             label="Price"
                             required
                         >
                             <input
-                                className={inputClassName(Boolean(fieldErrors.price))}
+                                className={inputClassName(
+                                    Boolean(fieldErrors.price)
+                                )}
                                 inputMode="decimal"
                                 onChange={(event) => {
                                     updateFormValue(
@@ -409,8 +414,7 @@ function validateProductForm(values: ProductFormValues) {
 
     const parsedPrice = parseAudInput(values.price);
 
-    if (parsedPrice.error)
-        fieldErrors.price = parsedPrice.error;
+    if (parsedPrice.error) fieldErrors.price = parsedPrice.error;
 
     return fieldErrors;
 }

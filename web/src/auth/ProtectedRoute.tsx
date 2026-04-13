@@ -2,7 +2,11 @@ import type { ReactNode } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 
 import { useAuth } from './AuthProvider';
-import { buildSignInPath, canAccessStaffPortal, resolvePostAuthPath } from './redirects';
+import {
+    buildSignInPath,
+    canAccessStaffPortal,
+    resolvePostAuthPath,
+} from './redirects';
 
 export type ProtectedRouteAccess = 'authenticated' | 'guest' | 'staff';
 
@@ -21,8 +25,7 @@ export function ProtectedRoute({
     const content = children ?? <Outlet />;
 
     if (access === 'guest') {
-        if (user === null)
-            return content;
+        if (user === null) return content;
 
         return (
             <Navigate
@@ -35,8 +38,7 @@ export function ProtectedRoute({
         );
     }
 
-    if (isLoading)
-        return null;
+    if (isLoading) return null;
 
     if (user === null) {
         return (

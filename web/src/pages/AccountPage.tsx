@@ -145,8 +145,7 @@ export default function AccountPage() {
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
 
     useEffect(() => {
-        if (!user)
-            return;
+        if (!user) return;
 
         const nextValues = toProfileValues(user);
 
@@ -197,8 +196,7 @@ export default function AccountPage() {
         event.preventDefault();
         setError(null);
 
-        if (!hasChanges)
-            return;
+        if (!hasChanges) return;
 
         // Validate the edited registration details before sending them to the backend.
         const nextFieldErrors = validateProfileForm(values, {
@@ -207,8 +205,7 @@ export default function AccountPage() {
         });
 
         setFieldErrors(nextFieldErrors);
-        if (Object.values(nextFieldErrors).some(Boolean))
-            return;
+        if (Object.values(nextFieldErrors).some(Boolean)) return;
 
         setIsSubmitting(true);
         try {
@@ -265,10 +262,7 @@ export default function AccountPage() {
                     <h2 className="text-lg font-semibold">Manage details</h2>
                 </div>
 
-                <form
-                    className="mt-5 grid gap-6"
-                    onSubmit={handleSubmit}
-                >
+                <form className="mt-5 grid gap-6" onSubmit={handleSubmit}>
                     {error ? (
                         <FormNotice tone="error">{error}</FormNotice>
                     ) : null}

@@ -1,7 +1,4 @@
-import {
-    PasswordValidator,
-    type PasswordRule,
-} from '../validation/passwords';
+import { PasswordValidator, type PasswordRule } from '../validation/passwords';
 import {
     ADDRESS_MAX_LENGTH,
     EMAIL_MAX_LENGTH,
@@ -24,7 +21,6 @@ export {
     STAFF_ID_MAX_LENGTH,
     STAFF_DESIGNATION_MAX_LENGTH,
 };
-
 
 const EMAIL_VALIDATOR = new EmailValidator({
     fieldName: 'Email',

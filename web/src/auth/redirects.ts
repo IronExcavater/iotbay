@@ -17,16 +17,13 @@ export function buildSignInPath({
     nextPath?: string;
     userType?: AuthUserType;
 } = {}) {
-    return buildAuthPath(
-        userType === 'staff' ? '/staff/sign-in' : '/sign-in',
-        {
-            email,
-            nextPath: normalizeNextPath(
-                nextPath,
-                userType === 'staff' ? '/admin' : ''
-            ),
-        }
-    );
+    return buildAuthPath(userType === 'staff' ? '/staff/sign-in' : '/sign-in', {
+        email,
+        nextPath: normalizeNextPath(
+            nextPath,
+            userType === 'staff' ? '/admin' : ''
+        ),
+    });
 }
 
 export function buildSignUpPath({ email, nextPath }: AuthPathOptions = {}) {
@@ -73,8 +70,7 @@ export function buildVerifyEmailPath({
     const query = new URL(path, 'http://localhost');
     query.searchParams.set('context', context);
 
-    if (downloaded)
-        query.searchParams.set('downloaded', '1');
+    if (downloaded) query.searchParams.set('downloaded', '1');
 
     return query.pathname + query.search;
 }
@@ -111,14 +107,11 @@ function buildAuthPath(
     const trimmedEmail = email?.trim();
     const trimmedNextPath = normalizeNextPath(nextPath);
 
-    if (trimmedEmail)
-        query.set('email', trimmedEmail);
+    if (trimmedEmail) query.set('email', trimmedEmail);
 
-    if (trimmedNextPath)
-        query.set('next', trimmedNextPath);
+    if (trimmedNextPath) query.set('next', trimmedNextPath);
 
-    if (userType === 'staff')
-        query.set('userType', 'staff');
+    if (userType === 'staff') query.set('userType', 'staff');
 
     const queryString = query.toString();
     return queryString ? `${pathname}?${queryString}` : pathname;
@@ -127,8 +120,7 @@ function buildAuthPath(
 export function normalizeNextPath(nextPath?: string | null, fallback = '') {
     const trimmedNextPath = nextPath?.trim();
 
-    if (!trimmedNextPath)
-        return fallback;
+    if (!trimmedNextPath) return fallback;
 
     if (!trimmedNextPath.startsWith('/') || trimmedNextPath.startsWith('//'))
         return fallback;

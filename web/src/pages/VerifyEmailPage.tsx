@@ -33,26 +33,32 @@ export default function VerifyEmailPage() {
     const { showToast } = useToast();
     const token = searchParams.get('token')?.trim() ?? '';
     const queryEmail = searchParams.get('email')?.trim() ?? '';
-    const userType = searchParams.get('userType')?.trim() === 'staff'
-        ? 'staff'
-        : undefined;
-    const context = searchParams.get('context')?.trim() === 'account'
-        ? 'account'
-        : 'signup';
+    const userType =
+        searchParams.get('userType')?.trim() === 'staff' ? 'staff' : undefined;
+    const context =
+        searchParams.get('context')?.trim() === 'account'
+            ? 'account'
+            : 'signup';
     const wasDownloaded = searchParams.get('downloaded') === '1';
     const nextPath = normalizeNextPath(
         searchParams.get('next'),
-        context === 'account' ? '/account' : userType === 'staff' ? '/admin' : '/'
+        context === 'account'
+            ? '/account'
+            : userType === 'staff'
+              ? '/admin'
+              : '/'
     );
 
     const [email, setEmail] = useState(queryEmail);
     const [changeEmail, setChangeEmail] = useState('');
     const [password, setPassword] = useState('');
     const [screen, setScreen] = useState<VerificationScreen>('pending');
-    const [message, setMessage] = useState(getPendingMessage(queryEmail, context));
-    const [pendingAction, setPendingAction] = useState<'change' | 'resend' | null>(
-        null
+    const [message, setMessage] = useState(
+        getPendingMessage(queryEmail, context)
     );
+    const [pendingAction, setPendingAction] = useState<
+        'change' | 'resend' | null
+    >(null);
     const [formError, setFormError] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
 
@@ -64,8 +70,7 @@ export default function VerifyEmailPage() {
     const isResending = pendingAction === 'resend';
 
     useEffect(() => {
-        if (!wasDownloaded)
-            return;
+        if (!wasDownloaded) return;
 
         showToast('Verification email downloaded');
 
@@ -73,7 +78,9 @@ export default function VerifyEmailPage() {
         nextParams.delete('downloaded');
         navigate(
             {
-                search: nextParams.toString() ? `?${nextParams.toString()}` : '',
+                search: nextParams.toString()
+                    ? `?${nextParams.toString()}`
+                    : '',
             },
             { replace: true }
         );
@@ -87,16 +94,14 @@ export default function VerifyEmailPage() {
         setPendingAction(null);
         setShowPassword(false);
 
-        if (hasToken)
-            return;
+        if (hasToken) return;
 
         setScreen(queryEmail ? 'pending' : 'error');
         setMessage(getPendingMessage(queryEmail, context));
     }, [context, hasToken, queryEmail]);
 
     useEffect(() => {
-        if (!hasToken)
-            return;
+        if (!hasToken) return;
 
         setScreen('verifying');
         setMessage('Verifying your email');
@@ -106,16 +111,14 @@ export default function VerifyEmailPage() {
         void authApi
             .verifyEmail(token)
             .then((user) => {
-                if (!isActive)
-                    return;
+                if (!isActive) return;
 
                 // The verification link may come from deep inside an auth flow,
                 // so finish on the originally requested destination when possible.
                 window.location.assign(resolvePostAuthPath(user, nextPath));
             })
             .catch((error: unknown) => {
-                if (!isActive)
-                    return;
+                if (!isActive) return;
 
                 setScreen('error');
                 setMessage(getVerificationErrorMessage(error));
@@ -132,8 +135,7 @@ export default function VerifyEmailPage() {
     }
 
     async function handleResend() {
-        if (!email || isResending)
-            return;
+        if (!email || isResending) return;
 
         setFormError(null);
         setPendingAction('resend');
@@ -204,7 +206,9 @@ export default function VerifyEmailPage() {
                     <p
                         className={clsx(
                             'text-sm',
-                            screen === 'error' ? 'text-red-700' : 'text-slate-600'
+                            screen === 'error'
+                                ? 'text-red-700'
+                                : 'text-slate-600'
                         )}
                     >
                         {message}
@@ -245,7 +249,10 @@ export default function VerifyEmailPage() {
                 ) : null}
 
                 {showPendingActions ? (
-                    <form className="grid gap-4 pt-1" onSubmit={handleChangeEmail}>
+                    <form
+                        className="grid gap-4 pt-1"
+                        onSubmit={handleChangeEmail}
+                    >
                         <div className="grid gap-1">
                             <h2 className="text-base font-semibold text-slate-900">
                                 Use a different email
@@ -294,7 +301,9 @@ export default function VerifyEmailPage() {
                                             setFormError(null);
                                         }}
                                         onToggle={() => {
-                                            setShowPassword((current) => !current);
+                                            setShowPassword(
+                                                (current) => !current
+                                            );
                                         }}
                                         placeholder="Enter your password"
                                         showPassword={showPassword}
@@ -307,7 +316,9 @@ export default function VerifyEmailPage() {
 
                             <div className="flex justify-end sm:self-end">
                                 <Button
-                                    disabled={isChangingEmail || !hasChangedEmail}
+                                    disabled={
+                                        isChangingEmail || !hasChangedEmail
+                                    }
                                     loading={isChangingEmail}
                                     type="submit"
                                     variant="primary"
@@ -323,12 +334,8 @@ export default function VerifyEmailPage() {
     );
 }
 
-function getPendingMessage(
-    email: string,
-    context: 'account' | 'signup'
-) {
-    if (!email)
-        return 'Verification details are missing';
+function getPendingMessage(email: string, context: 'account' | 'signup') {
+    if (!email) return 'Verification details are missing';
 
     return context === 'account'
         ? 'Verify your new email address to finish updating your account'
@@ -351,16 +358,13 @@ function validatePendingEmailForm({
     nextEmail: string;
     password: string;
 }) {
-    if (!currentEmail)
-        return 'Verification details are missing';
+    if (!currentEmail) return 'Verification details are missing';
 
     const emailError = validateEmail(nextEmail);
 
-    if (emailError)
-        return emailError;
+    if (emailError) return emailError;
 
-    if (!password)
-        return 'Password is required';
+    if (!password) return 'Password is required';
 
     return null;
 }
