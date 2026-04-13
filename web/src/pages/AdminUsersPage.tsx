@@ -9,7 +9,7 @@ import type { ManagedUser } from '../users/api';
 import { usersApi } from '../users/api';
 
 export default function AdminUsersPage() {
-    const { isAuthenticated, isLoading, logout, user } = useAuth();
+    const { isAuthed, isLoading, logout, user } = useAuth();
     const [isClearingIneligibleSession, setIsClearingIneligibleSession] =
         useState(false);
     const [users, setUsers] = useState<ManagedUser[]>([]);
@@ -20,7 +20,7 @@ export default function AdminUsersPage() {
     useEffect(() => {
         if (
             isLoading ||
-            !isAuthenticated ||
+            !isAuthed ||
             !user ||
             user.userType !== 'staff' ||
             user.permission !== 'superadmin' ||
@@ -50,12 +50,12 @@ export default function AdminUsersPage() {
 
         void loadUsers();
         return () => abortController.abort();
-    }, [isAuthenticated, isClearingIneligibleSession, isLoading, user]);
+    }, [isAuthed, isClearingIneligibleSession, isLoading, user]);
 
     useEffect(() => {
         if (
             isLoading ||
-            !isAuthenticated ||
+            !isAuthed ||
             !user ||
             (user.userType === 'staff' && user.permission === 'superadmin') ||
             isClearingIneligibleSession
@@ -67,9 +67,9 @@ export default function AdminUsersPage() {
         void logout().finally(() => {
             setIsClearingIneligibleSession(false);
         });
-    }, [isAuthenticated, isClearingIneligibleSession, isLoading, logout, user]);
+    }, [isAuthed, isClearingIneligibleSession, isLoading, logout, user]);
 
-    if (!isLoading && !isAuthenticated && !isClearingIneligibleSession) {
+    if (!isLoading && !isAuthed && !isClearingIneligibleSession) {
         return (
             <Navigate
                 replace
@@ -80,7 +80,7 @@ export default function AdminUsersPage() {
 
     if (
         !isLoading &&
-        isAuthenticated &&
+        isAuthed &&
         (user?.userType !== 'staff' || user.permission !== 'superadmin')
     ) {
         return (
