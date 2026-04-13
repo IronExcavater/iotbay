@@ -104,6 +104,7 @@ export default function AdminUsersPage() {
             managedUser.status,
             managedUser.permission ?? '',
             managedUser.designation ?? '',
+            managedUser.staffId ?? '',
         ].some((value) => value.toLowerCase().includes(normalizedSearch));
     });
 
@@ -119,6 +120,11 @@ export default function AdminUsersPage() {
                     </p>
                 </div>
                 <div className="flex gap-3">
+                    <Link to="/admin/invite-staff">
+                        <Button type="button" variant="primary">
+                            Invite staff
+                        </Button>
+                    </Link>
                     <Link to="/admin">
                         <Button type="button" variant="secondary">
                             Back to staff portal
@@ -198,6 +204,12 @@ export default function AdminUsersPage() {
                                                         {
                                                             managedUser.designation
                                                         }
+                                                    </span>
+                                                ) : null}
+                                                {managedUser.staffId ? (
+                                                    <span className="text-slate-600">
+                                                        Staff ID:{' '}
+                                                        {managedUser.staffId}
                                                     </span>
                                                 ) : null}
                                             </div>

@@ -13,6 +13,7 @@ export interface User {
     postcode?: string | null;
     permission?: string | null;
     phoneNumber?: string | null;
+    staffId?: string | null;
     state?: string | null;
     suburb?: string | null;
     userType: string;
@@ -89,6 +90,7 @@ export interface UpdateProfileInput {
     permission?: string;
     phoneCountry?: string;
     phoneNumber?: string;
+    staffId?: string;
     state?: string;
     suburb?: string;
 }
@@ -98,6 +100,24 @@ export interface VerificationResult {
     verification: {
         email: string;
     };
+}
+
+export interface InviteStaffInput {
+    designation: string;
+    email: string;
+    permission?: string;
+    staffId: string;
+}
+
+export interface StaffInvitationDetails {
+    user: User;
+}
+
+export interface CompleteStaffInvitationInput {
+    firstName: string;
+    lastName: string;
+    password: string;
+    token: string;
 }
 
 interface UserResponse {
@@ -138,6 +158,15 @@ export const authApi = {
 
     async me(signal?: AbortSignal): Promise<User> {
         return (await getJson<UserResponse>('/api/me', signal)).user;
+    },
+
+    async staffInvitation(token: string, signal?: AbortSignal): Promise<User> {
+        return (
+            await getJson<StaffInvitationDetails>(
+                `/api/staff-invitation?token=${encodeURIComponent(token)}`,
+                signal
+            )
+        ).user;
     },
 
     async updateMe(
@@ -196,5 +225,29 @@ export const authApi = {
 
     logout(signal?: AbortSignal): Promise<void> {
         return postJson<void>('/api/logout', undefined, signal);
+    },
+
+    inviteStaff(
+        input: InviteStaffInput,
+        signal?: AbortSignal
+    ): Promise<VerificationResult> {
+        return postJson<VerificationResult, InviteStaffInput>(
+            '/api/admin/staff-invitations',
+            input,
+            signal
+        );
+    },
+
+    async completeStaffInvitation(
+        input: CompleteStaffInvitationInput,
+        signal?: AbortSignal
+    ): Promise<User> {
+        return (
+            await postJson<UserResponse, CompleteStaffInvitationInput>(
+                '/api/staff-register',
+                input,
+                signal
+            )
+        ).user;
     },
 };

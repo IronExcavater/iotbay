@@ -1,10 +1,12 @@
 from http import HTTPStatus
 
-from flask import Blueprint, Response, make_response
+from flask import Blueprint, Response, make_response, request
 from flask.typing import ResponseReturnValue
 from src.auth.requests import (
     ChangePendingEmailRequest,
+    CompleteStaffInvitationRequest,
     ForgotPasswordRequest,
+    InviteStaffRequest,
     LoginRequest,
     RegisterRequest,
     ResendVerificationRequest,
@@ -99,6 +101,19 @@ def register() -> ResponseReturnValue:
     }, HTTPStatus.ACCEPTED
 
 
+@auth_bp.post("/admin/staff-invitations")
+@staff_permission_required(STAFF_PERMISSION_SUPERADMIN)
+def invite_staff() -> ResponseReturnValue:
+    result = app_extension("auth_service", AuthService).invite_staff(
+        parse_request(InviteStaffRequest),
+        locale=request_locale(),
+    )
+    return (
+        _verification_payload(email=result.email, artifact=result.artifact),
+        HTTPStatus.ACCEPTED,
+    )
+
+
 @auth_bp.post("/login")
 def login() -> ResponseReturnValue:
     auth_service = app_extension("auth_service", AuthService)
@@ -116,6 +131,24 @@ def verify_email() -> ResponseReturnValue:
     updated_user = auth_service.verify_email(parse_request(VerifyEmailRequest).token)
     response = make_response(_user_payload(updated_user), HTTPStatus.OK)
     _set_session_cookie(response, auth_service.start_session(updated_user))
+    return response, HTTPStatus.OK
+
+
+@auth_bp.get("/staff-invitation")
+def staff_invitation() -> ResponseReturnValue:
+    token = request.args.get("token", "").strip()
+    user = app_extension("auth_service", AuthService).invited_staff(token)
+    return _user_payload(user), HTTPStatus.OK
+
+
+@auth_bp.post("/staff-register")
+def complete_staff_registration() -> ResponseReturnValue:
+    auth_service = app_extension("auth_service", AuthService)
+    user = auth_service.complete_staff_invitation(
+        parse_request(CompleteStaffInvitationRequest)
+    )
+    response = make_response(_user_payload(user), HTTPStatus.OK)
+    _set_session_cookie(response, auth_service.start_session(user))
     return response, HTTPStatus.OK
 
 
