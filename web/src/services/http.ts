@@ -34,6 +34,7 @@ const BACKEND_ERROR_MESSAGES: Record<string, string> = {
     EMAIL_VERIFICATION_PENDING: 'Verification already pending',
     INVALID_CREDENTIALS: 'Incorrect email or password',
     INVALID_EMAIL_VERIFICATION_TOKEN: 'Invalid verification link',
+    INVALID_STAFF_INVITATION_TOKEN: 'Invalid staff invitation',
     INVALID_PASSWORD_RESET_TOKEN: 'Invalid reset link',
     PASSWORD_HAS_COMMON_PATTERN: 'Avoid common patterns',
     PASSWORD_HAS_PERSONAL_INFO: 'Avoid personal details',

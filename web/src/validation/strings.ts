@@ -5,6 +5,8 @@ export const PASSWORD_MAX_LENGTH = 200;
 export const TOKEN_MAX_LENGTH = 512;
 export const ADDRESS_MAX_LENGTH = 120;
 export const NAME_MAX_LENGTH = 100;
+export const STAFF_DESIGNATION_MAX_LENGTH = 100;
+export const STAFF_ID_MAX_LENGTH = 50;
 
 const ASCII_VISIBLE = /^[\x20-\x7E]+$/;
 

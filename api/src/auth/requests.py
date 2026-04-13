@@ -26,6 +26,7 @@ from src.users.models import (
     PERMISSION_VALIDATOR,
     PHONE_COUNTRY_VALIDATOR,
     PHONE_NUMBER_VALIDATOR,
+    STAFF_ID_VALIDATOR,
     USER_TYPE_VALIDATOR,
 )
 
@@ -96,6 +97,10 @@ CountryValue = Annotated[
 DesignationValue = Annotated[
     str,
     AfterValidator(_optional_request_validator(DESIGNATION_VALIDATOR)),
+]
+StaffIdValue = Annotated[
+    str,
+    AfterValidator(_optional_request_validator(STAFF_ID_VALIDATOR)),
 ]
 PermissionValue = Annotated[
     str,
@@ -168,5 +173,20 @@ class ChangePendingEmailRequest(AuthRequest):
 class UpdateProfileRequest(ProfileRequest):
     email: EmailValue
     current_password: CurrentPasswordValue = ""
+    staff_id: StaffIdValue = ""
     designation: DesignationValue = ""
     permission: PermissionValue = ""
+
+
+class InviteStaffRequest(AuthRequest):
+    email: EmailValue
+    staff_id: StaffIdValue
+    designation: DesignationValue
+    permission: PermissionValue = ""
+
+
+class CompleteStaffInvitationRequest(AuthRequest):
+    first_name: FirstNameValue
+    last_name: LastNameValue
+    password: PasswordValue
+    token: TokenValue

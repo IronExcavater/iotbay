@@ -10,6 +10,7 @@ SELECT
     addresses.state AS state,
     addresses.postcode AS postcode,
     addresses.country AS country,
+    staff.staff_id AS staff_id,
     staff.designation AS designation,
     staff.permission AS permission
 FROM users

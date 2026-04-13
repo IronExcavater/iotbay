@@ -426,6 +426,82 @@ class AuthRouteTestCase(AppTestCase):
             },
         )
 
+    def test_superadmin_can_invite_staff(self) -> None:
+        create_superadmin_test_session(self.client)
+
+        response = self.client.post(
+            "/api/admin/staff-invitations",
+            json={
+                "designation": "Store manager",
+                "email": "new.staff@example.com",
+                "permission": "admin",
+                "staffId": "STF-001",
+            },
+        )
+
+        self.assertEqual(response.status_code, 202)
+        payload = response.get_json()
+        self.assertIsNotNone(payload)
+        self.assertEqual(payload["verification"]["email"], "new.staff@example.com")
+        self.assertIn("staff-register", payload["download"]["html"])
+
+    def test_admin_cannot_invite_staff(self) -> None:
+        create_staff_test_session(self.client)
+
+        response = self.client.post(
+            "/api/admin/staff-invitations",
+            json={
+                "designation": "Store manager",
+                "email": "new.staff@example.com",
+                "permission": "admin",
+                "staffId": "STF-001",
+            },
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.get_json(),
+            {
+                "code": "STAFF_PERMISSION_REQUIRED",
+                "error": "staff permission is required",
+            },
+        )
+
+    def test_staff_can_complete_invitation(self) -> None:
+        create_superadmin_test_session(self.client)
+        invite_response = self.client.post(
+            "/api/admin/staff-invitations",
+            json={
+                "designation": "Store manager",
+                "email": "new.staff@example.com",
+                "permission": "admin",
+                "staffId": "STF-001",
+            },
+        )
+        token = _download_token(invite_response)
+        self.client.post("/api/logout")
+
+        response = self.client.post(
+            "/api/staff-register",
+            json={
+                "firstName": "New",
+                "lastName": "Staff",
+                "password": "HarbourDesk9$",
+                "token": token,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertIsNotNone(payload)
+        self.assertEqual(payload["user"]["email"], "new.staff@example.com")
+        self.assertEqual(payload["user"]["status"], "active")
+        self.assertEqual(payload["user"]["userType"], USER_TYPE_STAFF)
+        self.assertEqual(payload["user"]["staffId"], "STF-001")
+
+        me_response = self.client.get("/api/me")
+        self.assertEqual(me_response.status_code, 200)
+
     def test_register_replaces_existing_unverified_user_details(self) -> None:
         repository = extension_from(
             self.client.application,

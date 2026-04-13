@@ -33,6 +33,7 @@ import {
     validateLastName,
     validateLastNameOnBlur,
     validateRequired,
+    STAFF_ID_MAX_LENGTH,
 } from '../auth/validation';
 import { Button } from '../components/form/Button';
 import { Field } from '../components/form/Field';
@@ -57,6 +58,7 @@ interface ProfileValues {
     permission: string;
     phoneCountry: CountryCode;
     phoneNumber: string;
+    staffId: string;
     state: string;
     suburb: string;
 }
@@ -76,6 +78,7 @@ const DEFAULT_VALUES: ProfileValues = {
     permission: '',
     phoneCountry: getBrowserPhoneCountry(),
     phoneNumber: '',
+    staffId: '',
     state: '',
     suburb: '',
 };
@@ -100,6 +103,7 @@ function toProfileValues(user: User): ProfileValues {
         phoneNumber: toEditablePhoneNumber(user.phoneNumber, phoneCountry),
         state: user.state ?? '',
         suburb: user.suburb ?? '',
+        staffId: user.staffId ?? '',
     };
 }
 
@@ -398,8 +402,29 @@ export default function AccountPage() {
                             </h3>
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <Field
+                                    error={fieldErrors.staffId}
+                                    label="Staff ID"
+                                >
+                                    <input
+                                        className={inputClassName(
+                                            Boolean(fieldErrors.staffId)
+                                        )}
+                                        maxLength={STAFF_ID_MAX_LENGTH}
+                                        onChange={(event) => {
+                                            setValues((current) => ({
+                                                ...current,
+                                                staffId:
+                                                    event.target.value.toUpperCase(),
+                                            }));
+                                        }}
+                                        placeholder="STF-001"
+                                        value={values.staffId}
+                                    />
+                                </Field>
+
+                                <Field
                                     error={fieldErrors.designation}
-                                    label="Designation"
+                                    label="Position"
                                 >
                                     <input
                                         className={inputClassName(
@@ -647,6 +672,7 @@ function hasProfileChanges(
         'lastName',
         'postcode',
         'permission',
+        'staffId',
         'state',
         'suburb',
     ];
