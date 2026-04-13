@@ -235,12 +235,18 @@ export default function AdminPage() {
                     Manage the product catalogue
                 </p>
                 {user?.permission === 'superadmin' ? (
-                    <div>
+                    <div className="flex flex-wrap gap-4">
                         <Link
                             className="text-sm font-medium text-slate-700 underline-offset-4 hover:text-slate-950 hover:underline"
                             to="/admin/users"
                         >
                             Manage registered users
+                        </Link>
+                        <Link
+                            className="text-sm font-medium text-slate-700 underline-offset-4 hover:text-slate-950 hover:underline"
+                            to="/admin/invite-staff"
+                        >
+                            Invite staff
                         </Link>
                     </div>
                 ) : null}

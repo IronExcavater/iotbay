@@ -10,6 +10,7 @@ export interface ManagedUser {
     lastName: string;
     permission?: string | null;
     phoneNumber?: string | null;
+    staffId?: string | null;
     status: string;
     userType: string;
 }

@@ -23,6 +23,9 @@ REGISTRATION_VERIFICATION_HTML_TEMPLATE = Template(
     .with_name("registration_verification.html")
     .read_text(encoding="utf-8")
 )
+STAFF_INVITATION_HTML_TEMPLATE = Template(
+    Path(__file__).with_name("staff_invitation.html").read_text(encoding="utf-8")
+)
 
 
 def render_password_reset_email(
@@ -77,6 +80,35 @@ def render_registration_verification_email(
             "Verify your email: {verification_url}\n"
             "Expires: {formatted_expires_at}\n\n"
             "If you did not start this signup, you can ignore this email."
+        ),
+        to_email=email,
+        template_data=template_data,
+    )
+
+
+def render_staff_invitation_email(
+    *,
+    email: str,
+    registration_url: str,
+    expires_at: str,
+    locale: str,
+) -> RenderedEmail:
+    subject = "Create your IOTBay staff account"
+    formatted_expires_at = _format_expiry(expires_at, locale=locale)
+    template_data = {
+        "email": email,
+        "formatted_expires_at": formatted_expires_at,
+        "inline_styles": EMAIL_STYLESHEET,
+        "registration_url": registration_url,
+    }
+    return _render_email(
+        html_template=STAFF_INVITATION_HTML_TEMPLATE,
+        subject=subject,
+        text_body=(
+            "You were invited to create an IOTBay staff account.\n\n"
+            "Create your staff account: {registration_url}\n"
+            "Expires: {formatted_expires_at}\n\n"
+            "If you were not expecting this invitation, you can ignore this email."
         ),
         to_email=email,
         template_data=template_data,

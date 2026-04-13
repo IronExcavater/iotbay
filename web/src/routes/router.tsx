@@ -7,8 +7,10 @@ import AdminUsersPage from '../pages/AdminUsersPage';
 import AuthPage from '../pages/AuthPage';
 import ErrorPage from '../pages/ErrorPage';
 import HomePage from '../pages/HomePage';
+import InviteStaffPage from '../pages/InviteStaffPage';
 import NotFoundPage from '../pages/NotFoundPage';
 import ResetPasswordPage from '../pages/ResetPasswordPage';
+import StaffRegistrationPage from '../pages/StaffRegistrationPage';
 import VerifyEmailPage from '../pages/VerifyEmailPage';
 
 export const router = createBrowserRouter([
@@ -44,6 +46,14 @@ export const router = createBrowserRouter([
             {
                 path: 'admin/users',
                 element: <AdminUsersPage />,
+            },
+            {
+                path: 'admin/invite-staff',
+                element: <InviteStaffPage />,
+            },
+            {
+                path: 'staff-register',
+                element: <StaffRegistrationPage />,
             },
             {
                 path: '*',

@@ -41,6 +41,7 @@ class UserRepository(Repository):
         phone_number: str | None = None,
         validated_address: ValidatedAddress | None = None,
         address_line_two: str | None = None,
+        staff_id: str | None = None,
         designation: str | None = None,
         permission: str | None = None,
     ) -> User:
@@ -73,6 +74,7 @@ class UserRepository(Repository):
                     phone_number=phone_number,
                     validated_address=validated_address,
                     address_line_two=address_line_two,
+                    staff_id=staff_id,
                     designation=designation,
                     permission=permission,
                 )
@@ -93,6 +95,7 @@ class UserRepository(Repository):
         phone_number: str | None = None,
         validated_address: ValidatedAddress | None = None,
         address_line_two: str | None = None,
+        staff_id: str | None = None,
         designation: str | None = None,
         permission: str | None = None,
     ) -> User:
@@ -108,6 +111,7 @@ class UserRepository(Repository):
                 phone_number=phone_number,
                 validated_address=validated_address,
                 address_line_two=address_line_two,
+                staff_id=staff_id,
                 designation=designation,
                 permission=permission,
             )
@@ -130,6 +134,7 @@ class UserRepository(Repository):
                     phone_number=phone_number,
                     validated_address=validated_address,
                     address_line_two=address_line_two,
+                    staff_id=staff_id,
                     designation=designation,
                     permission=permission,
                 )
@@ -308,6 +313,7 @@ class UserRepository(Repository):
         phone_number: str | None = None,
         validated_address: ValidatedAddress | None = None,
         address_line_two: str | None = None,
+        staff_id: str | None = None,
         designation: str | None = None,
         permission: str | None = None,
         status: str | None = None,
@@ -335,6 +341,7 @@ class UserRepository(Repository):
                     phone_number=phone_number,
                     validated_address=validated_address,
                     address_line_two=address_line_two,
+                    staff_id=staff_id,
                     designation=designation,
                     permission=permission,
                 )
@@ -517,6 +524,7 @@ class UserRepository(Repository):
         phone_number: str | None,
         validated_address: ValidatedAddress | None,
         address_line_two: str | None,
+        staff_id: str | None,
         designation: str | None,
         permission: str | None,
     ) -> None:
@@ -533,6 +541,7 @@ class UserRepository(Repository):
         self._upsert_staff_details(
             connection,
             user_id=user_id,
+            staff_id=staff_id,
             designation=designation,
             permission=permission,
         )
@@ -576,6 +585,7 @@ class UserRepository(Repository):
         connection: sqlite3.Connection,
         *,
         user_id: bytes,
+        staff_id: str | None,
         designation: str | None,
         permission: str | None,
     ) -> None:
@@ -588,11 +598,12 @@ class UserRepository(Repository):
             "staff",
             {
                 "user_id": user_id,
+                "staff_id": stripped_or_none(staff_id),
                 "designation": stripped_or_none(designation),
                 "permission": permission or STAFF_PERMISSION_ADMIN,
             },
             conflict_columns=("user_id",),
-            update_columns=("designation", "permission"),
+            update_columns=("staff_id", "designation", "permission"),
         )
         self._delete_user_details_row(connection, "customers", user_id=user_id)
         self._addresses.delete_address(connection, address_id=current_address_id)

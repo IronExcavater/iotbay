@@ -33,9 +33,11 @@ USER_STATUS_DISABLED = "disabled"
 
 USER_TOKEN_PURPOSE_EMAIL_VERIFICATION = "email_verification"
 USER_TOKEN_PURPOSE_PASSWORD_RESET = "password_reset"
+USER_TOKEN_PURPOSE_STAFF_INVITATION = "staff_invitation"
 ENTITY_TYPE_USER = "user"
 NAME_MAX_LENGTH = 100
 STAFF_DESIGNATION_MAX_LENGTH = 100
+STAFF_ID_MAX_LENGTH = 50
 
 EMAIL_VALIDATOR = EmailValidator(
     field_name="email",
@@ -101,6 +103,13 @@ DESIGNATION_VALIDATOR = StringValidator(
     ascii_only=True,
     printable_ascii_only=True,
 )
+STAFF_ID_VALIDATOR = StringValidator(
+    field_name="staffId",
+    max_length=STAFF_ID_MAX_LENGTH,
+    ascii_only=True,
+    printable_ascii_only=True,
+    uppercase=True,
+)
 PERMISSION_VALIDATOR = ChoiceValidator(
     field_name="permission",
     choices=(STAFF_PERMISSION_ADMIN, STAFF_PERMISSION_SUPERADMIN),
@@ -128,6 +137,7 @@ class User(SqliteRowModel, BlobUuidModel, ApiModel):
         "state",
         "postcode",
         "country",
+        "staff_id",
         "designation",
         "permission",
     )
@@ -148,6 +158,7 @@ class User(SqliteRowModel, BlobUuidModel, ApiModel):
     state: str | None = None
     postcode: str | None = None
     country: str | None = None
+    staff_id: str | None = None
     designation: str | None = None
     permission: str | None = None
     user_id: bytes = field(default_factory=new_id_bytes)
@@ -254,6 +265,7 @@ def user_has_changes(
     first_name: str,
     last_name: str,
     designation: str,
+    staff_id: str,
     permission: str,
     details: UserDetails,
 ) -> bool:
@@ -284,6 +296,7 @@ def user_has_changes(
 
     return any(
         (
+            (staff_id or None) != (user.staff_id or None),
             (designation or None) != (user.designation or None),
             (permission or None) != (user.permission or None),
         )

@@ -13,6 +13,7 @@ import {
     EMAIL_MAX_LENGTH,
     NAME_MAX_LENGTH,
     STAFF_DESIGNATION_MAX_LENGTH,
+    STAFF_ID_MAX_LENGTH,
 } from '../auth/limits';
 import {
     getBrowserPhoneCountry,
@@ -57,6 +58,7 @@ interface ProfileValues {
     permission: string;
     phoneCountry: CountryCode;
     phoneNumber: string;
+    staffId: string;
     state: string;
     suburb: string;
 }
@@ -76,6 +78,7 @@ const DEFAULT_VALUES: ProfileValues = {
     permission: '',
     phoneCountry: getBrowserPhoneCountry(),
     phoneNumber: '',
+    staffId: '',
     state: '',
     suburb: '',
 };
@@ -117,6 +120,7 @@ export default function AccountPage() {
             permission: user.permission ?? '',
             phoneCountry,
             phoneNumber: toEditablePhoneNumber(user.phoneNumber, phoneCountry),
+            staffId: user.staffId ?? '',
             state: user.state ?? '',
             suburb: user.suburb ?? '',
         };
@@ -193,6 +197,7 @@ export default function AccountPage() {
                 permission: isStaff ? values.permission : '',
                 phoneCountry: isCustomer ? values.phoneCountry : '',
                 phoneNumber: isCustomer ? values.phoneNumber.trim() : '',
+                staffId: isStaff ? values.staffId.trim() : '',
             });
 
             setFieldErrors({});
@@ -396,8 +401,29 @@ export default function AccountPage() {
                             </h3>
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <Field
+                                    error={fieldErrors.staffId}
+                                    label="Staff ID"
+                                >
+                                    <input
+                                        className={inputClassName(
+                                            Boolean(fieldErrors.staffId)
+                                        )}
+                                        maxLength={STAFF_ID_MAX_LENGTH}
+                                        onChange={(event) => {
+                                            setValues((current) => ({
+                                                ...current,
+                                                staffId:
+                                                    event.target.value.toUpperCase(),
+                                            }));
+                                        }}
+                                        placeholder="STF-001"
+                                        value={values.staffId}
+                                    />
+                                </Field>
+
+                                <Field
                                     error={fieldErrors.designation}
-                                    label="Designation"
+                                    label="Position"
                                 >
                                     <input
                                         className={inputClassName(
@@ -648,6 +674,7 @@ function hasProfileChanges(
         'lastName',
         'postcode',
         'permission',
+        'staffId',
         'state',
         'suburb',
     ];

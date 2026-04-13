@@ -12,6 +12,7 @@ from src.emails.templates import (
     RenderedEmail,
     render_password_reset_email,
     render_registration_verification_email,
+    render_staff_invitation_email,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -65,6 +66,22 @@ class EmailService:
         rendered_email = render_registration_verification_email(
             email=email,
             verification_url=verification_url,
+            expires_at=expires_at,
+            locale=locale,
+        )
+        return self._deliver(rendered_email)
+
+    def send_staff_invitation_link(
+        self,
+        *,
+        email: str,
+        registration_url: str,
+        expires_at: str,
+        locale: str,
+    ) -> DeliveredEmailArtifact:
+        rendered_email = render_staff_invitation_email(
+            email=email,
+            registration_url=registration_url,
             expires_at=expires_at,
             locale=locale,
         )
