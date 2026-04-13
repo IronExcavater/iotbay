@@ -112,7 +112,19 @@ export default function SiteNav() {
                                             Staff portal
                                         </Link>
                                     ) : null}
-
+                                    {user.userType === 'staff' &&
+                                    user.permission === 'superadmin' ? (
+                                        <Link
+                                            className="rounded px-3 py-2 text-left hover:bg-slate-100"
+                                            onClick={() => {
+                                                setIsMenuOpen(false);
+                                            }}
+                                            role="menuitem"
+                                            to="/admin/users"
+                                        >
+                                            Manage users
+                                        </Link>
+                                    ) : null}
                                     <Link
                                         className="rounded px-3 py-2 text-left hover:bg-slate-100"
                                         onClick={closeMenu}

@@ -3,12 +3,12 @@ import unittest
 
 from src.auth.security import hash_password
 from src.common.app import extension_from
-from src.users.models import USER_STATUS_ACTIVE, USER_TYPE_STAFF
+from src.users.models import USER_STATUS_ACTIVE, USER_TYPE_STAFF, USER_TYPE_CUSTOMER, USER_STATUS_UNVERIFIED
 from src.users.repository import UserRepository
 from werkzeug.test import TestResponse
 
 from tests.helpers.app_case import AppTestCase
-from tests.helpers.session_factory import create_staff_test_session, create_test_session
+from tests.helpers.session_factory import create_staff_test_session, create_test_session, create_superadmin_test_session
 
 
 def _register_payload(
@@ -377,6 +377,85 @@ class AuthRouteTestCase(AppTestCase):
             response.get_json(),
             {"code": "EMAIL_EXISTS", "error": "email already exists"},
         )
+
+    def test_me_requires_authentication(self) -> None:
+        response = self.client.get("/api/me")
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(
+            response.get_json(),
+            {"error": "authentication is required"},
+        )
+
+    def test_superadmin_can_list_registered_users(self) -> None:
+        create_superadmin_test_session(self.client)
+        repository = extension_from(
+            self.client.application,
+            "user_repository",
+            UserRepository,
+        )
+        repository.insert_user(
+            email="customer.list@example.com",
+            password_hash=hash_password("CustomerList9$"),
+            first_name="List",
+            last_name="Customer",
+            user_type=USER_TYPE_CUSTOMER,
+            status=USER_STATUS_ACTIVE,
+        )
+
+        response = self.client.get("/api/admin/users")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertIsNotNone(payload)
+        emails = {item["email"] for item in payload["items"]}
+        self.assertIn("sam.superadmin@example.com", emails)
+        self.assertIn("customer.list@example.com", emails)
+
+    def test_admin_cannot_list_registered_users(self) -> None:
+        create_staff_test_session(self.client)
+
+        response = self.client.get("/api/admin/users")
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.get_json(),
+            {
+                "code": "STAFF_PERMISSION_REQUIRED",
+                "error": "staff permission is required",
+            },
+        )
+
+    def test_register_replaces_existing_unverified_user_details(self) -> None:
+        repository = extension_from(
+            self.client.application,
+            "user_repository",
+            UserRepository,
+        )
+        user = repository.insert_user(
+            email="alex.customer@example.com",
+            password_hash=hash_password("OldPassword9$"),
+            first_name="Old",
+            last_name="Name",
+            user_type=USER_TYPE_CUSTOMER,
+            status=USER_STATUS_UNVERIFIED,
+        )
+
+        response = self.client.post(
+            "/api/register",
+            json=_register_payload(
+                first_name="Alex",
+                last_name="Nguyen",
+                password="CedarGrove42",
+            ),
+        )
+
+        self.assertEqual(response.status_code, 202)
+        updated_user = repository.select_user_by_id(user_id=user.user_id)
+        self.assertIsNotNone(updated_user)
+        assert updated_user is not None
+        self.assertEqual(updated_user.first_name, "Alex")
+        self.assertEqual(updated_user.last_name, "Nguyen")
 
     def test_logout_clears_session(self) -> None:
         create_test_session(self.client)
