@@ -4,11 +4,12 @@ import { Link, Navigate } from 'react-router-dom';
 import { authApi } from '../auth/api';
 import { useAuth } from '../auth/AuthProvider';
 import {
+    sanitizeEmail,
+    validateEmail,
     EMAIL_MAX_LENGTH,
     STAFF_DESIGNATION_MAX_LENGTH,
     STAFF_ID_MAX_LENGTH,
-} from '../auth/limits';
-import { sanitizeEmail, validateEmail } from '../auth/validation';
+} from '../auth/validation';
 import { Button } from '../components/form/Button';
 import { Field } from '../components/form/Field';
 import { FormNotice } from '../components/form/FormNotice';
@@ -32,7 +33,7 @@ const DEFAULT_VALUES: InviteStaffValues = {
 };
 
 export default function InviteStaffPage() {
-    const { isAuthenticated, isLoading, logout, user } = useAuth();
+    const { isAuthed, isLoading, logout, user } = useAuth();
     const { showToast } = useToast();
     const [values, setValues] = useState(DEFAULT_VALUES);
     const [formError, setFormError] = useState<string | null>(null);
@@ -43,7 +44,7 @@ export default function InviteStaffPage() {
     useEffect(() => {
         if (
             isLoading ||
-            !isAuthenticated ||
+            !isAuthed ||
             !user ||
             (user.userType === 'staff' && user.permission === 'superadmin') ||
             isClearingIneligibleSession
@@ -55,9 +56,9 @@ export default function InviteStaffPage() {
         void logout().finally(() => {
             setIsClearingIneligibleSession(false);
         });
-    }, [isAuthenticated, isClearingIneligibleSession, isLoading, logout, user]);
+    }, [isAuthed, isClearingIneligibleSession, isLoading, logout, user]);
 
-    if (!isLoading && !isAuthenticated && !isClearingIneligibleSession) {
+    if (!isLoading && !isAuthed && !isClearingIneligibleSession) {
         return (
             <Navigate
                 replace
@@ -68,7 +69,7 @@ export default function InviteStaffPage() {
 
     if (
         !isLoading &&
-        isAuthenticated &&
+        isAuthed &&
         (user?.userType !== 'staff' || user.permission !== 'superadmin')
     ) {
         return (

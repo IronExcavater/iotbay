@@ -18,6 +18,7 @@ import {
 } from './api';
 
 interface AuthContextValue {
+    isAuthed: boolean;
     isLoading: boolean;
     login: (input: LoginInput) => Promise<User>;
     register: (input: RegisterInput) => Promise<RegisterResult>;
@@ -41,14 +42,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 // app startup always asks the API for the current user.
                 const currentUser = await authApi.me();
 
-                if (isActive)
-                    setUser(currentUser);
+                if (isActive) setUser(currentUser);
             } catch {
-                if (isActive)
-                    setUser(null);
+                if (isActive) setUser(null);
             } finally {
-                if (isActive)
-                    setIsLoading(false);
+                if (isActive) setIsLoading(false);
             }
         }
 
@@ -60,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const value: AuthContextValue = {
+        isAuthed: user !== null,
         isLoading,
         async login(input) {
             // Login returns the authenticated user after the backend validates

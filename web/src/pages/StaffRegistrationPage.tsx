@@ -20,7 +20,6 @@ import { Field } from '../components/form/Field';
 import { FormNotice } from '../components/form/FormNotice';
 import { inputClassName } from '../components/form/Input';
 import { PasswordInput } from '../components/form/PasswordInput';
-import { useEnterSubmit } from '../components/form/useEnterSubmit';
 import { toErrorMessage } from '../services/http';
 
 interface StaffRegistrationValues {
@@ -54,18 +53,6 @@ export default function StaffRegistrationPage() {
         email: invitation?.email ?? '',
         firstName: values.firstName,
         lastName: values.lastName,
-    });
-    const enterSubmit = useEnterSubmit({
-        canSubmit: () =>
-            Boolean(
-                invitation &&
-                values.firstName &&
-                values.lastName &&
-                values.password &&
-                values.confirmPassword &&
-                !formError
-            ),
-        formRef,
     });
 
     useEffect(() => {
@@ -216,7 +203,6 @@ export default function StaffRegistrationPage() {
 
                         <form
                             className="grid gap-4"
-                            onKeyDown={enterSubmit.onKeyDown}
                             onSubmit={handleSubmit}
                             ref={formRef}
                         >
