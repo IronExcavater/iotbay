@@ -2,11 +2,11 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { FaChevronDown } from 'react-icons/fa6';
 
-import { sanitizeAddressField } from '../auth/validation';
 import { Button } from '../components/form/Button';
 import { Field } from '../components/form/Field';
-import { inputClassName } from '../components/form/Input';
+import { Input } from '../components/form/Input';
 import { BackendError } from '../services/http';
+import { AddressText } from '../types/AddressText';
 import { addressApi, type AddressSuggestion } from './api';
 import { getBrowserAddressLocale } from './browserLocale';
 import type {
@@ -112,6 +112,7 @@ export function AddressFields({
         suggestionLanguage
     );
     const collapsedPlaceholder = buildCollapsedAddressPlaceholder(placeholders);
+    const collapsedError = getCollapsedAddressError(errors);
 
     const [searchValue, setSearchValue] = useState('');
     const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
@@ -194,12 +195,14 @@ export function AddressFields({
                 language: suggestionLanguage,
             });
 
-            onFieldChange('addressLineOne', address.addressLineOne);
-            onFieldChange('addressLineTwo', '');
-            onFieldChange('suburb', address.suburb);
-            onFieldChange('state', address.state);
-            onFieldChange('postcode', address.postcode);
-            onFieldChange('country', address.country);
+            applyStructuredAddress({
+                addressLineOne: address.addressLineOne,
+                addressLineTwo: '',
+                country: address.country,
+                postcode: address.postcode,
+                state: address.state,
+                suburb: address.suburb,
+            });
         } catch {
             setSuggestions([]);
         }
@@ -214,12 +217,18 @@ export function AddressFields({
         value: string,
         label: string
     ) {
-        handleFieldChange(name, sanitizeAddressField(value, label));
+        handleFieldChange(name, AddressText.formatInput(value, label));
     }
 
     function handleSearchFieldChange(value: string) {
-        const sanitized = sanitizeAddressField(value, 'Address');
+        const sanitized = AddressText.formatInput(value, 'Address');
         setSearchValue(sanitized);
+
+        if (!sanitized.trim()) {
+            clearStructuredAddress();
+            return;
+        }
+
         onFieldChange('addressLineOne', sanitized);
     }
 
@@ -238,7 +247,10 @@ export function AddressFields({
     async function applyCollapsedSearchValue() {
         const normalized = searchValue.trim();
 
-        if (!normalized) return;
+        if (!normalized) {
+            clearStructuredAddress();
+            return;
+        }
 
         if (autoResolvedQueryRef.current === normalized) return;
 
@@ -252,6 +264,28 @@ export function AddressFields({
 
         if (!hasStructuredAddress(values))
             onFieldChange('addressLineOne', normalized);
+    }
+
+    function applyStructuredAddress(nextValues: AddressFormValues) {
+        onFieldChange('addressLineOne', nextValues.addressLineOne);
+        onFieldChange('addressLineTwo', nextValues.addressLineTwo);
+        onFieldChange('suburb', nextValues.suburb);
+        onFieldChange('state', nextValues.state);
+        onFieldChange('postcode', nextValues.postcode);
+        onFieldChange('country', nextValues.country);
+    }
+
+    function clearStructuredAddress() {
+        autoResolvedQueryRef.current = '';
+        setSuggestions([]);
+        applyStructuredAddress({
+            addressLineOne: '',
+            addressLineTwo: '',
+            country: '',
+            postcode: '',
+            state: '',
+            suburb: '',
+        });
     }
 
     function getSuggestionPanel(fieldName: SearchFieldName) {
@@ -279,26 +313,25 @@ export function AddressFields({
                     values={values}
                 />
 
-                <Field error={errors.addressLineOne} label="Address">
-                    <AddressInputField
-                        autoComplete="section-address shipping address-line1"
-                        error={errors.addressLineOne}
-                        name="address-line1"
-                        onBlur={handleAddressBlur}
-                        onChange={handleSearchFieldChange}
-                        onFocus={() => {
-                            setActiveField('search');
-                            setSearchValue((current) => {
-                                if (current) return current;
+                <AddressInputField
+                    autoComplete="section-address shipping address-line1"
+                    error={collapsedError}
+                    label="Address"
+                    name="address-line1"
+                    onBlur={handleAddressBlur}
+                    onChange={handleSearchFieldChange}
+                    onFocus={() => {
+                        setActiveField('search');
+                        setSearchValue((current) => {
+                            if (current) return current;
 
-                                return values.addressLineOne.trim();
-                            });
-                        }}
-                        panel={getSuggestionPanel('search')}
-                        placeholder={collapsedPlaceholder}
-                        value={searchInputValue}
-                    />
-                </Field>
+                            return values.addressLineOne.trim();
+                        });
+                    }}
+                    panel={getSuggestionPanel('search')}
+                    placeholder={collapsedPlaceholder}
+                    value={searchInputValue}
+                />
             </>
         );
     }
@@ -441,7 +474,7 @@ export function AddressFields({
                 className="self-start whitespace-nowrap"
                 onClick={handleDetailsToggle}
                 type="button"
-                variant="text"
+                variant="ghost"
             >
                 <FaChevronDown
                     aria-hidden="true"
@@ -487,9 +520,9 @@ function AddressInputField({
     value,
 }: AddressInputFieldProps) {
     const input = (
-        <input
+        <Input
             autoComplete={autoComplete}
-            className={inputClassName(Boolean(error))}
+            hasError={Boolean(error)}
             name={name}
             onBlur={onBlur}
             onChange={(event) => {
@@ -630,6 +663,16 @@ function hasStructuredAddress(values: AddressFormValues) {
         values.state.trim() ||
         values.postcode.trim() ||
         values.country.trim()
+    );
+}
+
+function getCollapsedAddressError(errors: AddressFieldErrors) {
+    return (
+        errors.addressLineOne ||
+        errors.suburb ||
+        errors.state ||
+        errors.postcode ||
+        errors.country
     );
 }
 

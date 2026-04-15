@@ -1,12 +1,7 @@
-import {
-    PRODUCT_CODE_MAX_LENGTH,
-    PRODUCT_MAX_PRICE_CENTS,
-    PRODUCT_NAME_MAX_LENGTH,
-} from '../formatting/money';
 import { backendErrorMessage, resolveBackendError } from '../services/http';
+import { Money } from '../types/Money';
+import { ProductCode, ProductName } from '../types/ProductText';
 import { collectFieldErrors, hasFieldErrors } from '../validation/forms';
-import { MoneyValidator } from '../validation/numbers';
-import { StringValidator } from '../validation/strings';
 import type { CreateProductInput, Product } from './api';
 
 export interface ProductFormValues {
@@ -17,25 +12,6 @@ export interface ProductFormValues {
 
 export type ProductFieldName = keyof ProductFormValues;
 export type ProductFieldErrors = Partial<Record<ProductFieldName, string>>;
-
-const PRODUCT_NAME_VALIDATOR = new StringValidator({
-    fieldName: 'Name',
-    required: true,
-    maxLength: PRODUCT_NAME_MAX_LENGTH,
-    asciiOnly: true,
-    printableAsciiOnly: true,
-});
-const PRODUCT_CODE_VALIDATOR = new StringValidator({
-    fieldName: 'Code',
-    required: true,
-    maxLength: PRODUCT_CODE_MAX_LENGTH,
-    asciiOnly: true,
-    printableAsciiOnly: true,
-    uppercase: true,
-});
-const PRODUCT_PRICE_VALIDATOR = new MoneyValidator('Price', {
-    maxCents: PRODUCT_MAX_PRICE_CENTS,
-});
 
 export function createProductFormValues(): ProductFormValues {
     return {
@@ -49,34 +25,14 @@ export function toProductFormValues(product: Product): ProductFormValues {
     return {
         code: product.code,
         name: product.name,
-        price: formatProductPriceInput(product.priceCents),
+        price: Money.toInput(product.priceCents),
     };
 }
 
-export function formatProductField<Name extends ProductFieldName>(
-    name: Name,
-    value: ProductFormValues[Name]
-) {
-    switch (name) {
-        case 'code':
-            return PRODUCT_CODE_VALIDATOR.formatInput(
-                value
-            ) as ProductFormValues[Name];
-        case 'name':
-            return PRODUCT_NAME_VALIDATOR.formatInput(
-                value
-            ) as ProductFormValues[Name];
-        case 'price':
-            return PRODUCT_PRICE_VALIDATOR.formatInput(
-                value
-            ) as ProductFormValues[Name];
-    }
-}
-
 export function assessProductForm(values: ProductFormValues) {
-    const name = PRODUCT_NAME_VALIDATOR.assess(values.name);
-    const code = PRODUCT_CODE_VALIDATOR.assess(values.code);
-    const price = PRODUCT_PRICE_VALIDATOR.assess(values.price);
+    const name = ProductName.assess(values.name);
+    const code = ProductCode.assess(values.code);
+    const price = Money.assess(values.price);
     const fieldErrors = collectFieldErrors<ProductFieldName>({
         code,
         name,
@@ -177,8 +133,4 @@ export function toProductErrorState(error: unknown) {
         },
         (formError) => ({ fieldErrors: {}, formError })
     );
-}
-
-function formatProductPriceInput(priceCents: number) {
-    return PRODUCT_PRICE_VALIDATOR.formatInput((priceCents / 100).toFixed(2));
 }
