@@ -1,6 +1,6 @@
 import clsx from 'clsx';
 
-import type { PasswordRule } from './validation';
+import type { PasswordRule } from '../types/Password';
 
 export function PasswordRuleList({ rules }: { rules: PasswordRule[] }) {
     return (

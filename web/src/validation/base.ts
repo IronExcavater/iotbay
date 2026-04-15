@@ -42,7 +42,7 @@ export abstract class Validator<TInput, TOutput = TInput> {
                 error: null,
                 input,
                 issue: null,
-                value: this.validate(value, context),
+                value: this.validate(input, context),
             };
         } catch (error) {
             if (error instanceof ValidationError) {
