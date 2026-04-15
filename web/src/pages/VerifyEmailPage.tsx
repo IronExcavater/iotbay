@@ -4,17 +4,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { authApi } from '../auth/api';
 import { normalizeNextPath, resolvePostAuthPath } from '../auth/redirects';
-import {
-    assessEmail,
-    EMAIL_MAX_LENGTH,
-    PASSWORD_MAX_LENGTH,
-    sanitizeEmail,
-    sanitizePasswordInput,
-} from '../auth/validation';
 import { Button } from '../components/form/Button';
 import { Field } from '../components/form/Field';
 import { FormNotice } from '../components/form/FormNotice';
-import { inputClassName } from '../components/form/Input';
+import { Input } from '../components/form/Input';
 import { PasswordInput } from '../components/form/PasswordInput';
 import { PageHeader } from '../components/PageHeader';
 import { useToast } from '../components/toast/ToastProvider';
@@ -24,6 +17,8 @@ import {
     backendErrorMessage,
     resolveBackendError,
 } from '../services/http';
+import { Email } from '../types/Email';
+import { Password } from '../types/Password';
 import {
     collectFieldErrors,
     hasFieldErrors,
@@ -193,7 +188,7 @@ export default function VerifyEmailPage() {
             return;
         }
 
-        const normalizedEmail = assessEmail(nextEmail).value;
+        const normalizedEmail = Email.assess(nextEmail).value;
         if (!normalizedEmail) {
             return;
         }
@@ -297,24 +292,22 @@ export default function VerifyEmailPage() {
                             label="New email"
                             required
                         >
-                            <input
+                            <Input
                                 autoComplete="email"
-                                className={inputClassName(
-                                    Boolean(fieldErrors.email)
-                                )}
-                                maxLength={EMAIL_MAX_LENGTH}
+                                hasError={Boolean(fieldErrors.email)}
+                                maxLength={Email.MAX_LENGTH}
                                 name="email"
                                 onBlur={() => {
                                     setFieldErrors((current) => ({
                                         ...current,
                                         email:
-                                            assessEmail(nextEmail).error ??
+                                            Email.assess(nextEmail).error ??
                                             undefined,
                                     }));
                                 }}
                                 onChange={(event) => {
                                     handleChangeEmailInput(
-                                        sanitizeEmail(event.target.value)
+                                        Email.formatInput(event.target.value)
                                     );
                                 }}
                                 placeholder="jane.doe@email.com"
@@ -323,7 +316,15 @@ export default function VerifyEmailPage() {
                             />
                         </Field>
 
-                        <section className="grid min-h-18 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                        {/* Two-column layout only when the password field is visible;
+                            otherwise just right-align the button. */}
+                        <section
+                            className={clsx(
+                                hasChangedEmail
+                                    ? 'grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end'
+                                    : 'flex justify-end'
+                            )}
+                        >
                             {hasChangedEmail ? (
                                 <Field
                                     error={fieldErrors.password}
@@ -339,7 +340,7 @@ export default function VerifyEmailPage() {
                                     <PasswordInput
                                         autoComplete="current-password"
                                         hasError={Boolean(fieldErrors.password)}
-                                        maxLength={PASSWORD_MAX_LENGTH}
+                                        maxLength={Password.MAX_LENGTH}
                                         name="currentPassword"
                                         onBlur={() => {
                                             setFieldErrors((current) => ({
@@ -351,7 +352,7 @@ export default function VerifyEmailPage() {
                                         }}
                                         onChange={(event) => {
                                             setPassword(
-                                                sanitizePasswordInput(
+                                                Password.formatInput(
                                                     event.target.value
                                                 )
                                             );
@@ -371,22 +372,16 @@ export default function VerifyEmailPage() {
                                         value={password}
                                     />
                                 </Field>
-                            ) : (
-                                <div />
-                            )}
+                            ) : null}
 
-                            <div className="flex justify-end sm:self-end">
-                                <Button
-                                    disabled={
-                                        isChangingEmail || !hasChangedEmail
-                                    }
-                                    loading={isChangingEmail}
-                                    type="submit"
-                                    variant="primary"
-                                >
-                                    Change email
-                                </Button>
-                            </div>
+                            <Button
+                                disabled={isChangingEmail || !hasChangedEmail}
+                                loading={isChangingEmail}
+                                type="submit"
+                                variant="primary"
+                            >
+                                Change email
+                            </Button>
                         </section>
                     </form>
                 ) : null}
@@ -423,8 +418,8 @@ function validatePendingEmailForm({
         return {};
     }
 
-    return collectFieldErrors<VerificationFieldName>({
-        email: assessEmail(nextEmail),
+        return collectFieldErrors<VerificationFieldName>({
+        email: Email.assess(nextEmail),
         password: password ? null : 'Password is required',
     });
 }

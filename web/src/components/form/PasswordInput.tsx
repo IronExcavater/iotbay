@@ -1,8 +1,7 @@
 import type { ChangeEventHandler, FocusEventHandler } from 'react';
-import clsx from 'clsx';
 import { FaEye, FaEyeSlash } from 'react-icons/fa6';
 
-import { inputClassName } from './Input';
+import { Input } from './Input';
 
 export function PasswordInput({
     autoComplete,
@@ -31,9 +30,10 @@ export function PasswordInput({
 
     return (
         <div className="relative">
-            <input
+            <Input
                 autoComplete={autoComplete}
-                className={clsx(inputClassName(hasError), 'pr-11')}
+                className="pr-11"
+                hasError={hasError}
                 maxLength={maxLength}
                 name={name}
                 onBlur={onBlur}
