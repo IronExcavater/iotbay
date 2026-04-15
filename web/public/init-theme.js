@@ -3,14 +3,19 @@
 (() => {
     try {
         const stored = window.localStorage.getItem('theme-mode');
-        const mode =
-            stored === 'light' || stored === 'dark'
-                ? stored
-                : window.matchMedia('(prefers-color-scheme: dark)').matches
-                  ? 'dark'
-                  : 'light';
-        document.documentElement.dataset.theme = mode;
-        document.documentElement.style.colorScheme = mode;
+        const resolvedMode = window.matchMedia('(prefers-color-scheme: dark)')
+            .matches
+            ? 'dark'
+            : 'light';
+
+        if (stored === 'light' || stored === 'dark') {
+            document.documentElement.dataset.theme = stored;
+            document.documentElement.style.colorScheme = stored;
+            return;
+        }
+
+        document.documentElement.removeAttribute('data-theme');
+        document.documentElement.style.colorScheme = resolvedMode;
     } catch {
         // Ignore storage access failures and fall back to CSS defaults.
     }

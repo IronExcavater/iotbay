@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import {
     FaArrowRightFromBracket,
+    FaDisplay,
     FaIdBadge,
     FaMoon,
     FaShieldHalved,
@@ -18,9 +19,11 @@ import { MenuLinkItem, MenuItem, MenuPanel } from './overlay/MenuItems';
 export default function SiteNav() {
     const navigate = useNavigate();
     const { logout, user } = useAuth();
-    const { mode, toggleMode } = useThemeMode();
+    const { mode, resolvedMode, setMode } = useThemeMode();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement | null>(null);
+    const themeMenuRef = useRef<HTMLDivElement | null>(null);
 
     const profileLabel = user
         ? `${user.firstName} ${user.lastName}`
@@ -36,8 +39,8 @@ export default function SiteNav() {
 
     return (
         <header className="sticky top-0 z-30 border-b border-slate-200/90 bg-white/95 backdrop-blur">
-            <div className="mx-auto flex w-full max-w-6xl items-stretch">
-                <div className="flex min-w-0 flex-1 items-center justify-between gap-4 px-4 py-4 sm:px-6">
+            <div className="relative mx-auto flex w-full max-w-6xl items-center px-4 py-4 pr-18 sm:px-6 sm:pr-22">
+                <div className="flex min-w-0 flex-1 items-center justify-between gap-4">
                     <Link
                         className="group relative -mx-2 inline-flex items-center gap-3 rounded px-2 py-1 text-base font-semibold tracking-[0.2em] text-slate-950 uppercase transition-transform duration-200 ease-out outline-none hover:scale-[1.02] focus-visible:scale-[1.02] focus-visible:outline-none"
                         to="/"
@@ -153,8 +156,60 @@ export default function SiteNav() {
                     </nav>
                 </div>
 
-                <div className="flex w-14 shrink-0 border-l border-slate-200/90 sm:w-16">
-                    <ThemeToggle mode={mode} onToggle={toggleMode} />
+                <div
+                    className="absolute top-1/2 right-4 -translate-y-1/2 sm:right-6"
+                    ref={themeMenuRef}
+                >
+                    <ThemeToggle
+                        mode={mode}
+                        onOpenChange={setIsThemeMenuOpen}
+                        open={isThemeMenuOpen}
+                        resolvedMode={resolvedMode}
+                    />
+                    <AnchoredPopover
+                        align="right"
+                        anchorRef={themeMenuRef}
+                        className="min-w-44"
+                        onClose={() => {
+                            setIsThemeMenuOpen(false);
+                        }}
+                        open={isThemeMenuOpen}
+                    >
+                        <MenuPanel>
+                            <ThemeMenuItem
+                                active={mode === 'light'}
+                                icon={<FaSun aria-hidden="true" className="size-3.5" />}
+                                label="Light"
+                                onSelect={() => {
+                                    setMode('light');
+                                    setIsThemeMenuOpen(false);
+                                }}
+                            />
+                            <ThemeMenuItem
+                                active={mode === 'dark'}
+                                icon={<FaMoon aria-hidden="true" className="size-3.5" />}
+                                label="Dark"
+                                onSelect={() => {
+                                    setMode('dark');
+                                    setIsThemeMenuOpen(false);
+                                }}
+                            />
+                            <ThemeMenuItem
+                                active={mode === 'system'}
+                                icon={
+                                    <FaDisplay
+                                        aria-hidden="true"
+                                        className="size-3.5"
+                                    />
+                                }
+                                label={`System (${resolvedMode})`}
+                                onSelect={() => {
+                                    setMode('system');
+                                    setIsThemeMenuOpen(false);
+                                }}
+                            />
+                        </MenuPanel>
+                    </AnchoredPopover>
                 </div>
             </div>
         </header>
@@ -163,27 +218,60 @@ export default function SiteNav() {
 
 function ThemeToggle({
     mode,
-    onToggle,
+    onOpenChange,
+    open,
+    resolvedMode,
 }: {
-    mode: 'dark' | 'light';
-    onToggle: () => void;
+    mode: 'dark' | 'light' | 'system';
+    onOpenChange: (open: boolean) => void;
+    open: boolean;
+    resolvedMode: 'dark' | 'light';
 }) {
     const label =
-        mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+        mode === 'system'
+            ? `Theme: system (${resolvedMode})`
+            : `Theme: ${mode}`;
 
     return (
         <button
             aria-label={label}
-            className="flex h-full w-full items-center justify-center text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-            onClick={onToggle}
+            aria-expanded={open}
+            className="inline-flex size-10 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+            onClick={() => {
+                onOpenChange(!open);
+            }}
             title={label}
             type="button"
         >
-            {mode === 'dark' ? (
-                <FaSun aria-hidden="true" className="size-4" />
-            ) : (
+            {mode === 'system' ? (
+                <FaDisplay aria-hidden="true" className="size-4" />
+            ) : mode === 'dark' ? (
                 <FaMoon aria-hidden="true" className="size-4" />
+            ) : (
+                <FaSun aria-hidden="true" className="size-4" />
             )}
         </button>
+    );
+}
+
+function ThemeMenuItem({
+    active,
+    icon,
+    label,
+    onSelect,
+}: {
+    active: boolean;
+    icon: ReactNode;
+    label: string;
+    onSelect: () => void;
+}) {
+    return (
+        <MenuItem
+            className={active ? 'bg-slate-100 text-slate-900' : undefined}
+            onClick={onSelect}
+        >
+            {icon}
+            <span>{label}</span>
+        </MenuItem>
     );
 }
