@@ -16,17 +16,16 @@ from src.common.validation import (
     StringValidator,
     TokenValidator,
 )
+from src.common.types import EmailAddress, FirstName, LastName
 from src.users.models import (
     CURRENT_PASSWORD_VALIDATOR,
     DESIGNATION_VALIDATOR,
-    EMAIL_VALIDATOR,
-    FIRST_NAME_VALIDATOR,
-    LAST_NAME_VALIDATOR,
     PASSWORD_INPUT_VALIDATOR,
     PERMISSION_VALIDATOR,
     PHONE_COUNTRY_VALIDATOR,
     PHONE_NUMBER_VALIDATOR,
     STAFF_ID_VALIDATOR,
+    USER_STATUS_VALIDATOR,
     USER_TYPE_VALIDATOR,
 )
 
@@ -46,9 +45,9 @@ def _optional_request_validator(validator: StringValidator):
     return validate
 
 
-EmailValue = Annotated[str, AfterValidator(EMAIL_VALIDATOR.validate_request)]
-FirstNameValue = Annotated[str, AfterValidator(FIRST_NAME_VALIDATOR.validate_request)]
-LastNameValue = Annotated[str, AfterValidator(LAST_NAME_VALIDATOR.validate_request)]
+EmailValue = Annotated[str, AfterValidator(EmailAddress.validate_request)]
+FirstNameValue = Annotated[str, AfterValidator(FirstName.validate_request)]
+LastNameValue = Annotated[str, AfterValidator(LastName.validate_request)]
 PasswordValue = Annotated[
     str,
     AfterValidator(PASSWORD_INPUT_VALIDATOR.validate_request),
@@ -61,6 +60,10 @@ TokenValue = Annotated[str, AfterValidator(TOKEN_VALIDATOR.validate_request)]
 UserTypeValue = Annotated[
     str,
     AfterValidator(_optional_request_validator(USER_TYPE_VALIDATOR)),
+]
+UserStatusValue = Annotated[
+    str,
+    AfterValidator(_optional_request_validator(USER_STATUS_VALIDATOR)),
 ]
 PhoneNumberValue = Annotated[
     str,
@@ -183,6 +186,19 @@ class InviteStaffRequest(AuthRequest):
     staff_id: StaffIdValue
     designation: DesignationValue
     permission: PermissionValue = ""
+
+
+class AdminUpdateUserRequest(AuthRequest):
+    email: EmailValue
+    first_name: FirstNameValue
+    last_name: LastNameValue
+    staff_id: StaffIdValue = ""
+    designation: DesignationValue = ""
+    permission: PermissionValue = ""
+
+
+class AdminSetUserStatusRequest(AuthRequest):
+    status: UserStatusValue
 
 
 class CompleteStaffInvitationRequest(AuthRequest):

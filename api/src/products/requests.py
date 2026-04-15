@@ -2,8 +2,7 @@ from typing import ClassVar
 
 from pydantic import BaseModel, ConfigDict, field_validator
 from pydantic.alias_generators import to_camel
-from src.common.validation import NumberValidator
-from src.products.models import PRODUCT_CODE_VALIDATOR, PRODUCT_NAME_VALIDATOR
+from src.common.types import MoneyAmount, ProductCode, ProductName
 
 
 class ProductRequest(BaseModel):
@@ -19,21 +18,17 @@ class ProductMutationRequest(ProductRequest):
     name: str
     price_cents: int
 
-    PRICE_CENTS_VALIDATOR: ClassVar[NumberValidator] = NumberValidator(
-        field_name="priceCents"
-    )
-
     @field_validator("name")
     @classmethod
     def require_name(cls, value: str) -> str:
-        return PRODUCT_NAME_VALIDATOR.validate_request(value)
+        return ProductName.validate_request(value)
 
     @field_validator("code")
     @classmethod
     def require_code(cls, value: str) -> str:
-        return PRODUCT_CODE_VALIDATOR.validate_request(value)
+        return ProductCode.validate_request(value)
 
     @field_validator("price_cents")
     @classmethod
     def require_price_cents(cls, value: int) -> int:
-        return cls.PRICE_CENTS_VALIDATOR.validate_request(value)
+        return MoneyAmount.validate_request_cents(value)
