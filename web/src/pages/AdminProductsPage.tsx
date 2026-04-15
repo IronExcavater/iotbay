@@ -1,27 +1,27 @@
-import { useEffect, useState, type SubmitEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 
-import { Button } from '../components/form/Button';
-import { Field } from '../components/form/Field';
-import { FormNotice } from '../components/form/FormNotice';
-import { inputClassName } from '../components/form/Input';
-import { formatDateTime } from '../formatting/dateTime';
-import { formatAud } from '../formatting/money';
+import { ProductFormDialog } from '../admin/products/components/ProductFormDialog';
+import { ProductTable } from '../admin/products/components/ProductTable';
+import { useFormattedInput } from '../hooks/useFormattedInput';
+import { useSearchFilter } from '../hooks/useSearchFilter';
 import { productApi, type Product } from '../products/api';
 import {
     assessProductForm,
     createProductFormValues,
-    formatProductField,
     toProductErrorState,
     toProductFormValues,
     type ProductFieldErrors,
     type ProductFormValues,
 } from '../products/form';
 import { toErrorMessage } from '../services/http';
+import { Money } from '../types/Money';
+import { ProductCode, ProductName } from '../types/ProductText';
 
 export default function AdminProductsPage() {
     const [products, setProducts] = useState<Product[]>([]);
     const [isLoadingProducts, setIsLoadingProducts] = useState(true);
     const [productsError, setProductsError] = useState<string | null>(null);
+    const [search, setSearch] = useState('');
     const [formValues, setFormValues] = useState<ProductFormValues>(() =>
         createProductFormValues()
     );
@@ -31,55 +31,88 @@ export default function AdminProductsPage() {
     const [editingProductId, setEditingProductId] = useState<string | null>(
         null
     );
+    const [isFormOpen, setIsFormOpen] = useState(false);
 
     const isEditing = Boolean(editingProductId);
     const formTitle = isEditing ? 'Edit product' : 'Create product';
     const submitLabel = isEditing ? 'Save product' : 'Create product';
+    const filteredProducts = useSearchFilter(products, search, (product) => [
+        product.code,
+        product.name,
+    ]);
+
+    const nameInput = useFormattedInput({
+        onChange: (value) => {
+            setFormValues((current) => ({
+                ...current,
+                name: value,
+            }));
+        },
+        value: formValues.name,
+        valueType: ProductName,
+    });
+    const codeInput = useFormattedInput({
+        onChange: (value) => {
+            setFormValues((current) => ({
+                ...current,
+                code: value,
+            }));
+        },
+        value: formValues.code,
+        valueType: ProductCode,
+    });
+    const priceInput = useFormattedInput({
+        onChange: (value) => {
+            setFormValues((current) => ({
+                ...current,
+                price: value,
+            }));
+        },
+        value: formValues.price,
+        valueType: Money,
+    });
+
+    async function loadProducts(signal?: AbortSignal) {
+        setIsLoadingProducts(true);
+
+        try {
+            const items = await productApi.list(signal);
+
+            if (!signal?.aborted) {
+                setProducts(sortProducts(items));
+                setProductsError(null);
+            }
+        } catch (error) {
+            if (!signal?.aborted) {
+                setProductsError(toErrorMessage(error, 'Unable to load products'));
+            }
+        } finally {
+            if (!signal?.aborted) {
+                setIsLoadingProducts(false);
+            }
+        }
+    }
 
     useEffect(() => {
         const abortController = new AbortController();
-
-        async function loadProducts() {
-            try {
-                const items = await productApi.list(abortController.signal);
-
-                if (!abortController.signal.aborted) {
-                    setProducts(sortProducts(items));
-                    setProductsError(null);
-                }
-            } catch (error) {
-                if (!abortController.signal.aborted) {
-                    setProductsError(
-                        toErrorMessage(error, 'Unable to load products')
-                    );
-                }
-            } finally {
-                if (!abortController.signal.aborted) {
-                    setIsLoadingProducts(false);
-                }
-            }
-        }
-
-        void loadProducts();
-
+        void loadProducts(abortController.signal);
         return () => abortController.abort();
     }, []);
 
-    function updateFormValue<Name extends keyof ProductFormValues>(
-        name: Name,
-        value: ProductFormValues[Name]
-    ) {
-        setFormValues((current) => ({
-            ...current,
-            [name]: formatProductField(name, value),
-        }));
-    }
-
-    function resetForm() {
+    function closeForm() {
         setEditingProductId(null);
         setFieldErrors({});
         setFormError(null);
         setFormValues(createProductFormValues());
+        setIsFormOpen(false);
+    }
+
+    function handleCreate() {
+        setEditingProductId(null);
+        setFieldErrors({});
+        setFormError(null);
+        setFormValues(createProductFormValues());
+        setIsFormOpen(true);
     }
 
     function handleEdit(product: Product) {
@@ -87,6 +120,7 @@ export default function AdminProductsPage() {
         setFieldErrors({});
         setFormError(null);
         setFormValues(toProductFormValues(product));
+        setIsFormOpen(true);
     }
 
     function upsertProduct(product: Product) {
@@ -113,14 +147,14 @@ export default function AdminProductsPage() {
             );
 
             if (editingProductId === product.id) {
-                resetForm();
+                closeForm();
             }
         } catch (error) {
-            setFormError(toErrorMessage(error, 'Unable to delete product'));
+            setProductsError(toErrorMessage(error, 'Unable to delete product'));
         }
     }
 
-    async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
+    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         setFormError(null);
 
@@ -139,7 +173,7 @@ export default function AdminProductsPage() {
                 : await productApi.create(assessment.payload);
 
             upsertProduct(product);
-            resetForm();
+            closeForm();
         } catch (error) {
             const nextState = toProductErrorState(error);
             setFieldErrors(nextState.fieldErrors);
@@ -150,199 +184,39 @@ export default function AdminProductsPage() {
     }
 
     return (
-        <section className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(18rem,1fr)]">
-            <div className="overflow-hidden rounded border border-slate-200 bg-white">
-                <div className="border-b border-slate-200 px-5 py-4">
-                    <h2 className="text-lg font-semibold">Products</h2>
-                    <p className="mt-1 text-sm text-slate-600">
-                        Browse and maintain the product catalogue.
-                    </p>
-                </div>
+        <>
+            <ProductTable
+                hasSearch={Boolean(search.trim())}
+                isLoading={isLoadingProducts}
+                onCreate={handleCreate}
+                onDelete={(product) => {
+                    void handleDelete(product);
+                }}
+                onEdit={handleEdit}
+                onRefresh={() => {
+                    void loadProducts();
+                }}
+                products={filteredProducts}
+                productsError={productsError}
+                search={search}
+                setSearch={setSearch}
+            />
 
-                {renderProductsContent({
-                    isLoadingProducts,
-                    onDelete: handleDelete,
-                    onEdit: handleEdit,
-                    products,
-                    productsError,
-                })}
-            </div>
-
-            <section className="rounded border border-slate-200 bg-white p-5">
-                <div className="flex items-center justify-between gap-3">
-                    <div className="grid gap-1">
-                        <h2 className="text-lg font-semibold">{formTitle}</h2>
-                        <p className="text-sm text-slate-600">
-                            Save catalogue changes in Australian dollars.
-                        </p>
-                    </div>
-
-                    {isEditing ? (
-                        <Button
-                            onClick={resetForm}
-                            type="button"
-                            variant="secondary"
-                        >
-                            Cancel
-                        </Button>
-                    ) : null}
-                </div>
-
-                <form className="mt-5 grid gap-4" onSubmit={handleSubmit}>
-                    {formError ? (
-                        <FormNotice tone="error">{formError}</FormNotice>
-                    ) : null}
-
-                    <Field error={fieldErrors.name} label="Name" required>
-                        <input
-                            className={inputClassName(
-                                Boolean(fieldErrors.name)
-                            )}
-                            onChange={(event) => {
-                                updateFormValue('name', event.target.value);
-                            }}
-                            placeholder="Smart Light Bulb"
-                            value={formValues.name}
-                        />
-                    </Field>
-
-                    <Field error={fieldErrors.code} label="Code" required>
-                        <input
-                            className={inputClassName(
-                                Boolean(fieldErrors.code)
-                            )}
-                            onChange={(event) => {
-                                updateFormValue('code', event.target.value);
-                            }}
-                            placeholder="SKU-001"
-                            value={formValues.code}
-                        />
-                    </Field>
-
-                    <Field
-                        error={fieldErrors.price}
-                        hint={
-                            fieldErrors.price
-                                ? undefined
-                                : 'Enter Australian dollars'
-                        }
-                        label="Price"
-                        required
-                    >
-                        <input
-                            className={inputClassName(
-                                Boolean(fieldErrors.price)
-                            )}
-                            inputMode="decimal"
-                            onChange={(event) => {
-                                updateFormValue('price', event.target.value);
-                            }}
-                            placeholder="49.95"
-                            value={formValues.price}
-                        />
-                    </Field>
-
-                    <Button
-                        disabled={isSubmitting}
-                        loading={isSubmitting}
-                        type="submit"
-                        variant="primary"
-                    >
-                        {submitLabel}
-                    </Button>
-                </form>
-            </section>
-        </section>
-    );
-}
-
-function renderProductsContent({
-    isLoadingProducts,
-    onDelete,
-    onEdit,
-    products,
-    productsError,
-}: {
-    isLoadingProducts: boolean;
-    onDelete: (product: Product) => Promise<void>;
-    onEdit: (product: Product) => void;
-    products: Product[];
-    productsError: string | null;
-}) {
-    if (isLoadingProducts) {
-        return <p className="px-5 py-4 text-slate-500">Loading products</p>;
-    }
-
-    if (productsError) {
-        return <p className="px-5 py-4 text-red-700">{productsError}</p>;
-    }
-
-    if (products.length === 0) {
-        return <p className="px-5 py-4 text-slate-500">No products yet</p>;
-    }
-
-    return (
-        <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-slate-200 bg-slate-100 text-xs font-semibold tracking-[0.12em] text-slate-700 uppercase">
-                    <tr>
-                        <th className="px-5 py-3">Code</th>
-                        <th className="px-5 py-3">Name</th>
-                        <th className="px-5 py-3">Price</th>
-                        <th className="px-5 py-3">Updated</th>
-                        <th className="px-5 py-3">Actions</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {products.map((product) => (
-                        <tr
-                            className="border-t border-slate-200 align-top"
-                            key={product.id}
-                        >
-                            <td className="px-5 py-3 font-mono text-xs text-slate-600">
-                                {product.code}
-                            </td>
-                            <td className="px-5 py-3">{product.name}</td>
-                            <td className="px-5 py-3">
-                                {formatAud(product.priceCents)}
-                            </td>
-                            <td
-                                className="px-5 py-3 text-slate-500"
-                                title={formatDateTime(
-                                    product.updatedAt,
-                                    'long'
-                                )}
-                            >
-                                {formatDateTime(product.updatedAt, 'relative')}
-                            </td>
-                            <td className="px-5 py-3">
-                                <div className="flex gap-2">
-                                    <Button
-                                        onClick={() => {
-                                            onEdit(product);
-                                        }}
-                                        type="button"
-                                        variant="secondary"
-                                    >
-                                        Edit
-                                    </Button>
-                                    <Button
-                                        onClick={() => {
-                                            void onDelete(product);
-                                        }}
-                                        type="button"
-                                        variant="danger"
-                                    >
-                                        Delete
-                                    </Button>
-                                </div>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
+            <ProductFormDialog
+                codeInput={codeInput}
+                fieldErrors={fieldErrors}
+                formError={formError}
+                formTitle={formTitle}
+                isOpen={isFormOpen}
+                isSubmitting={isSubmitting}
+                nameInput={nameInput}
+                onClose={closeForm}
+                onSubmit={handleSubmit}
+                priceInput={priceInput}
+                submitLabel={submitLabel}
+                values={formValues}
+            />
+        </>
     );
 }
 

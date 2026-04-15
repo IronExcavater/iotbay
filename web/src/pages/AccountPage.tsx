@@ -1,8 +1,13 @@
 import { useEffect, useState, type SubmitEvent } from 'react';
-import type { CountryCode } from 'libphonenumber-js';
 import { useNavigate } from 'react-router-dom';
 
-import { AddressFields } from '../addresses/AddressFields';
+import {
+    AccountActionsSection,
+    AccountContactSection,
+    AccountPersonalSection,
+    AccountStaffSection,
+} from '../account/components/AccountFormSections';
+import type { ProfileValues } from '../account/types';
 import {
     setAddressField,
     type AddressFieldName,
@@ -19,55 +24,14 @@ import {
     validatePhoneNumber,
 } from '../auth/phone';
 import { buildVerifyEmailPath } from '../auth/redirects';
-import {
-    assessDesignation,
-    assessPermission,
-    assessStaffId,
-    EMAIL_MAX_LENGTH,
-    NAME_MAX_LENGTH,
-    sanitizeDesignation,
-    sanitizeEmail,
-    sanitizeFirstName,
-    sanitizeLastName,
-    sanitizePasswordInput,
-    sanitizeStaffId,
-    STAFF_DESIGNATION_MAX_LENGTH,
-    validateEmail,
-    validateFirstName,
-    validateFirstNameOnBlur,
-    validateLastName,
-    validateLastNameOnBlur,
-    validateRequired,
-    STAFF_ID_MAX_LENGTH,
-} from '../auth/validation';
-import { Button } from '../components/form/Button';
-import { Field } from '../components/form/Field';
 import { FormNotice } from '../components/form/FormNotice';
-import { inputClassName } from '../components/form/Input';
-import { PasswordInput } from '../components/form/PasswordInput';
-import { PhoneField } from '../components/form/PhoneField';
 import { useToast } from '../components/toast/ToastProvider';
 import { downloadHtml } from '../services/download';
 import { backendErrorMessage, resolveBackendError } from '../services/http';
+import { Email } from '../types/Email';
+import { FirstName, LastName } from '../types/Name';
+import { Designation, StaffId } from '../types/Staff';
 import { collectFieldErrors } from '../validation/forms';
-
-interface ProfileValues {
-    addressLineOne: string;
-    addressLineTwo: string;
-    country: string;
-    currentPassword: string;
-    designation: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    postcode: string;
-    permission: string;
-    phoneCountry: CountryCode;
-    phoneNumber: string;
-    staffId: string;
-    state: string;
-    suburb: string;
-}
 
 type FieldErrors = Partial<Record<keyof ProfileValues, string>>;
 
@@ -132,7 +96,7 @@ function toProfileUpdateInput(
         email: values.email.trim(),
         firstName: values.firstName.trim(),
         lastName: values.lastName.trim(),
-        permission: isStaff ? values.permission : '',
+        permission: '',
         phoneCountry: isCustomer ? values.phoneCountry : '',
         phoneNumber: isCustomer ? values.phoneNumber.trim() : '',
     };
@@ -274,269 +238,94 @@ export default function AccountPage() {
                         <FormNotice tone="error">{error}</FormNotice>
                     ) : null}
 
-                    <section className="grid gap-4">
-                        <h3 className="text-sm font-semibold tracking-[0.08em] text-slate-700 uppercase">
-                            Personal
-                        </h3>
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <Field
-                                error={fieldErrors.firstName}
-                                label="First name"
-                                required
-                            >
-                                <input
-                                    className={inputClassName(
-                                        Boolean(fieldErrors.firstName)
-                                    )}
-                                    maxLength={NAME_MAX_LENGTH}
-                                    onBlur={() => {
-                                        setFieldError(
-                                            'firstName',
-                                            validateFirstNameOnBlur(
-                                                values.firstName
-                                            )
-                                        );
-                                    }}
-                                    onChange={(event) => {
-                                        updateValues({
-                                            firstName: sanitizeFirstName(
-                                                event.target.value
-                                            ),
-                                        });
-                                    }}
-                                    placeholder="Jane"
-                                    value={values.firstName}
-                                />
-                            </Field>
-
-                            <Field
-                                error={fieldErrors.lastName}
-                                label="Last name"
-                                required
-                            >
-                                <input
-                                    className={inputClassName(
-                                        Boolean(fieldErrors.lastName)
-                                    )}
-                                    maxLength={NAME_MAX_LENGTH}
-                                    onBlur={() => {
-                                        setFieldError(
-                                            'lastName',
-                                            validateLastNameOnBlur(
-                                                values.lastName
-                                            )
-                                        );
-                                    }}
-                                    onChange={(event) => {
-                                        updateValues({
-                                            lastName: sanitizeLastName(
-                                                event.target.value
-                                            ),
-                                        });
-                                    }}
-                                    placeholder="Doe"
-                                    value={values.lastName}
-                                />
-                            </Field>
-                        </div>
-
-                        <Field error={fieldErrors.email} label="Email" required>
-                            <input
-                                className={inputClassName(
-                                    Boolean(fieldErrors.email)
-                                )}
-                                maxLength={EMAIL_MAX_LENGTH}
-                                onBlur={() => {
-                                    setFieldError(
-                                        'email',
-                                        validateEmail(values.email)
-                                    );
-                                }}
-                                onChange={(event) => {
-                                    updateValues({
-                                        email: sanitizeEmail(
-                                            event.target.value
-                                        ),
-                                    });
-                                }}
-                                placeholder="jane.doe@email.com"
-                                type="email"
-                                value={values.email}
-                            />
-                        </Field>
-                    </section>
+                    <AccountPersonalSection
+                        fieldErrors={fieldErrors}
+                        onEmailBlur={() => {
+                            setFieldError('email', Email.validate(values.email));
+                        }}
+                        onEmailChange={(value) => {
+                            updateValues({ email: Email.formatInput(value) });
+                        }}
+                        onFirstNameBlur={() => {
+                            setFieldError(
+                                'firstName',
+                                FirstName.validateOnBlur(values.firstName)
+                            );
+                        }}
+                        onFirstNameChange={(value) => {
+                            updateValues({
+                                firstName: FirstName.formatInput(value),
+                            });
+                        }}
+                        onLastNameBlur={() => {
+                            setFieldError(
+                                'lastName',
+                                LastName.validateOnBlur(values.lastName)
+                            );
+                        }}
+                        onLastNameChange={(value) => {
+                            updateValues({
+                                lastName: LastName.formatInput(value),
+                            });
+                        }}
+                        values={values}
+                    />
 
                     {isCustomer ? (
-                        <section className="grid gap-4 border-t border-slate-200 pt-6">
-                            {/* Show the registered customer's saved contact details here. */}
-                            <h3 className="text-sm font-semibold tracking-[0.08em] text-slate-700 uppercase">
-                                Contact
-                            </h3>
-                            <PhoneField
-                                country={values.phoneCountry}
-                                error={fieldErrors.phoneNumber}
-                                label="Phone number"
-                                onBlur={handlePhoneBlur}
-                                onCountryChange={(country) => {
-                                    updateValues({ phoneCountry: country });
-                                }}
-                                onNumberChange={(value) => {
-                                    updateValues({ phoneNumber: value });
-                                }}
-                                value={values.phoneNumber}
-                            />
-
-                            <AddressFields
-                                countryCode={values.phoneCountry}
-                                errors={fieldErrors}
-                                onFieldChange={handleAddressFieldChange}
-                                values={values}
-                            />
-                        </section>
+                        <AccountContactSection
+                            errors={fieldErrors}
+                            onAddressFieldChange={handleAddressFieldChange}
+                            onPhoneBlur={handlePhoneBlur}
+                            onPhoneCountryChange={(phoneCountry) => {
+                                updateValues({ phoneCountry });
+                            }}
+                            onPhoneNumberChange={(phoneNumber) => {
+                                updateValues({ phoneNumber });
+                            }}
+                            values={values}
+                        />
                     ) : null}
 
                     {isStaff ? (
-                        <section className="grid gap-4 border-t border-slate-200 pt-6">
-                            {/* Staff accounts expose their saved role details instead of customer contact fields. */}
-                            <h3 className="text-sm font-semibold tracking-[0.08em] text-slate-700 uppercase">
-                                Staff
-                            </h3>
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <Field
-                                    error={fieldErrors.staffId}
-                                    label="Staff ID"
-                                >
-                                    <input
-                                        className={inputClassName(
-                                            Boolean(fieldErrors.staffId)
-                                        )}
-                                        maxLength={STAFF_ID_MAX_LENGTH}
-                                        onChange={(event) => {
-                                            setValues((current) => ({
-                                                ...current,
-                                                staffId: sanitizeStaffId(
-                                                    event.target.value
-                                                ),
-                                            }));
-                                        }}
-                                        placeholder="STF-001"
-                                        value={values.staffId}
-                                    />
-                                </Field>
-
-                                <Field
-                                    error={fieldErrors.designation}
-                                    label="Position"
-                                >
-                                    <input
-                                        className={inputClassName(
-                                            Boolean(fieldErrors.designation)
-                                        )}
-                                        maxLength={STAFF_DESIGNATION_MAX_LENGTH}
-                                        onChange={(event) => {
-                                            updateValues({
-                                                designation:
-                                                    sanitizeDesignation(
-                                                        event.target.value
-                                                    ),
-                                            });
-                                        }}
-                                        placeholder="Store manager"
-                                        value={values.designation}
-                                    />
-                                </Field>
-
-                                <Field
-                                    error={fieldErrors.permission}
-                                    label="Permission"
-                                >
-                                    <select
-                                        aria-label="Permission"
-                                        className={inputClassName(
-                                            Boolean(fieldErrors.permission)
-                                        )}
-                                        onChange={(event) => {
-                                            updateValues({
-                                                permission: event.target.value,
-                                            });
-                                        }}
-                                        title="Permission"
-                                        value={values.permission}
-                                    >
-                                        <option value="">
-                                            Select permission
-                                        </option>
-                                        <option value="admin">Admin</option>
-                                        <option value="superadmin">
-                                            Superadmin
-                                        </option>
-                                    </select>
-                                </Field>
-                            </div>
-                        </section>
+                        <AccountStaffSection
+                            errors={fieldErrors}
+                            onDesignationChange={(value) => {
+                                updateValues({
+                                    designation: Designation.formatInput(value),
+                                });
+                            }}
+                            onStaffIdChange={(value) => {
+                                setValues((current) => ({
+                                    ...current,
+                                    staffId: StaffId.formatInput(value),
+                                }));
+                            }}
+                            values={values}
+                        />
                     ) : null}
 
-                    <section className="grid min-h-18 gap-3 border-t border-slate-200 pt-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-                        {hasChanges ? (
-                            <Field
-                                error={fieldErrors.currentPassword}
-                                hint={currentPasswordHint}
-                                label="Password"
-                                metaPlacement="inline"
-                                required
-                            >
-                                <PasswordInput
-                                    autoComplete="current-password"
-                                    hasError={Boolean(
-                                        fieldErrors.currentPassword
-                                    )}
-                                    name="currentPassword"
-                                    onBlur={() => {
-                                        if (!hasChanges) {
-                                            return;
-                                        }
-
-                                        setFieldError(
-                                            'currentPassword',
-                                            validateRequired(
-                                                values.currentPassword,
-                                                'Current password is required'
-                                            )
-                                        );
-                                    }}
-                                    onChange={(event) => {
-                                        updateValues({
-                                            currentPassword:
-                                                sanitizePasswordInput(
-                                                    event.target.value
-                                                ),
-                                        });
-                                    }}
-                                    onToggle={() => {
-                                        setShowCurrentPassword(
-                                            (current) => !current
-                                        );
-                                    }}
-                                    placeholder="Enter your password"
-                                    showPassword={showCurrentPassword}
-                                    value={values.currentPassword}
-                                />
-                            </Field>
-                        ) : (
-                            <div className="sm:min-h-18" />
-                        )}
-
-                        <div className="flex justify-end sm:self-end">
-                            <Button
-                                disabled={isSubmitting || !hasChanges}
-                                loading={isSubmitting}
-                                type="submit"
-                                variant="primary"
-                            >
-                                Save changes
-                            </Button>
-                        </div>
-                    </section>
+                    <AccountActionsSection
+                        currentPasswordHint={currentPasswordHint}
+                        error={fieldErrors.currentPassword}
+                        hasChanges={hasChanges}
+                        isSubmitting={isSubmitting}
+                        onBlur={() => {
+                            setFieldError(
+                                'currentPassword',
+                                values.currentPassword.trim()
+                                    ? null
+                                    : 'Current password is required'
+                            );
+                        }}
+                        onChange={(value) => {
+                            updateValues({ currentPassword: value });
+                        }}
+                        onSubmitToggle={() => {
+                            setShowCurrentPassword((current) => !current);
+                        }}
+                        showPassword={showCurrentPassword}
+                        value={values.currentPassword}
+                    />
                 </form>
             </section>
         </section>
@@ -612,15 +401,15 @@ function validateProfileForm(
 
     // Re-check the core registration fields so account updates follow the same
     // basic validation rules as the original registration flow.
-    const emailError = validateEmail(values.email);
+    const emailError = Email.validate(values.email);
     if (emailError) {
         fieldErrors.email = emailError;
     }
-    const firstNameError = validateFirstName(values.firstName);
+    const firstNameError = FirstName.validate(values.firstName);
     if (firstNameError) {
         fieldErrors.firstName = firstNameError;
     }
-    const lastNameError = validateLastName(values.lastName);
+    const lastNameError = LastName.validate(values.lastName);
     if (lastNameError) {
         fieldErrors.lastName = lastNameError;
     }
@@ -642,9 +431,8 @@ function validateProfileForm(
         Object.assign(
             fieldErrors,
             collectFieldErrors<keyof ProfileValues>({
-                designation: assessDesignation(values.designation, false),
-                permission: assessPermission(values.permission),
-                staffId: assessStaffId(values.staffId, false),
+                designation: Designation.assess(values.designation, false),
+                staffId: StaffId.assess(values.staffId, false),
             })
         );
     }
@@ -653,10 +441,9 @@ function validateProfileForm(
         // Require the current password before allowing saved registration
         // details to be changed on an existing account.
         fieldErrors.currentPassword =
-            validateRequired(
-                values.currentPassword,
-                'Current password is required'
-            ) || undefined;
+            values.currentPassword.trim()
+                ? undefined
+                : 'Current password is required';
     }
 
     return fieldErrors;
@@ -689,7 +476,6 @@ function hasProfileChanges(
         'firstName',
         'lastName',
         'postcode',
-        'permission',
         'staffId',
         'state',
         'suburb',

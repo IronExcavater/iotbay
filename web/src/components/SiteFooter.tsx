@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { FaGithub } from 'react-icons/fa6';
-import { Link } from 'react-router-dom';
 
 import { getJson } from '../services/http';
-import { textButtonClassName } from './form/Button';
+import { TextAnchor, TextLink } from './form/TextLink';
 
 const DEFAULT_CONTACT_EMAIL = 'support@iotbay.com';
 const GITHUB_REPOSITORY_URL =
@@ -44,18 +43,11 @@ export default function SiteFooter() {
                         <h2 className="font-semibold text-slate-900">
                             Sitemap
                         </h2>
-                        <Link className={textButtonClassName} to="/">
-                            Home
-                        </Link>
-                        <Link className={textButtonClassName} to="/account">
-                            Account
-                        </Link>
-                        <Link
-                            className={textButtonClassName}
-                            to="/staff/sign-in?next=/admin"
-                        >
+                        <TextLink to="/">Home</TextLink>
+                        <TextLink to="/account">Account</TextLink>
+                        <TextLink to="/staff/sign-in?next=/admin">
                             Staff portal
-                        </Link>
+                        </TextLink>
                     </div>
                 </section>
 
@@ -64,12 +56,9 @@ export default function SiteFooter() {
                         <h2 className="font-semibold text-slate-900">
                             Contact
                         </h2>
-                        <a
-                            className={textButtonClassName}
-                            href={`mailto:${contactEmail}`}
-                        >
+                        <TextAnchor href={`mailto:${contactEmail}`}>
                             {contactEmail}
-                        </a>
+                        </TextAnchor>
                     </div>
                 </section>
 
@@ -79,17 +68,16 @@ export default function SiteFooter() {
                             Credits
                         </h2>
                         <p>ISD 2026</p>
-                        <a
+                        <TextAnchor
                             aria-label="IoTBay on GitHub"
-                            className={textButtonClassName}
                             href={GITHUB_REPOSITORY_URL}
                             rel="noreferrer"
-                            title="View IoTBay on GitHub"
                             target="_blank"
+                            title="View IoTBay on GitHub"
                         >
                             <FaGithub aria-hidden="true" size={20} />
                             <span>IoTBay</span>
-                        </a>
+                        </TextAnchor>
                     </div>
                 </section>
             </div>

@@ -1,5 +1,6 @@
 import {
     Children,
+    forwardRef,
     isValidElement,
     type ButtonHTMLAttributes,
     type ReactNode,
@@ -7,23 +8,26 @@ import {
 import clsx from 'clsx';
 import { FaSpinner } from 'react-icons/fa6';
 
-type ButtonVariant = 'danger' | 'primary' | 'secondary' | 'text';
+type ButtonVariant = 'danger' | 'ghost' | 'primary' | 'secondary';
 
-export const textButtonClassName =
-    'inline-flex w-fit items-center gap-1.5 text-sm text-slate-600 underline-offset-4 outline-none transition-colors hover:text-slate-900 hover:underline focus-visible:text-slate-900 focus-visible:underline focus-visible:outline-none';
-
-export function Button({
-    children,
-    className = '',
-    loading = false,
-    title,
-    variant = 'primary',
-    ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & {
-    children: ReactNode;
-    loading?: boolean;
-    variant?: ButtonVariant;
-}) {
+export const Button = forwardRef<
+    HTMLButtonElement,
+    ButtonHTMLAttributes<HTMLButtonElement> & {
+        children: ReactNode;
+        loading?: boolean;
+        variant?: ButtonVariant;
+    }
+>(function Button(
+    {
+        children,
+        className = '',
+        loading = false,
+        title,
+        variant = 'primary',
+        ...props
+    },
+    ref
+) {
     const resolvedTitle = title ?? getButtonText(children);
 
     return (
@@ -33,6 +37,7 @@ export function Button({
                 variantClassName[variant],
                 className
             )}
+            ref={ref}
             title={resolvedTitle}
             {...props}
         >
@@ -57,14 +62,14 @@ export function Button({
             ) : null}
         </button>
     );
-}
+});
 
 const variantClassName: Record<ButtonVariant, string> = {
     danger: 'border border-red-200 px-3 py-1.5 text-red-700 hover:bg-red-50',
+    ghost: 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 disabled:text-slate-300',
     primary:
         'bg-slate-900 px-4 py-2 text-white hover:bg-slate-700 disabled:bg-slate-400',
     secondary: 'border border-slate-300 px-3 py-2 hover:bg-slate-100',
-    text: textButtonClassName,
 };
 
 function getButtonText(children: ReactNode): string | undefined {

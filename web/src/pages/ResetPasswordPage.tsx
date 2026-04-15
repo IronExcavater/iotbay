@@ -1,23 +1,15 @@
 import { useEffect, useState, type SubmitEvent } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { authApi } from '../auth/api';
 import { PasswordRuleList } from '../auth/PasswordRuleList';
 import { buildSignInPath, normalizeNextPath } from '../auth/redirects';
-import {
-    assessEmail,
-    assessPassword,
-    EMAIL_MAX_LENGTH,
-    getPasswordRules,
-    PASSWORD_MAX_LENGTH,
-    sanitizeEmail,
-    sanitizePasswordInput,
-} from '../auth/validation';
-import { Button, textButtonClassName } from '../components/form/Button';
+import { Button } from '../components/form/Button';
 import { Field } from '../components/form/Field';
 import { FormNotice } from '../components/form/FormNotice';
-import { inputClassName } from '../components/form/Input';
+import { Input } from '../components/form/Input';
 import { PasswordInput } from '../components/form/PasswordInput';
+import { TextLink } from '../components/form/TextLink';
 import { PageHeader } from '../components/PageHeader';
 import { useToast } from '../components/toast/ToastProvider';
 import { downloadHtmlAndNotify } from '../services/download';
@@ -26,6 +18,8 @@ import {
     normalizeMessage,
     resolveBackendError,
 } from '../services/http';
+import { Email } from '../types/Email';
+import { Password } from '../types/Password';
 import {
     collectFieldErrors,
     hasFieldErrors,
@@ -61,7 +55,7 @@ export default function ResetPasswordPage() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const signInPath = buildSignInPath({ email, nextPath, userType });
-    const passwordRules = getPasswordRules(password);
+    const passwordRules = Password.rules(password);
 
     useEffect(() => {
         setEmail(initialEmail);
@@ -112,7 +106,7 @@ export default function ResetPasswordPage() {
     }
 
     async function submitResetRequest() {
-        const normalizedEmail = assessEmail(email).value;
+        const normalizedEmail = Email.assess(email).value;
         if (!normalizedEmail) {
             return;
         }
@@ -184,7 +178,7 @@ export default function ResetPasswordPage() {
                             <PasswordInput
                                 autoComplete="new-password"
                                 hasError={Boolean(fieldErrors.password)}
-                                maxLength={PASSWORD_MAX_LENGTH}
+                                maxLength={Password.MAX_LENGTH}
                                 name="newPassword"
                                 onBlur={() => {
                                     if (!password) {
@@ -195,7 +189,7 @@ export default function ResetPasswordPage() {
                                         return;
                                     }
 
-                                    const assessment = assessPassword(password);
+                                    const assessment = Password.assess(password);
                                     setFieldError(
                                         'password',
                                         assessment.error
@@ -205,7 +199,7 @@ export default function ResetPasswordPage() {
                                 }}
                                 onChange={(event) => {
                                     handlePasswordChange(
-                                        sanitizePasswordInput(
+                                        Password.formatInput(
                                             event.target.value
                                         )
                                     );
@@ -229,7 +223,7 @@ export default function ResetPasswordPage() {
                             <PasswordInput
                                 autoComplete="new-password"
                                 hasError={Boolean(fieldErrors.confirmPassword)}
-                                maxLength={PASSWORD_MAX_LENGTH}
+                                maxLength={Password.MAX_LENGTH}
                                 name="confirmPassword"
                                 onBlur={() => {
                                     setFieldError(
@@ -242,7 +236,7 @@ export default function ResetPasswordPage() {
                                 }}
                                 onChange={(event) => {
                                     handleConfirmPasswordChange(
-                                        sanitizePasswordInput(
+                                        Password.formatInput(
                                             event.target.value
                                         )
                                     );
@@ -260,21 +254,19 @@ export default function ResetPasswordPage() {
                     </>
                 ) : (
                     <Field error={fieldErrors.email} label="Email" required>
-                        <input
+                        <Input
                             autoComplete="email"
-                            className={inputClassName(
-                                Boolean(fieldErrors.email)
-                            )}
-                            maxLength={EMAIL_MAX_LENGTH}
+                            hasError={Boolean(fieldErrors.email)}
+                                maxLength={Email.MAX_LENGTH}
                             name="email"
                             onBlur={() => {
                                 setFieldError(
                                     'email',
-                                    assessEmail(email).error
+                                    Email.assess(email).error
                                 );
                             }}
                             onChange={(event) => {
-                                setEmail(sanitizeEmail(event.target.value));
+                                setEmail(Email.formatInput(event.target.value));
                                 setFieldError('email');
                                 setFormError(null);
                             }}
@@ -294,9 +286,7 @@ export default function ResetPasswordPage() {
                     {submitLabel}
                 </Button>
 
-                <Link className={textButtonClassName} to={signInPath}>
-                    Back to sign in
-                </Link>
+                <TextLink to={signInPath}>Back to sign in</TextLink>
             </form>
         </section>
     );
@@ -317,11 +307,11 @@ function getResetFieldErrors({
 }) {
     if (!isResetMode) {
         return collectFieldErrors<ResetFieldName>({
-            email: assessEmail(email),
+            email: Email.assess(email),
         });
     }
 
-    const passwordAssessment = assessPassword(password);
+    const passwordAssessment = Password.assess(password);
 
     return collectFieldErrors<ResetFieldName>({
         confirmPassword: getResetConfirmPasswordError(

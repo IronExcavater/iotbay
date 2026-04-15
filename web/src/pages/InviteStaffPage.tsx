@@ -1,26 +1,24 @@
 import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 import { authApi } from '../auth/api';
+import { useAuth } from '../auth/AuthProvider';
 import {
-    assessDesignation,
-    assessEmail,
-    assessPermission,
-    assessStaffId,
-    sanitizeDesignation,
-    sanitizeEmail,
-    sanitizeStaffId,
-    EMAIL_MAX_LENGTH,
-    STAFF_DESIGNATION_MAX_LENGTH,
-    STAFF_ID_MAX_LENGTH,
-} from '../auth/validation';
-import { Button } from '../components/form/Button';
+    Button,
+} from '../components/form/Button';
 import { Field } from '../components/form/Field';
 import { FormNotice } from '../components/form/FormNotice';
-import { inputClassName } from '../components/form/Input';
+import { Input } from '../components/form/Input';
+import {
+    MenuSelect,
+} from '../components/form/MenuSelect';
+import { OverlayDialog } from '../components/overlay/OverlayDialog';
 import { useToast } from '../components/toast/ToastProvider';
 import { downloadHtmlAndNotify } from '../services/download';
 import { toErrorMessage } from '../services/http';
+import { Email } from '../types/Email';
+import { Designation, Permission, StaffId } from '../types/Staff';
+import { manageablePermissionOptions } from '../users/permissions';
 import {
     collectFieldErrors,
     hasFieldErrors,
@@ -45,6 +43,8 @@ const DEFAULT_VALUES: InviteStaffValues = {
 };
 
 export default function InviteStaffPage() {
+    const navigate = useNavigate();
+    const { user } = useAuth();
     const { showToast } = useToast();
     const [values, setValues] = useState(DEFAULT_VALUES);
     const [fieldErrors, setFieldErrors] = useState<InviteStaffFieldErrors>({});
@@ -55,11 +55,17 @@ export default function InviteStaffPage() {
         event.preventDefault();
         setFormError(null);
 
+        // Assess once, derive both validation errors and the payload values.
+        const designation = Designation.assess(values.designation);
+        const email = Email.assess(values.email);
+        const permission = Permission.assess(values.permission, true);
+        const staffId = StaffId.assess(values.staffId);
+
         const nextFieldErrors = collectFieldErrors<InviteStaffFieldName>({
-            designation: assessDesignation(values.designation),
-            email: assessEmail(values.email),
-            permission: assessPermission(values.permission, true),
-            staffId: assessStaffId(values.staffId),
+            designation,
+            email,
+            permission,
+            staffId,
         });
 
         setFieldErrors(nextFieldErrors);
@@ -67,17 +73,8 @@ export default function InviteStaffPage() {
             return;
         }
 
-        const designation = assessDesignation(values.designation);
-        const email = assessEmail(values.email);
-        const permission = assessPermission(values.permission, true);
-        const staffId = assessStaffId(values.staffId);
-
-        if (
-            !designation.value ||
-            !email.value ||
-            !permission.value ||
-            !staffId.value
-        ) {
+        // Type-narrowing guard: if there are no field errors the values must be present.
+        if (!designation.value || !email.value || !permission.value || !staffId.value) {
             return;
         }
 
@@ -95,6 +92,7 @@ export default function InviteStaffPage() {
             });
             setValues(DEFAULT_VALUES);
             setFieldErrors({});
+            navigate('/admin/users');
         } catch (error) {
             setFormError(
                 toErrorMessage(error, 'Unable to invite staff member')
@@ -105,18 +103,13 @@ export default function InviteStaffPage() {
     }
 
     return (
-        <section className="mx-auto grid max-w-2xl gap-6">
-            <header className="grid gap-2">
-                <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
-                    Invite staff
-                </h2>
-                <p className="text-sm text-slate-600">
-                    Send a staff registration link that lets the invited team
-                    member finish creating their account.
-                </p>
-            </header>
-
-            <section className="rounded border border-slate-200 bg-white p-5">
+        <OverlayDialog
+            onClose={() => {
+                navigate('/admin/users');
+            }}
+            title="Invite staff"
+        >
+            <section>
                 <form className="grid gap-4" onSubmit={handleSubmit}>
                     {formError ? (
                         <FormNotice tone="error">{formError}</FormNotice>
@@ -127,18 +120,18 @@ export default function InviteStaffPage() {
                         label="Staff email"
                         required
                     >
-                        <input
-                            autoComplete="email"
-                            className={inputClassName(
-                                Boolean(fieldErrors.email)
-                            )}
-                            maxLength={EMAIL_MAX_LENGTH}
-                            onChange={(event) => {
-                                setValues((current) => ({
-                                    ...current,
-                                    email: sanitizeEmail(event.target.value),
-                                }));
-                            }}
+                            <Input
+                                autoComplete="email"
+                                hasError={Boolean(fieldErrors.email)}
+                                maxLength={Email.MAX_LENGTH}
+                                onChange={(event) => {
+                                    setValues((current) => ({
+                                        ...current,
+                                        email: Email.formatInput(
+                                            event.target.value
+                                        ),
+                                    }));
+                                }}
                             placeholder="staff.member@iotbay.com"
                             value={values.email}
                         />
@@ -150,15 +143,13 @@ export default function InviteStaffPage() {
                             label="Staff ID"
                             required
                         >
-                            <input
-                                className={inputClassName(
-                                    Boolean(fieldErrors.staffId)
-                                )}
-                                maxLength={STAFF_ID_MAX_LENGTH}
+                            <Input
+                                hasError={Boolean(fieldErrors.staffId)}
+                                maxLength={StaffId.MAX_LENGTH}
                                 onChange={(event) => {
                                     setValues((current) => ({
                                         ...current,
-                                        staffId: sanitizeStaffId(
+                                        staffId: StaffId.formatInput(
                                             event.target.value
                                         ),
                                     }));
@@ -173,15 +164,13 @@ export default function InviteStaffPage() {
                             label="Position"
                             required
                         >
-                            <input
-                                className={inputClassName(
-                                    Boolean(fieldErrors.designation)
-                                )}
-                                maxLength={STAFF_DESIGNATION_MAX_LENGTH}
+                            <Input
+                                hasError={Boolean(fieldErrors.designation)}
+                                maxLength={Designation.MAX_LENGTH}
                                 onChange={(event) => {
                                     setValues((current) => ({
                                         ...current,
-                                        designation: sanitizeDesignation(
+                                        designation: Designation.formatInput(
                                             event.target.value
                                         ),
                                     }));
@@ -192,30 +181,23 @@ export default function InviteStaffPage() {
                         </Field>
                     </div>
 
-                    <Field
+                    <MenuSelect
                         error={fieldErrors.permission}
                         label="Permission"
+                        onChange={(value) => {
+                            setValues((current) => ({
+                                ...current,
+                                permission: value,
+                            }));
+                        }}
+                        options={manageablePermissionOptions(user)}
                         required
-                    >
-                        <select
-                            className={inputClassName(
-                                Boolean(fieldErrors.permission)
-                            )}
-                            onChange={(event) => {
-                                setValues((current) => ({
-                                    ...current,
-                                    permission: event.target.value,
-                                }));
-                            }}
-                            value={values.permission}
-                        >
-                            <option value="admin">Admin</option>
-                            <option value="superadmin">Superadmin</option>
-                        </select>
-                    </Field>
+                        value={values.permission}
+                    />
 
-                    <div className="flex flex-wrap items-center gap-3 pt-2">
+                    <div className="grid gap-3 pt-2">
                         <Button
+                            className="w-full"
                             disabled={isSubmitting}
                             loading={isSubmitting}
                             type="submit"
@@ -223,14 +205,9 @@ export default function InviteStaffPage() {
                         >
                             Send invite
                         </Button>
-                        <Link to="/admin/users">
-                            <Button type="button" variant="secondary">
-                                Back to users
-                            </Button>
-                        </Link>
                     </div>
                 </form>
             </section>
-        </section>
+        </OverlayDialog>
     );
 }
