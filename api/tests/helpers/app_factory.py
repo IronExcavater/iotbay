@@ -4,6 +4,7 @@ from shutil import copyfile
 from flask.testing import FlaskClient
 from src.addresses.service import AddressService
 from src.app import create_app
+from src.common.app import services_from
 from src.config import load_app_config
 
 TEST_CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "test.json"
@@ -24,7 +25,7 @@ def create_test_app_client(
     app = create_app(str(config_path))
     app.testing = True
     if address_service is not None:
-        app.extensions["address_service"] = address_service
+        services_from(app).address = address_service
 
     client = app.test_client()
     api_key = app.config.get("API_ACCESS_KEY")

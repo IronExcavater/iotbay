@@ -1,8 +1,7 @@
 from flask import Blueprint
 from src.addresses.google_maps_api import AddressServiceUnavailableError
 from src.addresses.requests import AddressResolveQuery, AddressSuggestQuery
-from src.addresses.service import AddressService
-from src.common.app import app_extension
+from src.common.app import services
 from src.common.web import parse_query
 
 addresses_bp = Blueprint("addresses", __name__)
@@ -14,11 +13,10 @@ def suggest_addresses():
     if len(query.q) < 3:
         return {"items": []}, 200
 
-    service = app_extension("address_service", AddressService)
     try:
         items = [
             item.to_dict()
-            for item in service.suggest(
+            for item in services().address.suggest(
                 query=query.q,
                 country=query.country or None,
                 language=query.language or None,
@@ -35,8 +33,7 @@ def resolve_address():
     if not query.id:
         return {"error": "address id is required", "code": "ADDRESS_INVALID"}, 400
 
-    service = app_extension("address_service", AddressService)
-    address = service.resolve(
+    address = services().address.resolve(
         place_id=query.id,
         country=query.country or None,
         language=query.language or None,
