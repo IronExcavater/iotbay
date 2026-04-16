@@ -1,8 +1,11 @@
 from http import HTTPStatus
+from uuid import UUID
 
 from flask import Blueprint, Response, make_response, request
 from flask.typing import ResponseReturnValue
 from src.auth.requests import (
+    AdminSetUserStatusRequest,
+    AdminUpdateUserRequest,
     ChangePendingEmailRequest,
     CompleteStaffInvitationRequest,
     ForgotPasswordRequest,
@@ -14,19 +17,18 @@ from src.auth.requests import (
     UpdateProfileRequest,
     VerifyEmailRequest,
 )
-from src.auth.service import AuthService
 from src.auth.session import (
+    current_authenticated_staff_user,
     current_authenticated_user,
     login_required,
     request_session_token,
     session_cookie_name,
     staff_permission_required,
 )
-from src.common.app import app_bool, app_extension, app_int
-from src.common.web import parse_request, request_locale
+from src.common.app import app_bool, app_int, services
+from src.common.web import ApiError, parse_request, request_locale
 from src.emails.service import DeliveredEmailArtifact
 from src.users.models import STAFF_PERMISSION_SUPERADMIN, User
-from src.users.repository import UserRepository
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -90,9 +92,20 @@ def _download_payload(artifact: DeliveredEmailArtifact) -> dict[str, object]:
     }
 
 
+def _parse_user_id(user_id: str) -> bytes:
+    try:
+        return UUID(user_id).bytes
+    except ValueError as error:
+        raise ApiError(
+            "invalid user",
+            HTTPStatus.BAD_REQUEST,
+            code="USER_NOT_FOUND",
+        ) from error
+
+
 @auth_bp.post("/register")
 def register() -> ResponseReturnValue:
-    result = app_extension("auth_service", AuthService).register_customer(
+    result = services().auth.register_customer(
         parse_request(RegisterRequest),
         locale=request_locale(),
     )
@@ -104,7 +117,7 @@ def register() -> ResponseReturnValue:
 @auth_bp.post("/admin/staff-invitations")
 @staff_permission_required(STAFF_PERMISSION_SUPERADMIN)
 def invite_staff() -> ResponseReturnValue:
-    result = app_extension("auth_service", AuthService).invite_staff(
+    result = services().auth.invite_staff(
         parse_request(InviteStaffRequest),
         locale=request_locale(),
     )
@@ -116,7 +129,7 @@ def invite_staff() -> ResponseReturnValue:
 
 @auth_bp.post("/login")
 def login() -> ResponseReturnValue:
-    auth_service = app_extension("auth_service", AuthService)
+    auth_service = services().auth
     # Authenticate the submitted credentials first, then attach a new session
     # cookie so subsequent requests can be matched back to this user.
     user = auth_service.authenticate(parse_request(LoginRequest))
@@ -127,7 +140,7 @@ def login() -> ResponseReturnValue:
 
 @auth_bp.post("/verify-email")
 def verify_email() -> ResponseReturnValue:
-    auth_service = app_extension("auth_service", AuthService)
+    auth_service = services().auth
     updated_user = auth_service.verify_email(parse_request(VerifyEmailRequest).token)
     response = make_response(_user_payload(updated_user), HTTPStatus.OK)
     _set_session_cookie(response, auth_service.start_session(updated_user))
@@ -137,13 +150,13 @@ def verify_email() -> ResponseReturnValue:
 @auth_bp.get("/staff-invitation")
 def staff_invitation() -> ResponseReturnValue:
     token = request.args.get("token", "").strip()
-    user = app_extension("auth_service", AuthService).invited_staff(token)
+    user = services().auth.invited_staff(token)
     return _user_payload(user), HTTPStatus.OK
 
 
 @auth_bp.post("/staff-register")
 def complete_staff_registration() -> ResponseReturnValue:
-    auth_service = app_extension("auth_service", AuthService)
+    auth_service = services().auth
     user = auth_service.complete_staff_invitation(
         parse_request(CompleteStaffInvitationRequest)
     )
@@ -154,7 +167,7 @@ def complete_staff_registration() -> ResponseReturnValue:
 
 @auth_bp.post("/forgot-password")
 def forgot_password() -> ResponseReturnValue:
-    artifact = app_extension("auth_service", AuthService).request_password_reset(
+    artifact = services().auth.request_password_reset(
         parse_request(ForgotPasswordRequest),
         locale=request_locale(),
     )
@@ -169,7 +182,7 @@ def forgot_password() -> ResponseReturnValue:
 
 @auth_bp.post("/resend-verification")
 def resend_verification() -> ResponseReturnValue:
-    artifact = app_extension("auth_service", AuthService).resend_verification(
+    artifact = services().auth.resend_verification(
         parse_request(ResendVerificationRequest),
         locale=request_locale(),
     )
@@ -181,7 +194,7 @@ def resend_verification() -> ResponseReturnValue:
 
 @auth_bp.post("/change-pending-email")
 def change_pending_email() -> ResponseReturnValue:
-    result = app_extension("auth_service", AuthService).change_pending_email(
+    result = services().auth.change_pending_email(
         parse_request(ChangePendingEmailRequest),
         locale=request_locale(),
     )
@@ -193,9 +206,7 @@ def change_pending_email() -> ResponseReturnValue:
 
 @auth_bp.post("/reset-password")
 def reset_password() -> ResponseReturnValue:
-    app_extension("auth_service", AuthService).reset_password(
-        parse_request(ResetPasswordRequest)
-    )
+    services().auth.reset_password(parse_request(ResetPasswordRequest))
     return {"ok": True}, HTTPStatus.OK
 
 
@@ -208,15 +219,36 @@ def me() -> ResponseReturnValue:
 @auth_bp.get("/admin/users")
 @staff_permission_required(STAFF_PERMISSION_SUPERADMIN)
 def list_users() -> ResponseReturnValue:
-    repository = app_extension("user_repository", UserRepository)
-    users = [user.to_dict() for user in repository.list_users()]
+    users = [user.to_dict() for user in services().user_repository.list_users()]
     return {"items": users}, HTTPStatus.OK
+
+
+@auth_bp.patch("/admin/users/<string:user_id>")
+@staff_permission_required(STAFF_PERMISSION_SUPERADMIN)
+def update_managed_user(user_id: str) -> ResponseReturnValue:
+    user = services().auth.update_managed_user(
+        actor=current_authenticated_staff_user(STAFF_PERMISSION_SUPERADMIN),
+        target_user_id=_parse_user_id(user_id),
+        data=parse_request(AdminUpdateUserRequest),
+    )
+    return _user_payload(user), HTTPStatus.OK
+
+
+@auth_bp.patch("/admin/users/<string:user_id>/status")
+@staff_permission_required(STAFF_PERMISSION_SUPERADMIN)
+def update_managed_user_status(user_id: str) -> ResponseReturnValue:
+    user = services().auth.update_managed_user_status(
+        actor=current_authenticated_staff_user(STAFF_PERMISSION_SUPERADMIN),
+        target_user_id=_parse_user_id(user_id),
+        data=parse_request(AdminSetUserStatusRequest),
+    )
+    return _user_payload(user), HTTPStatus.OK
 
 
 @auth_bp.patch("/me")
 @login_required
 def update_me() -> ResponseReturnValue:
-    result = app_extension("auth_service", AuthService).update_user(
+    result = services().auth.update_user(
         user=current_authenticated_user(),
         data=parse_request(UpdateProfileRequest),
         locale=request_locale(),
@@ -236,7 +268,7 @@ def update_me() -> ResponseReturnValue:
 def logout() -> ResponseReturnValue:
     # Remove the persisted session record for the current cookie and instruct
     # the browser to drop the auth cookie as part of logout.
-    app_extension("auth_service", AuthService).logout(request_session_token())
+    services().auth.logout(request_session_token())
     response = make_response("", HTTPStatus.NO_CONTENT)
     _clear_session_cookie(response)
     return response, HTTPStatus.NO_CONTENT
