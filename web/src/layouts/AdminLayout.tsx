@@ -81,7 +81,7 @@ export default function AdminLayout() {
                 <div
                     className={clsx(
                         'border-b border-slate-200 px-2 py-3',
-                        isCollapsed ? 'flex justify-center' : 'flex items-center'
+                        'flex items-center'
                     )}
                 >
                     {!isCollapsed ? (
@@ -133,10 +133,8 @@ export default function AdminLayout() {
                             <NavLink
                                 className={({ isActive }) =>
                                     clsx(
-                                        'flex h-11 items-center rounded-lg text-sm font-medium',
-                                        isCollapsed
-                                            ? 'justify-center px-0'
-                                            : 'justify-start gap-3 px-3',
+                                        'flex h-11 items-center rounded-lg px-3 text-sm font-medium',
+                                        !isCollapsed && 'gap-3',
                                         isActive
                                             ? 'bg-slate-900 text-white'
                                             : 'text-slate-700 hover:bg-slate-100'
@@ -150,9 +148,7 @@ export default function AdminLayout() {
                                     aria-hidden="true"
                                     className="size-4 shrink-0"
                                 />
-                                {!isCollapsed ? (
-                                    <span className="truncate">{item.label}</span>
-                                ) : null}
+                                {!isCollapsed ? <span>{item.label}</span> : null}
                             </NavLink>
                         );
                     })}
