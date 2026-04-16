@@ -141,6 +141,16 @@ function mapMoneyCaretPosition({
     rawValue: string;
     selectionStart: number;
 }) {
+    const rawIntegerPart = rawValue.split(/[.,]/, 1)[0];
+    const firstSignificantDigitIndex = rawIntegerPart.search(/[1-9]/);
+
+    if (
+        firstSignificantDigitIndex > 0 &&
+        selectionStart <= firstSignificantDigitIndex
+    ) {
+        return 0;
+    }
+
     const digitsBeforeCaret = countDigits(rawValue.slice(0, selectionStart));
     const rawHasDecimalBeforeCaret = /[.,]/.test(rawValue.slice(0, selectionStart));
     const decimalIndex = nextValue.search(/[.,]/);

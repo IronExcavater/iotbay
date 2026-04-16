@@ -199,7 +199,7 @@ export function AccountActionsSection({
             className={clsx(
                 'border-t border-slate-200 pt-6',
                 hasChanges
-                    ? 'grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end'
+                    ? 'grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start'
                     : 'flex justify-end'
             )}
         >
@@ -208,7 +208,7 @@ export function AccountActionsSection({
                     error={error}
                     hint={currentPasswordHint}
                     label="Password"
-                    metaPlacement="inline"
+                    metaPlacement="below"
                     required
                 >
                     <PasswordInput
@@ -227,14 +227,16 @@ export function AccountActionsSection({
                 </Field>
             ) : null}
 
-            <Button
-                disabled={isSubmitting || !hasChanges}
-                loading={isSubmitting}
-                type="submit"
-                variant="primary"
-            >
-                Save changes
-            </Button>
+            <div className={clsx(hasChanges && 'sm:pt-6')}>
+                <Button
+                    disabled={isSubmitting || !hasChanges}
+                    loading={isSubmitting}
+                    type="submit"
+                    variant="primary"
+                >
+                    Save changes
+                </Button>
+            </div>
         </section>
     );
 }
