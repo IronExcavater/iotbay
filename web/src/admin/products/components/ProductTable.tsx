@@ -1,8 +1,4 @@
-import {
-    FaArrowsRotate,
-    FaPenToSquare,
-    FaTrashCan,
-} from 'react-icons/fa6';
+import { FaArrowsRotate, FaPenToSquare, FaTrashCan } from 'react-icons/fa6';
 
 import { Button } from '../../../components/form/Button';
 import { SearchInput } from '../../../components/form/SearchInput';
@@ -59,7 +55,10 @@ export function ProductTable({
                         type="button"
                         variant="ghost"
                     >
-                        <FaArrowsRotate aria-hidden="true" className="size-3.5" />
+                        <FaArrowsRotate
+                            aria-hidden="true"
+                            className="size-3.5"
+                        />
                     </Button>
                 </div>
 
@@ -163,12 +162,14 @@ export function ProductTable({
                                                 {
                                                     icon: FaPenToSquare,
                                                     label: 'Edit',
-                                                    onSelect: () => onEdit(product),
+                                                    onSelect: () =>
+                                                        onEdit(product),
                                                 },
                                                 {
                                                     icon: FaTrashCan,
                                                     label: 'Delete',
-                                                    onSelect: () => onDelete(product),
+                                                    onSelect: () =>
+                                                        onDelete(product),
                                                     tone: 'danger',
                                                 },
                                             ]}

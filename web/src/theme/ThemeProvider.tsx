@@ -21,10 +21,9 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
     const [mode, setMode] = useState<ThemeMode>(() => readInitialTheme());
-    const [resolvedMode, setResolvedMode] = useState<Exclude<
-        ThemeMode,
-        'system'
-    >>(() => resolveSystemMode());
+    const [resolvedMode, setResolvedMode] = useState<
+        Exclude<ThemeMode, 'system'>
+    >(() => resolveSystemMode());
 
     useEffect(() => {
         const nextResolvedMode = mode === 'system' ? resolveSystemMode() : mode;

@@ -84,7 +84,9 @@ export default function AdminProductsPage() {
             }
         } catch (error) {
             if (!signal?.aborted) {
-                setProductsError(toErrorMessage(error, 'Unable to load products'));
+                setProductsError(
+                    toErrorMessage(error, 'Unable to load products')
+                );
             }
         } finally {
             if (!signal?.aborted) {

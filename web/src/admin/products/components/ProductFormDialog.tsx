@@ -4,7 +4,10 @@ import { FormNotice } from '../../../components/form/FormNotice';
 import { Input } from '../../../components/form/Input';
 import { MoneyField } from '../../../components/form/MoneyField';
 import { OverlayDialog } from '../../../components/overlay/OverlayDialog';
-import type { ProductFieldErrors, ProductFormValues } from '../../../products/form';
+import type {
+    ProductFieldErrors,
+    ProductFormValues,
+} from '../../../products/form';
 
 interface ProductFormDialogProps {
     codeInput: {
@@ -78,7 +81,9 @@ export function ProductFormDialog({
                 <MoneyField
                     error={fieldErrors.price}
                     hint={
-                        fieldErrors.price ? undefined : 'Enter Australian dollars'
+                        fieldErrors.price
+                            ? undefined
+                            : 'Enter Australian dollars'
                     }
                     inputRef={priceInput.inputRef}
                     label="Price"

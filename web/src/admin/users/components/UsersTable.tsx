@@ -63,7 +63,10 @@ export function UsersTable({
                         type="button"
                         variant="ghost"
                     >
-                        <FaArrowsRotate aria-hidden="true" className="size-3.5" />
+                        <FaArrowsRotate
+                            aria-hidden="true"
+                            className="size-3.5"
+                        />
                     </Button>
                 </div>
 
@@ -153,7 +156,8 @@ export function UsersTable({
                                             ) : null}
                                             {managedUser.staffId ? (
                                                 <span className="text-xs text-slate-500">
-                                                    Staff ID: {managedUser.staffId}
+                                                    Staff ID:{' '}
+                                                    {managedUser.staffId}
                                                 </span>
                                             ) : null}
                                         </TableStackCell>
@@ -175,7 +179,9 @@ export function UsersTable({
                                                     {managedUser.addressLabel}
                                                 </span>
                                             ) : managedUser.country ? (
-                                                <span>{managedUser.country}</span>
+                                                <span>
+                                                    {managedUser.country}
+                                                </span>
                                             ) : (
                                                 <span>No contact details</span>
                                             )}
@@ -185,7 +191,8 @@ export function UsersTable({
                                         <ActionMenu
                                             items={[
                                                 {
-                                                    disabled: !canEdit(managedUser),
+                                                    disabled:
+                                                        !canEdit(managedUser),
                                                     icon: FaPenToSquare,
                                                     label: 'Edit',
                                                     onSelect: () =>

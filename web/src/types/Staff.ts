@@ -48,9 +48,9 @@ export class StaffId {
     constructor(readonly value: string) {}
 
     static assess(value: string, required = true) {
-        return (required ? STAFF_ID_VALIDATOR : OPTIONAL_STAFF_ID_VALIDATOR).assess(
-            value
-        );
+        return (
+            required ? STAFF_ID_VALIDATOR : OPTIONAL_STAFF_ID_VALIDATOR
+        ).assess(value);
     }
 
     static formatInput(value: string) {
@@ -79,7 +79,9 @@ export class Permission {
 
     static assess(value: string, required = false) {
         return (
-            required ? REQUIRED_PERMISSION_VALIDATOR : OPTIONAL_PERMISSION_VALIDATOR
+            required
+                ? REQUIRED_PERMISSION_VALIDATOR
+                : OPTIONAL_PERMISSION_VALIDATOR
         ).assess(value);
     }
 }

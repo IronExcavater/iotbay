@@ -21,7 +21,9 @@ export function canEditManagedUser(actor: User | null, target: ManagedUser) {
         return true;
     }
 
-    return permissionRank(target.permission) <= permissionRank(actor.permission);
+    return (
+        permissionRank(target.permission) <= permissionRank(actor.permission)
+    );
 }
 
 export function canChangeManagedUserStatus(

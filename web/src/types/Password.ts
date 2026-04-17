@@ -43,7 +43,12 @@ export class Password {
             lastName?: string;
         } = {}
     ) {
-        return parseValue(this, value, (password) => new Password(password), context);
+        return parseValue(
+            this,
+            value,
+            (password) => new Password(password),
+            context
+        );
     }
 
     static rules(

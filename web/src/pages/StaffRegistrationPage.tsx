@@ -207,14 +207,17 @@ export default function StaffRegistrationPage() {
                                     required
                                 >
                                     <Input
-                                        hasError={Boolean(fieldErrors.firstName)}
+                                        hasError={Boolean(
+                                            fieldErrors.firstName
+                                        )}
                                         maxLength={FirstName.MAX_LENGTH}
                                         onChange={(event) => {
                                             setValues((current) => ({
                                                 ...current,
-                                                firstName: FirstName.formatInput(
-                                                    event.target.value
-                                                ),
+                                                firstName:
+                                                    FirstName.formatInput(
+                                                        event.target.value
+                                                    ),
                                             }));
                                         }}
                                         placeholder="Taylor"
@@ -293,9 +296,10 @@ export default function StaffRegistrationPage() {
                                     onChange={(event) => {
                                         setValues((current) => ({
                                             ...current,
-                                            confirmPassword: Password.formatInput(
-                                                event.target.value
-                                            ),
+                                            confirmPassword:
+                                                Password.formatInput(
+                                                    event.target.value
+                                                ),
                                         }));
                                     }}
                                     onToggle={() => {

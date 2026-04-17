@@ -3,15 +3,11 @@ import { useNavigate } from 'react-router-dom';
 
 import { authApi } from '../auth/api';
 import { useAuth } from '../auth/AuthProvider';
-import {
-    Button,
-} from '../components/form/Button';
+import { Button } from '../components/form/Button';
 import { Field } from '../components/form/Field';
 import { FormNotice } from '../components/form/FormNotice';
 import { Input } from '../components/form/Input';
-import {
-    MenuSelect,
-} from '../components/form/MenuSelect';
+import { MenuSelect } from '../components/form/MenuSelect';
 import { OverlayDialog } from '../components/overlay/OverlayDialog';
 import { useToast } from '../components/toast/ToastProvider';
 import { downloadHtmlAndNotify } from '../services/download';
@@ -74,7 +70,12 @@ export default function InviteStaffPage() {
         }
 
         // Type-narrowing guard: if there are no field errors the values must be present.
-        if (!designation.value || !email.value || !permission.value || !staffId.value) {
+        if (
+            !designation.value ||
+            !email.value ||
+            !permission.value ||
+            !staffId.value
+        ) {
             return;
         }
 
@@ -120,18 +121,18 @@ export default function InviteStaffPage() {
                         label="Staff email"
                         required
                     >
-                            <Input
-                                autoComplete="email"
-                                hasError={Boolean(fieldErrors.email)}
-                                maxLength={Email.MAX_LENGTH}
-                                onChange={(event) => {
-                                    setValues((current) => ({
-                                        ...current,
-                                        email: Email.formatInput(
-                                            event.target.value
-                                        ),
-                                    }));
-                                }}
+                        <Input
+                            autoComplete="email"
+                            hasError={Boolean(fieldErrors.email)}
+                            maxLength={Email.MAX_LENGTH}
+                            onChange={(event) => {
+                                setValues((current) => ({
+                                    ...current,
+                                    email: Email.formatInput(
+                                        event.target.value
+                                    ),
+                                }));
+                            }}
                             placeholder="staff.member@iotbay.com"
                             value={values.email}
                         />

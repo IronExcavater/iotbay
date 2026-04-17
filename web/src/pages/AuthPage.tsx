@@ -1,9 +1,5 @@
 import { useEffect, useState, type ChangeEvent, type SubmitEvent } from 'react';
-import {
-    useLocation,
-    useNavigate,
-    useSearchParams,
-} from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { setAddressField, type AddressFieldName } from '../addresses/form';
 import { useAuth } from '../auth/AuthProvider';
@@ -298,7 +294,10 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
                         onBlur={() => {
                             // Validate the normalized email after the user leaves the field
                             // so sign-up catches formatting issues early.
-                            setFieldError('email', Email.validate(values.email));
+                            setFieldError(
+                                'email',
+                                Email.validate(values.email)
+                            );
                         }}
                         onChange={handleEmailChange}
                         placeholder="jane.doe@email.com"
@@ -365,9 +364,7 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
                         />
                     </Field>
                 ) : (
-                    <TextLink to={forgotPasswordPath}>
-                        Forgot password
-                    </TextLink>
+                    <TextLink to={forgotPasswordPath}>Forgot password</TextLink>
                 )}
 
                 <Button

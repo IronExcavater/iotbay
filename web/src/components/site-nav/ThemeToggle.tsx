@@ -9,11 +9,7 @@ interface ThemeToggleProps {
     open: boolean;
 }
 
-export function ThemeToggle({
-    mode,
-    onOpenChange,
-    open,
-}: ThemeToggleProps) {
+export function ThemeToggle({ mode, onOpenChange, open }: ThemeToggleProps) {
     const label = mode === 'system' ? 'Theme: system' : `Theme: ${mode}`;
 
     return (

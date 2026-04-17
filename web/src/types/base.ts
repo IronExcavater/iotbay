@@ -14,7 +14,10 @@ export interface InputValueType<TContext = void> {
 }
 
 export interface AssessValueType<TInput, TOutput, TContext = void> {
-    assess(value: TInput, context?: TContext): ValidationResult<TInput, TOutput>;
+    assess(
+        value: TInput,
+        context?: TContext
+    ): ValidationResult<TInput, TOutput>;
 }
 
 export function parseValue<TInput, TOutput, TInstance, TContext = void>(
