@@ -70,9 +70,7 @@ export class MoneyValidator extends NumberValidator<string> {
 
         const integerPart =
             trimLeadingZeroes(
-                sanitized
-                    .slice(0, separatorIndex)
-                    .replace(/[.,]/g, '')
+                sanitized.slice(0, separatorIndex).replace(/[.,]/g, '')
             ) || '0';
         const fractionalPart = sanitized
             .slice(separatorIndex + 1)
@@ -152,7 +150,9 @@ function mapMoneyCaretPosition({
     }
 
     const digitsBeforeCaret = countDigits(rawValue.slice(0, selectionStart));
-    const rawHasDecimalBeforeCaret = /[.,]/.test(rawValue.slice(0, selectionStart));
+    const rawHasDecimalBeforeCaret = /[.,]/.test(
+        rawValue.slice(0, selectionStart)
+    );
     const decimalIndex = nextValue.search(/[.,]/);
 
     if (digitsBeforeCaret === 0) {

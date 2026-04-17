@@ -19,7 +19,9 @@ export type ManagedUserFieldErrors = Partial<
     Record<ManagedUserFieldName, string>
 >;
 
-export function toManagedUserFormValues(user: ManagedUser): ManagedUserFormValues {
+export function toManagedUserFormValues(
+    user: ManagedUser
+): ManagedUserFormValues {
     return {
         designation: user.designation ?? '',
         email: user.email,
@@ -76,12 +78,12 @@ export function assessManagedUserForm(
     return {
         fieldErrors,
         payload: {
-            designation: isStaff ? designation.value ?? '' : '',
+            designation: isStaff ? (designation.value ?? '') : '',
             email: email.value ?? '',
             firstName: firstName.value ?? '',
             lastName: lastName.value ?? '',
-            permission: isStaff ? permission.value ?? '' : '',
-            staffId: isStaff ? staffId.value ?? '' : '',
+            permission: isStaff ? (permission.value ?? '') : '',
+            staffId: isStaff ? (staffId.value ?? '') : '',
         } satisfies UpdateManagedUserInput,
     };
 }

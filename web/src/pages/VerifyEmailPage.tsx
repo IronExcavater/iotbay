@@ -418,7 +418,7 @@ function validatePendingEmailForm({
         return {};
     }
 
-        return collectFieldErrors<VerificationFieldName>({
+    return collectFieldErrors<VerificationFieldName>({
         email: Email.assess(nextEmail),
         password: password ? null : 'Password is required',
     });

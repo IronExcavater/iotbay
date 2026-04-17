@@ -40,7 +40,11 @@ export function AccountPersonalSection({
                 Personal
             </h3>
             <div className="grid gap-4 sm:grid-cols-2">
-                <Field error={fieldErrors.firstName} label="First name" required>
+                <Field
+                    error={fieldErrors.firstName}
+                    label="First name"
+                    required
+                >
                     <Input
                         hasError={Boolean(fieldErrors.firstName)}
                         maxLength={FirstName.MAX_LENGTH}

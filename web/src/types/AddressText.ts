@@ -39,11 +39,11 @@ export class AddressText {
     }) {
         return Boolean(
             value.addressLineOne?.trim() ||
-                value.addressLineTwo.trim() ||
-                value.suburb?.trim() ||
-                value.state?.trim() ||
-                value.postcode?.trim() ||
-                value.country?.trim()
+            value.addressLineTwo.trim() ||
+            value.suburb?.trim() ||
+            value.state?.trim() ||
+            value.postcode?.trim() ||
+            value.country?.trim()
         );
     }
 }

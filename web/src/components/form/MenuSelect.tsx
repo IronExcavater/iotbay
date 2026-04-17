@@ -83,10 +83,7 @@ export function MenuSelect({
                         {selectedOption?.label ?? placeholder}
                     </span>
 
-                    <DropdownChevron
-                        className="shrink-0"
-                        isOpen={isOpen}
-                    />
+                    <DropdownChevron className="shrink-0" isOpen={isOpen} />
                 </button>
 
                 <AnchoredPopover

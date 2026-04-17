@@ -241,7 +241,10 @@ export default function AccountPage() {
                     <AccountPersonalSection
                         fieldErrors={fieldErrors}
                         onEmailBlur={() => {
-                            setFieldError('email', Email.validate(values.email));
+                            setFieldError(
+                                'email',
+                                Email.validate(values.email)
+                            );
                         }}
                         onEmailChange={(value) => {
                             updateValues({ email: Email.formatInput(value) });
@@ -440,10 +443,9 @@ function validateProfileForm(
     if (hasChanges) {
         // Require the current password before allowing saved registration
         // details to be changed on an existing account.
-        fieldErrors.currentPassword =
-            values.currentPassword.trim()
-                ? undefined
-                : 'Current password is required';
+        fieldErrors.currentPassword = values.currentPassword.trim()
+            ? undefined
+            : 'Current password is required';
     }
 
     return fieldErrors;

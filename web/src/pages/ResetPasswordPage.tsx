@@ -189,7 +189,8 @@ export default function ResetPasswordPage() {
                                         return;
                                     }
 
-                                    const assessment = Password.assess(password);
+                                    const assessment =
+                                        Password.assess(password);
                                     setFieldError(
                                         'password',
                                         assessment.error
@@ -199,9 +200,7 @@ export default function ResetPasswordPage() {
                                 }}
                                 onChange={(event) => {
                                     handlePasswordChange(
-                                        Password.formatInput(
-                                            event.target.value
-                                        )
+                                        Password.formatInput(event.target.value)
                                     );
                                 }}
                                 onToggle={() => {
@@ -236,9 +235,7 @@ export default function ResetPasswordPage() {
                                 }}
                                 onChange={(event) => {
                                     handleConfirmPasswordChange(
-                                        Password.formatInput(
-                                            event.target.value
-                                        )
+                                        Password.formatInput(event.target.value)
                                     );
                                 }}
                                 onToggle={() => {
@@ -257,7 +254,7 @@ export default function ResetPasswordPage() {
                         <Input
                             autoComplete="email"
                             hasError={Boolean(fieldErrors.email)}
-                                maxLength={Email.MAX_LENGTH}
+                            maxLength={Email.MAX_LENGTH}
                             name="email"
                             onBlur={() => {
                                 setFieldError(

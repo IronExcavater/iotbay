@@ -97,7 +97,12 @@ export default function SiteNav() {
                         <MenuPanel>
                             <ThemeMenuItem
                                 active={mode === 'light'}
-                                icon={<FaSun aria-hidden="true" className="size-3.5" />}
+                                icon={
+                                    <FaSun
+                                        aria-hidden="true"
+                                        className="size-3.5"
+                                    />
+                                }
                                 label="Light"
                                 onSelect={() => {
                                     setMode('light');
@@ -106,7 +111,12 @@ export default function SiteNav() {
                             />
                             <ThemeMenuItem
                                 active={mode === 'dark'}
-                                icon={<FaMoon aria-hidden="true" className="size-3.5" />}
+                                icon={
+                                    <FaMoon
+                                        aria-hidden="true"
+                                        className="size-3.5"
+                                    />
+                                }
                                 label="Dark"
                                 onSelect={() => {
                                     setMode('dark');

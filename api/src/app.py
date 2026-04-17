@@ -31,7 +31,7 @@ def create_app(config_path: str | None = None) -> Flask:
         VERIFICATION_CODE_LIFETIME_SECONDS=config.verification_code_lifetime_seconds,
         WEB_URL=config.web_url,
     )
-    
+
     app.extensions[APP_SERVICES_EXTENSION] = build_app_services(
         address_config=address_config,
         app_config=config,

@@ -1,5 +1,10 @@
 import type React from 'react';
-import { FaArrowRightFromBracket, FaIdBadge, FaShieldHalved, FaUser } from 'react-icons/fa6';
+import {
+    FaArrowRightFromBracket,
+    FaIdBadge,
+    FaShieldHalved,
+    FaUser,
+} from 'react-icons/fa6';
 
 import { DropdownChevron } from '../form/DropdownChevron';
 import { AnchoredPopover } from '../overlay/AnchoredPopover';
@@ -50,7 +55,10 @@ export function AccountMenu({
                 <MenuPanel>
                     {showStaffPortal ? (
                         <MenuLinkItem onClick={onClose} to="/admin">
-                            <FaShieldHalved aria-hidden="true" className="size-3.5" />
+                            <FaShieldHalved
+                                aria-hidden="true"
+                                className="size-3.5"
+                            />
                             <span>Staff portal</span>
                         </MenuLinkItem>
                     ) : null}

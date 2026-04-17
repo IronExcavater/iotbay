@@ -1,9 +1,4 @@
-import {
-    useCallback,
-    useLayoutEffect,
-    useRef,
-    type ChangeEvent,
-} from 'react';
+import { useCallback, useLayoutEffect, useRef, type ChangeEvent } from 'react';
 import type { InputValueType } from '../types/base';
 
 export function useFormattedInput<TContext = void>({
@@ -23,7 +18,8 @@ export function useFormattedInput<TContext = void>({
     const handleChange = useCallback(
         (event: ChangeEvent<HTMLInputElement>) => {
             const rawValue = event.target.value;
-            const selectionStart = event.target.selectionStart ?? rawValue.length;
+            const selectionStart =
+                event.target.selectionStart ?? rawValue.length;
             const nextValue = valueType.formatInput(rawValue, context);
             const formattedPrefix = valueType.formatInput(
                 rawValue.slice(0, selectionStart),

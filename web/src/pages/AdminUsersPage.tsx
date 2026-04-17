@@ -60,7 +60,10 @@ export default function AdminUsersPage() {
     }
 
     // Convenience wrapper so individual field onChange handlers are one-liners.
-    function updateFormValues(name: keyof ManagedUserFormValues, value: string) {
+    function updateFormValues(
+        name: keyof ManagedUserFormValues,
+        value: string
+    ) {
         setFormValues((current) =>
             current
                 ? { ...current, [name]: formatManagedUserField(name, value) }
@@ -93,7 +96,10 @@ export default function AdminUsersPage() {
 
         setIsSubmitting(true);
         try {
-            const updatedUser = await usersApi.update(editingUser.id, assessment.payload);
+            const updatedUser = await usersApi.update(
+                editingUser.id,
+                assessment.payload
+            );
             replaceUser(updatedUser);
             closeEditDialog();
         } catch (error) {
@@ -117,7 +123,9 @@ export default function AdminUsersPage() {
             });
             replaceUser(updatedUser);
         } catch (error) {
-            setActionError(toErrorMessage(error, 'Unable to update user status'));
+            setActionError(
+                toErrorMessage(error, 'Unable to update user status')
+            );
         }
     }
 
@@ -137,7 +145,9 @@ export default function AdminUsersPage() {
                     canChangeStatus={(managedUser) =>
                         canChangeManagedUserStatus(user, managedUser)
                     }
-                    canEdit={(managedUser) => canEditManagedUser(user, managedUser)}
+                    canEdit={(managedUser) =>
+                        canEditManagedUser(user, managedUser)
+                    }
                     filteredUsers={filteredUsers}
                     isLoadingUsers={isLoadingUsers}
                     onEdit={handleEdit}

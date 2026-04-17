@@ -18,11 +18,7 @@ function matchesSearchQuery(
     query: string,
     values: Array<string | null | undefined>
 ) {
-    const terms = query
-        .trim()
-        .toLowerCase()
-        .split(/\s+/)
-        .filter(Boolean);
+    const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
 
     if (terms.length === 0) {
         return true;

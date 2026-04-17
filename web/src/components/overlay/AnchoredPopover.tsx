@@ -8,7 +8,6 @@ import {
 import clsx from 'clsx';
 import { createPortal } from 'react-dom';
 
-
 interface AnchoredPopoverProps {
     align?: 'left' | 'right';
     anchorRef: RefObject<HTMLElement | null>;
@@ -45,7 +44,9 @@ export function AnchoredPopover({
 
             const rect = anchor.getBoundingClientRect();
             const left =
-                align === 'right' ? Math.max(12, rect.right) : Math.max(12, rect.left);
+                align === 'right'
+                    ? Math.max(12, rect.right)
+                    : Math.max(12, rect.left);
 
             panel.style.left = `${left}px`;
             panel.style.top = `${rect.bottom + 4}px`;

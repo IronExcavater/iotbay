@@ -148,7 +148,9 @@ export default function AdminLayout() {
                                     aria-hidden="true"
                                     className="size-4 shrink-0"
                                 />
-                                {!isCollapsed ? <span>{item.label}</span> : null}
+                                {!isCollapsed ? (
+                                    <span>{item.label}</span>
+                                ) : null}
                             </NavLink>
                         );
                     })}

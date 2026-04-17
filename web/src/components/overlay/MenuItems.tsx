@@ -15,7 +15,9 @@ export function MenuPanel({
     children: ReactNode;
     className?: string;
 }) {
-    return <div className={clsx('grid gap-1 p-1.5', className)}>{children}</div>;
+    return (
+        <div className={clsx('grid gap-1 p-1.5', className)}>{children}</div>
+    );
 }
 
 export function MenuItem({
