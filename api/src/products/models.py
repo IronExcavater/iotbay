@@ -10,9 +10,6 @@ from src.common.types import (
     MoneyAmount,
     ProductCode,
     ProductName,
-    PRODUCT_CODE_MAX_LENGTH,
-    PRODUCT_MAX_PRICE_CENTS,
-    PRODUCT_NAME_MAX_LENGTH,
 )
 
 ENTITY_TYPE_PRODUCT = "product"

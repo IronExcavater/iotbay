@@ -22,22 +22,13 @@ python3 --version
 uv --version
 ```
 
-### 2. Create Your Local Environment File (Optional)
+### 2. Create Your Local Environment File
 
-The app can still run locally without the optional email or address integrations.
-
-Copy `.env.example` to `.env`:
-
-```bash
-cp .env.example .env
-```
-
-Then open `.env` and set the values you need:
+Create a copy of `.env.example` to `.env`. Open `.env` and set the values you need:
 
 - `IOTBAY_API_KEY`: required for local API access
 - `IOTBAY_GOOGLE_MAPS_API_KEY`: optional, only needed for address suggestions
 - `IOTBAY_SMTP_*` and `IOTBAY_SENDER`: optional, only needed if you want real emails to send
-
 
 ### 3. Run First-Time Setup
 
@@ -64,10 +55,13 @@ If you are not sure whether your machine is set up correctly, just run all four 
 Run the frontend and backend in separate terminals.
 
 Terminal 1:
+
 ```bash
 npm run -w api dev
 ```
+
 Terminal 2:
+
 ```bash
 npm run -w web dev
 ```
@@ -92,6 +86,7 @@ After `git pull`, the safest manual reset is:
 npm install
 npm run -w api deps
 npm run -w api db:migrate
+npm run -w api db:seed:load
 ```
 
 You do not need to run all three every single time. Use this rule:
@@ -99,18 +94,6 @@ You do not need to run all three every single time. Use this rule:
 - if any `package.json` or `package-lock.json` changed, run `npm install`
 - if `api/requirements.txt` changed, run `npm run -w api deps`
 - if anything in `api/migrations/` changed, run `npm run -w api db:migrate`
-
-### Automatic Sync After Pull
-
-Husky now runs these automatically after merge-based pulls and rebases.
-
-It checks what changed and then runs only what is needed:
-
-- `package.json` or `package-lock.json`, it runs `npm install`
-- `api/requirements.txt`, it runs `npm run -w api venv` and `npm run -w api deps`
-- `api/migrations/*.sql`, it runs `npm run -w api venv` and `npm run -w api db:migrate`
-
-This is only a convenience. If something still looks wrong after pulling, run the three manual commands above.
 
 ### Usual Workflow
 
@@ -126,46 +109,28 @@ If the pull changed dependencies or migrations and the hooks did not already han
 npm install
 npm run -w api deps
 npm run -w api db:migrate
+npm run -w api db:seed:load
 ```
 
 ## Optional Integrations
 
 ### Email Sending
 
-Email sending is optional for local development.
+Email sending is optional for local development and uses SMTP to send emails from your own external email to reduce complexity.
 
-If you want registration emails and password reset emails to work, fill in the SMTP values in `.env`.
+- use your email address for `IOTBAY_SMTP_USERNAME` in `.env`
+- use your email password for `IOTBAY_SMTP_PASSWORD`.
 
-For Gmail:
-
-- use your Gmail address for `IOTBAY_SENDER` and `IOTBAY_SMTP_USERNAME`
-- use an app password for `IOTBAY_SMTP_PASSWORD`, not your normal Gmail password
-- Google typically requires 2-Step Verification before app passwords are available
-
-Google account security:
-- https://myaccount.google.com/security
-
-For other providers such as Outlook, use that provider's SMTP host, port, username, and either its normal SMTP password flow or an app password if the provider requires one.
+> **Note:** For Gmail, you must use an app password not your normal Gmail password. [How to create a Google app password](https://support.google.com/accounts/answer/185833?hl=en). Google requires 2-Step Verification before app passwords are available for your account
 
 ### Address Suggestions
 
-Address suggestions are also optional for local development.
-
-If you want Google-backed address suggestions to work:
+Address suggestions are also optional for local development and use Google-backed address suggestions and validation.
 
 - create a Google Maps Platform API key
 - enable billing on the Google Cloud project
-- enable `Places API (New)` for the project
-- make sure the key is allowed to use the Places API
+- enable `Places API (New)` and `Address Validation API` for your API key
 - put the key into `IOTBAY_GOOGLE_MAPS_API_KEY` in `.env`
-
-Official docs:
-
-- Places API (New): https://developers.google.com/maps/documentation/places/web-service/op-overview
-- Places API usage and billing: https://developers.google.com/maps/documentation/places/web-service/usage-and-billing
-- Google Maps Platform pricing: https://developers.google.com/maps/billing-and-pricing/pricing
-
-Google Maps pricing changes over time, so check the official pricing page instead of assuming an old free tier number still applies.
 
 ## If You Get Stuck
 

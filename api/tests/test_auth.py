@@ -3,12 +3,21 @@ import unittest
 
 from src.auth.security import hash_password
 from src.common.app import extension_from
-from src.users.models import USER_STATUS_ACTIVE, USER_TYPE_STAFF, USER_TYPE_CUSTOMER, USER_STATUS_UNVERIFIED
+from src.users.models import (
+    USER_STATUS_ACTIVE,
+    USER_STATUS_UNVERIFIED,
+    USER_TYPE_CUSTOMER,
+    USER_TYPE_STAFF,
+)
 from src.users.repository import UserRepository
 from werkzeug.test import TestResponse
 
 from tests.helpers.app_case import AppTestCase
-from tests.helpers.session_factory import create_staff_test_session, create_test_session, create_superadmin_test_session
+from tests.helpers.session_factory import (
+    create_staff_test_session,
+    create_superadmin_test_session,
+    create_test_session,
+)
 
 
 def _register_payload(
@@ -168,6 +177,114 @@ class AuthRouteTestCase(AppTestCase):
 
         self.assertEqual(staff_response.status_code, 200)
         self.assertEqual(staff_response.get_json()["user"]["userType"], USER_TYPE_STAFF)
+
+    def test_customer_login_rejects_staff_accounts(self) -> None:
+        staff_session = create_staff_test_session(self.client)
+        self.client.post("/api/logout")
+
+        response = self.client.post(
+            "/api/login",
+            json={
+                "email": staff_session.email,
+                "password": staff_session.password,
+                "userType": USER_TYPE_CUSTOMER,
+            },
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.get_json(),
+            {
+                "code": "CUSTOMER_ACCOUNT_REQUIRED",
+                "error": "customer account is required",
+            },
+        )
+
+    def test_superadmin_can_update_managed_user_and_status(self) -> None:
+        superadmin_session = create_superadmin_test_session(self.client)
+        repository = extension_from(
+            self.client.application,
+            "user_repository",
+            UserRepository,
+        )
+        managed_user = repository.insert_user(
+            email="managed.staff@example.com",
+            password_hash=hash_password("Harbour84!"),
+            first_name="Jordan",
+            last_name="Lee",
+            user_type=USER_TYPE_STAFF,
+            status=USER_STATUS_ACTIVE,
+            staff_id="STF-010",
+            designation="Sales",
+            permission="admin",
+        )
+
+        update_response = self.client.patch(
+            f"/api/admin/users/{managed_user.id}",
+            json={
+                "email": "jordan.lee@example.com",
+                "firstName": "Jordan",
+                "lastName": "Miles",
+                "staffId": "STF-011",
+                "designation": "Operations",
+                "permission": "superadmin",
+            },
+        )
+
+        self.assertEqual(update_response.status_code, 200)
+        self.assertEqual(update_response.get_json()["user"]["permission"], "superadmin")
+        self.assertEqual(update_response.get_json()["user"]["lastName"], "Miles")
+
+        status_response = self.client.patch(
+            f"/api/admin/users/{managed_user.id}/status",
+            json={"status": "disabled"},
+        )
+
+        self.assertEqual(status_response.status_code, 403)
+        self.assertEqual(
+            status_response.get_json(),
+            {
+                "code": "USER_MANAGEMENT_NOT_ALLOWED",
+                "error": "you cannot manage that user",
+            },
+        )
+        self.assertEqual(superadmin_session.user.permission, "superadmin")
+
+    def test_superadmin_cannot_manage_self_or_peer_superadmin(self) -> None:
+        superadmin_session = create_superadmin_test_session(self.client)
+        repository = extension_from(
+            self.client.application,
+            "user_repository",
+            UserRepository,
+        )
+        peer_superadmin = repository.insert_user(
+            email="peer.superadmin@example.com",
+            password_hash=hash_password("Harbour84!"),
+            first_name="Casey",
+            last_name="Rowe",
+            user_type=USER_TYPE_STAFF,
+            status=USER_STATUS_ACTIVE,
+            designation="Super Admin",
+            permission="superadmin",
+        )
+
+        self_response = self.client.patch(
+            f"/api/admin/users/{superadmin_session.user.id}/status",
+            json={"status": "disabled"},
+        )
+        peer_response = self.client.patch(
+            f"/api/admin/users/{peer_superadmin.id}/status",
+            json={"status": "disabled"},
+        )
+
+        self.assertEqual(self_response.status_code, 403)
+        self.assertEqual(peer_response.status_code, 403)
+        self.assertEqual(
+            self_response.get_json()["code"], "USER_MANAGEMENT_NOT_ALLOWED"
+        )
+        self.assertEqual(
+            peer_response.get_json()["code"], "USER_MANAGEMENT_NOT_ALLOWED"
+        )
 
     def test_verify_email_activates_user_and_starts_session(self) -> None:
         register_response = self.client.post("/api/register", json=_register_payload())

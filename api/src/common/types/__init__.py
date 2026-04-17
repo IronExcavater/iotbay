@@ -1,4 +1,7 @@
 from src.common.types.values import (
+    PRODUCT_CODE_MAX_LENGTH,
+    PRODUCT_MAX_PRICE_CENTS,
+    PRODUCT_NAME_MAX_LENGTH,
     Designation,
     EmailAddress,
     FirstName,
@@ -9,9 +12,6 @@ from src.common.types.values import (
     ProductCode,
     ProductName,
     StaffId,
-    PRODUCT_CODE_MAX_LENGTH,
-    PRODUCT_MAX_PRICE_CENTS,
-    PRODUCT_NAME_MAX_LENGTH,
 )
 
 __all__ = [

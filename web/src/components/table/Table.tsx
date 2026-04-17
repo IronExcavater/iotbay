@@ -28,7 +28,7 @@ export function TableHead({ children }: { children: ReactNode }) {
 // appear together, so combining them removes a layer of boilerplate.
 export function TableActionCell({ children }: { children: ReactNode }) {
     return (
-        <td className="px-2 py-2 align-middle text-right">
+        <td className="px-2 py-2 text-right align-middle">
             <div className="flex min-h-8 items-center justify-end">
                 {children}
             </div>

@@ -1,5 +1,3 @@
-from typing import ClassVar
-
 from pydantic import BaseModel, ConfigDict, field_validator
 from pydantic.alias_generators import to_camel
 from src.common.types import MoneyAmount, ProductCode, ProductName

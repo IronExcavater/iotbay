@@ -11,12 +11,12 @@ from src.addresses.models import (
     SUBURB_VALIDATOR,
     validate_address_fields,
 )
+from src.common.types import EmailAddress, FirstName, LastName
 from src.common.validation import (
     TOKEN_MAX_LENGTH,
     StringValidator,
     TokenValidator,
 )
-from src.common.types import EmailAddress, FirstName, LastName
 from src.users.models import (
     CURRENT_PASSWORD_VALIDATOR,
     DESIGNATION_VALIDATOR,
