@@ -6,9 +6,6 @@
       "type": "node-terminal",
       "request": "launch",
       "command": "npm run dev",
-      "presentation": {
-        "hidden": true
-      }
     },
     {
       "name": "Browser",
@@ -20,7 +17,7 @@
   ],
   "compounds": [
     {
-      "name": "Dev",
+      "name": "Dev and Browser",
       "configurations": [
         "Dev",
         "Browser"
