@@ -14,6 +14,7 @@
         "typecheck": "uv run pyright",
         "ruff": "uv run ruff check . && uv run ruff format . --check",
         "ruff:fix": "uv run ruff check . --fix && uv run ruff format .",
+        "check:all": "npm run typecheck && npm run ruff",
         "fix:all": "npm run typecheck && npm run ruff:fix",
         "test": "uv run python -m unittest discover -s tests",
         "build": "uv build"

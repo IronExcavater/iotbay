@@ -12,7 +12,7 @@ IOTBay is a monorepo with two workspaces:
 - Install `Node.js` (includes `npm`): https://nodejs.org/en/download
 - Install `uv`: https://docs.astral.sh/uv/getting-started/installation/
 
-### 2. Create Your Local Environment File
+### 2. Environment File
 
 Create a copy of `.env.example` to `.env`. Open `.env` and set the values you need:
 
@@ -20,21 +20,18 @@ Create a copy of `.env.example` to `.env`. Open `.env` and set the values you ne
 - `IOTBAY_GOOGLE_MAPS_API_KEY`: optional, only needed for address suggestions
 - `IOTBAY_SMTP_*`: optional, only needed if you want real emails to send
 
-### 3. Run First-Time Setup
+### 3. Sync Local Project
 
 Run these commands once after cloning the repository:
 
 ```bash
-npm install
-npm run -w api sync
-npm run -w api db:migrate
+npm run sync
 ```
 
-What these commands do:
+What this does:
 
-- `npm install`: installs all JavaScript dependencies for the monorepo
-- `npm run -w api sync`: creates the Python virtual environment and packages specified in `api/pyproject.toml`
-- `npm run -w api db:migrate`: executes any unapplied database migrations
+- installs all JavaScript dependencies for the monorepo
+- runs workspace sync scripts, including the API virtual environment, SQLite migrations and seed data
 
 ### 4. Start The App
 
@@ -51,25 +48,32 @@ npm run dev
 Quick API check:
 
 ```bash
-curl http://localhost:5001/api/health
+curl -H "x-api-key: change-me-local-api-key" http://localhost:5001/api/health
 ```
+
+Use the `IOTBAY_API_KEY` value from your `.env` file.
 
 ## Daily Use
 
 After `git pull`, the safest manual reset is:
 
 ```bash
-npm install
-npm run -w api sync
-npm run -w api migrate
-npm run -w api seed
+npm run sync
 ```
 
-You do not need to run all three every single time. Use this rule:
+You do not need to run the full sync every single time. Use this rule:
 
 - if any `package.json` changed, run `npm install`
 - if `api/pyproject.toml` changed, run `npm run -w api sync`
-- if anything in `api/migrations/` changed, run `npm run -w api migrate`
+- if anything in `api/migrations/*` changed, run `npm run -w api migrate`
+- if you want to reset shared local data, run `npm run -w api seed`
+
+The Git post-merge and post-rewrite hooks run `npm run sync` after pulls,
+merges, and rebases. `npm install` also runs workspace sync scripts through
+`postinstall`, skipping workspaces that do not define `sync`.
+
+For workspace-wide optional scripts, use `--if-present`; for example,
+`npm run sync --workspaces --if-present`.
 
 ## Optional Integrations
 
@@ -96,6 +100,10 @@ Address suggestions are also optional for local development and use Google-backe
 Before committing, run:
 
 ```text
+npm run check:all     # Frontend and backend read-only quality gate
+npm test              # Runs workspace test scripts
+npm run build         # Builds all buildable workspaces
+
 npm run -w web fix:all    # Frontend quality gate
   npm run typecheck       # Runs TypeScript static typing
   npm run eslint:fix      # Finds and fixes JS issues
@@ -108,6 +116,8 @@ npm run -w api fix:all    # Backend quality gate
 
 npm run -w api test       # Runs backend unit tests
 ```
+
+Pull requests and pushes to `main` run the same checks in GitHub Actions.
 
 ## Database Changes
 

@@ -9,12 +9,17 @@
     ],
     "scripts": {
         "prepare": "husky",
-        "postinstall": "npm run -w api sync",
-        "dev": "concurrently \"npm run -w web dev\" \"npm run -w api dev\"",
+        "postinstall": "npm run sync --workspaces --if-present",
+        "sync": "npm install",
+        "dev": "concurrently -n web,api -c cyan,magenta \"npm run -w web dev\" \"npm run -w api dev\"",
+        "build": "npm run build --workspaces --if-present",
+        "test": "npm run test --workspaces --if-present",
+        "check:all": "npm run check:all --workspaces",
         "fix:staged": "lint-staged --config lint-staged.config.js",
-        "fix:all": "npm run -w web fix:all && npm run -w api fix:all"
+        "fix:all": "npm run fix:all --workspaces --if-present"
     },
     "devDependencies": {
+        "concurrently": "^9.2.1",
         "husky": "^9.0.11",
         "lint-staged": "^16.2.6"
     }

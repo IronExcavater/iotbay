@@ -14,6 +14,7 @@
         "stylelint:fix": "stylelint \"src/**/*.{css,scss}\" --allow-empty-input --fix",
         "prettier": "prettier . -c",
         "prettier:fix": "prettier . -wu --log-level warn",
+        "check:all": "npm run typecheck && npm run eslint && npm run stylelint && npm run prettier",
         "fix:all": "npm run typecheck && npm run eslint:fix && npm run stylelint:fix && npm run prettier:fix"
     },
     "dependencies": {
