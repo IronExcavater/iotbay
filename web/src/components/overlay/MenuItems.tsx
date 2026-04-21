@@ -2,6 +2,8 @@ import { type ComponentProps, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { Link } from 'react-router-dom';
 
+import { Tooltip } from '../ui/Tooltip';
+
 // Base styling shared across all menu item variants.
 const itemBase =
     'inline-flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition';
@@ -24,10 +26,11 @@ export function MenuItem({
     children,
     className,
     disabled,
+    title,
     tone = 'default',
     ...props
 }: ComponentProps<'button'> & { tone?: 'danger' | 'default' }) {
-    return (
+    const button = (
         <button
             className={clsx(
                 tone === 'danger' ? itemDanger : itemDefault,
@@ -42,6 +45,14 @@ export function MenuItem({
         >
             {children}
         </button>
+    );
+
+    return title ? (
+        <Tooltip className="w-full" label={title}>
+            {button}
+        </Tooltip>
+    ) : (
+        button
     );
 }
 

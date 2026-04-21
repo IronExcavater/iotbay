@@ -7,6 +7,7 @@ import {
     TableLoadingRow,
     TableMessageRow,
 } from '../components/table/Table';
+import { Tooltip } from '../components/ui/Tooltip';
 import { productApi, type Product } from '../products/api';
 import { toErrorMessage } from '../services/http';
 import { DateTimeValue } from '../types/DateTimeValue';
@@ -101,17 +102,20 @@ export default function HomePage() {
                                         <td className="px-5 py-3">
                                             {Money.format(product.priceCents)}
                                         </td>
-                                        <td
-                                            className="px-5 py-3 text-slate-500"
-                                            title={DateTimeValue.format(
-                                                product.updatedAt,
-                                                'long'
-                                            )}
-                                        >
-                                            {DateTimeValue.format(
-                                                product.updatedAt,
-                                                'short'
-                                            )}
+                                        <td className="px-5 py-3 text-slate-500">
+                                            <Tooltip
+                                                label={DateTimeValue.format(
+                                                    product.updatedAt,
+                                                    'long'
+                                                )}
+                                            >
+                                                <span>
+                                                    {DateTimeValue.format(
+                                                        product.updatedAt,
+                                                        'short'
+                                                    )}
+                                                </span>
+                                            </Tooltip>
                                         </td>
                                     </tr>
                                 ))

@@ -1,12 +1,8 @@
-import {
-    Children,
-    forwardRef,
-    isValidElement,
-    type ButtonHTMLAttributes,
-    type ReactNode,
-} from 'react';
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { FaSpinner } from 'react-icons/fa6';
+
+import { Tooltip } from '../ui/Tooltip';
 
 type ButtonVariant = 'danger' | 'ghost' | 'primary' | 'secondary';
 
@@ -28,9 +24,7 @@ export const Button = forwardRef<
     },
     ref
 ) {
-    const resolvedTitle = title ?? getButtonText(children);
-
-    return (
+    const button = (
         <button
             className={clsx(
                 'relative cursor-pointer rounded text-sm font-medium disabled:cursor-not-allowed',
@@ -38,7 +32,6 @@ export const Button = forwardRef<
                 className
             )}
             ref={ref}
-            title={resolvedTitle}
             {...props}
         >
             <span
@@ -62,6 +55,8 @@ export const Button = forwardRef<
             ) : null}
         </button>
     );
+
+    return title ? <Tooltip label={title}>{button}</Tooltip> : button;
 });
 
 const variantClassName: Record<ButtonVariant, string> = {
@@ -71,21 +66,3 @@ const variantClassName: Record<ButtonVariant, string> = {
         'bg-primary px-4 py-2 text-primary-fg hover:bg-primary-hover disabled:bg-slate-400',
     secondary: 'border border-slate-300 px-3 py-2 hover:bg-slate-100',
 };
-
-function getButtonText(children: ReactNode): string | undefined {
-    const text = Children.toArray(children)
-        .map((child) => {
-            if (typeof child === 'string' || typeof child === 'number') {
-                return String(child);
-            }
-            if (isValidElement<{ children?: ReactNode }>(child)) {
-                return getButtonText(child.props.children) ?? '';
-            }
-            return '';
-        })
-        .join(' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-
-    return text || undefined;
-}
