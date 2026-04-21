@@ -1,149 +1,15 @@
-@property --surface-0 {
-    syntax: '<color>';
-    inherits: true;
-    initial-value: transparent;
-}
+@use './theme-token-data' as theme;
 
-@property --surface-50 {
-    syntax: '<color>';
-    inherits: true;
-    initial-value: transparent;
-}
-
-@property --surface-100 {
-    syntax: '<color>';
-    inherits: true;
-    initial-value: transparent;
-}
-
-@property --surface-200 {
-    syntax: '<color>';
-    inherits: true;
-    initial-value: transparent;
-}
-
-@property --surface-300 {
-    syntax: '<color>';
-    inherits: true;
-    initial-value: transparent;
-}
-
-@property --ink-400 {
-    syntax: '<color>';
-    inherits: true;
-    initial-value: transparent;
-}
-
-@property --ink-500 {
-    syntax: '<color>';
-    inherits: true;
-    initial-value: transparent;
-}
-
-@property --ink-600 {
-    syntax: '<color>';
-    inherits: true;
-    initial-value: transparent;
-}
-
-@property --ink-700 {
-    syntax: '<color>';
-    inherits: true;
-    initial-value: transparent;
-}
-
-@property --ink-900 {
-    syntax: '<color>';
-    inherits: true;
-    initial-value: transparent;
-}
-
-@property --ink-950 {
-    syntax: '<color>';
-    inherits: true;
-    initial-value: transparent;
-}
-
-@property --danger-50 {
-    syntax: '<color>';
-    inherits: true;
-    initial-value: transparent;
-}
-
-@property --danger-500 {
-    syntax: '<color>';
-    inherits: true;
-    initial-value: transparent;
-}
-
-@property --danger-700 {
-    syntax: '<color>';
-    inherits: true;
-    initial-value: transparent;
-}
+@include theme.register-color-tokens;
 
 :root {
     color-scheme: light;
 
-    --surface-0: #fff;
-    --surface-50: #f8fafc;
-    --surface-100: #f1f5f9;
-    --surface-200: #e2e8f0;
-    --surface-300: #cbd5e1;
-    --ink-400: #94a3b8;
-    --ink-500: #64748b;
-    --ink-600: #475569;
-    --ink-700: #334155;
-    --ink-900: #0f172a;
-    --ink-950: #020617;
-    --primary-bg: var(--surface-200);
-    --primary-bg-hover: var(--surface-300);
-    --primary-fg: var(--ink-950);
-    --danger-50: #fef2f2;
-    --danger-500: #ef4444;
-    --danger-700: #b91c1c;
+    @include theme.color-vars(theme.$light-colors);
 }
 
 :root[data-theme='dark'] {
     color-scheme: dark;
 
-    --surface-0: #0b1220;
-    --surface-50: #131d31;
-    --surface-100: #1d2a42;
-    --surface-200: #30415e;
-    --surface-300: #4a5d7b;
-    --ink-400: #9fb1cb;
-    --ink-500: #d6e0f0;
-    --ink-600: #e8eef8;
-    --ink-700: #f6f9fd;
-    --ink-900: #f8fafc;
-    --ink-950: #fff;
-    --danger-50: #37151a;
-    --danger-500: #fb7185;
-    --danger-700: #fecdd3;
-}
-
-@theme inline {
-    --color-white: #fff;
-    --color-surface-0: var(--surface-0);
-    --color-surface-50: var(--surface-50);
-    --color-surface-100: var(--surface-100);
-    --color-surface-200: var(--surface-200);
-    --color-surface-300: var(--surface-300);
-    --color-slate-50: var(--surface-50);
-    --color-slate-100: var(--surface-100);
-    --color-slate-200: var(--surface-200);
-    --color-slate-300: var(--surface-300);
-    --color-slate-400: var(--ink-400);
-    --color-slate-500: var(--ink-500);
-    --color-slate-600: var(--ink-600);
-    --color-slate-700: var(--ink-700);
-    --color-slate-900: var(--ink-900);
-    --color-slate-950: var(--ink-950);
-    --color-primary: var(--primary-bg);
-    --color-primary-hover: var(--primary-bg-hover);
-    --color-primary-fg: var(--primary-fg);
-    --color-red-50: var(--danger-50);
-    --color-red-500: var(--danger-500);
-    --color-red-700: var(--danger-700);
+    @include theme.color-vars(theme.$dark-colors);
 }
