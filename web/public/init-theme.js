@@ -14,7 +14,6 @@
 
     function applyTheme(resolvedMode) {
         document.documentElement.dataset.theme = resolvedMode;
-        document.documentElement.style.colorScheme = resolvedMode;
     }
 
     try {

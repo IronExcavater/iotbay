@@ -1,3 +1,87 @@
+@property --surface-0 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: transparent;
+}
+
+@property --surface-50 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: transparent;
+}
+
+@property --surface-100 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: transparent;
+}
+
+@property --surface-200 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: transparent;
+}
+
+@property --surface-300 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: transparent;
+}
+
+@property --ink-400 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: transparent;
+}
+
+@property --ink-500 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: transparent;
+}
+
+@property --ink-600 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: transparent;
+}
+
+@property --ink-700 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: transparent;
+}
+
+@property --ink-900 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: transparent;
+}
+
+@property --ink-950 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: transparent;
+}
+
+@property --danger-50 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: transparent;
+}
+
+@property --danger-500 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: transparent;
+}
+
+@property --danger-700 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: transparent;
+}
+
 :root {
     color-scheme: light;
 
@@ -12,9 +96,9 @@
     --ink-700: #334155;
     --ink-900: #0f172a;
     --ink-950: #020617;
-    --primary-bg: #0f172a;
-    --primary-bg-hover: #334155;
-    --primary-fg: #fff;
+    --primary-bg: var(--surface-200);
+    --primary-bg-hover: var(--surface-300);
+    --primary-fg: var(--ink-950);
     --danger-50: #fef2f2;
     --danger-500: #ef4444;
     --danger-700: #b91c1c;
@@ -34,9 +118,6 @@
     --ink-700: #f6f9fd;
     --ink-900: #f8fafc;
     --ink-950: #fff;
-    --primary-bg: #f8fafc;
-    --primary-bg-hover: #d6e0f0;
-    --primary-fg: #0b1220;
     --danger-50: #37151a;
     --danger-500: #fb7185;
     --danger-700: #fecdd3;
