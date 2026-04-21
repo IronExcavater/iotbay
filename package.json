@@ -1,5 +1,6 @@
 {
     "name": "iotbay",
+    "description": "IoTBay monorepo containing both the React frontend and Flask backend",
     "version": "0.0.1",
     "private": true,
     "workspaces": [
