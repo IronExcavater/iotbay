@@ -1,5 +1,6 @@
 @import './tokens.scss';
 @import 'tailwindcss';
+@import '../theme/theme.scss';
 
 html,
 body,
@@ -10,4 +11,6 @@ body,
 
 body {
     margin: 0;
+    background: var(--surface-50);
+    color: var(--ink-900);
 }

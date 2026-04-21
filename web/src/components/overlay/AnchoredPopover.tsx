@@ -120,7 +120,7 @@ export function AnchoredPopover({
     return createPortal(
         <div
             className={clsx(
-                'z-70 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded border border-slate-200 bg-white shadow-lg',
+                'bg-surface-0 z-70 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded border border-slate-200 shadow-lg',
                 className
             )}
             ref={panelRef}

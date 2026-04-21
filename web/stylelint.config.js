@@ -33,6 +33,7 @@ export default {
             },
         ],
         'custom-property-empty-line-before': null,
+        'property-no-vendor-prefix': null,
         'scss/load-partial-extension': null,
         'scss/at-rule-no-unknown': [
             true,

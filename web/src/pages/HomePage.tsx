@@ -49,7 +49,7 @@ export default function HomePage() {
         <section className="grid gap-6">
             <PageHeader title="Products" />
 
-            <div className="overflow-hidden rounded border border-slate-200 bg-white">
+            <div className="bg-surface-0 overflow-hidden rounded border border-slate-200">
                 <div className="overflow-x-auto">
                     <Table>
                         <colgroup>

@@ -226,7 +226,7 @@ export default function VerifyEmailPage() {
         <section className="mx-auto grid max-w-xl gap-6">
             <PageHeader title="Verify email" />
 
-            <section className="grid gap-5 rounded border border-slate-200 bg-white p-5">
+            <section className="bg-surface-0 grid gap-5 rounded border border-slate-200 p-5">
                 {screen !== 'pending' ? (
                     <p
                         className={clsx(

@@ -47,7 +47,7 @@ export function OverlayDialog({
 
             <section
                 className={clsx(
-                    'relative z-10 grid w-full max-w-xl gap-5 rounded-xl border border-slate-200 bg-white p-6 shadow-2xl',
+                    'bg-surface-0 relative z-10 grid w-full max-w-xl gap-5 rounded-xl border border-slate-200 p-6 shadow-2xl',
                     className
                 )}
             >

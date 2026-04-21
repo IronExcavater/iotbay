@@ -241,7 +241,7 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
             <PageHeader title={pageCopy.title} />
 
             <form
-                className="grid gap-4 rounded border border-slate-200 bg-white p-5"
+                className="bg-surface-0 grid gap-4 rounded border border-slate-200 p-5"
                 noValidate
                 onSubmit={handleSubmit}
             >

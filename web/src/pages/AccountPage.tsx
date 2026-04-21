@@ -228,7 +228,7 @@ export default function AccountPage() {
                 Account
             </h1>
 
-            <section className="rounded border border-slate-200 bg-white p-5">
+            <section className="bg-surface-0 rounded border border-slate-200 p-5">
                 <div className="grid gap-1">
                     <h2 className="text-lg font-semibold">Manage details</h2>
                 </div>

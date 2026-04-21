@@ -16,7 +16,7 @@ export function PasswordRuleList({ rules }: { rules: PasswordRule[] }) {
                             'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[10px] leading-none',
                             rule.met
                                 ? 'border-emerald-600 bg-emerald-600 text-white'
-                                : 'border-slate-300 bg-white text-transparent'
+                                : 'bg-surface-0 border-slate-300 text-transparent'
                         )}
                     >
                         {'\u2713'}

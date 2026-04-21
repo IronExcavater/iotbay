@@ -1,0 +1,55 @@
+:root {
+    --theme-transition-duration: 180ms;
+}
+
+:root.theme-transition
+    :where(
+        body,
+        [class*='bg-slate-'],
+        [class*='bg-surface-'],
+        [class*='bg-primary'],
+        [class*='border-slate-'],
+        [class*='border-red-'],
+        [class*='border-emerald-'],
+        [class*='ring-'],
+        [class*='shadow-'],
+        [class*='text-slate-'],
+        [class*='text-red-'],
+        [class*='text-emerald-'],
+        [class*='text-primary'],
+        [class*='fill-'],
+        [class*='stroke-']
+    ) {
+    transition:
+        color var(--theme-transition-duration) ease,
+        background-color var(--theme-transition-duration) ease,
+        border-color var(--theme-transition-duration) ease,
+        outline-color var(--theme-transition-duration) ease,
+        text-decoration-color var(--theme-transition-duration) ease,
+        fill var(--theme-transition-duration) ease,
+        stroke var(--theme-transition-duration) ease,
+        box-shadow var(--theme-transition-duration) ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root.theme-transition
+        :where(
+            body,
+            [class*='bg-slate-'],
+            [class*='bg-surface-'],
+            [class*='bg-primary'],
+            [class*='border-slate-'],
+            [class*='border-red-'],
+            [class*='border-emerald-'],
+            [class*='ring-'],
+            [class*='shadow-'],
+            [class*='text-slate-'],
+            [class*='text-red-'],
+            [class*='text-emerald-'],
+            [class*='text-primary'],
+            [class*='fill-'],
+            [class*='stroke-']
+        ) {
+        transition: none;
+    }
+}

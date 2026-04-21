@@ -148,7 +148,7 @@ export default function StaffRegistrationPage() {
                 Create your staff account
             </h1>
 
-            <section className="grid gap-5 rounded border border-slate-200 bg-white p-5">
+            <section className="bg-surface-0 grid gap-5 rounded border border-slate-200 p-5">
                 {isLoadingInvitation ? (
                     <p className="text-sm text-slate-600">
                         Loading your staff invitation
