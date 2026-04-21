@@ -9,6 +9,7 @@ import {
 import { DropdownChevron } from '../form/DropdownChevron';
 import { AnchoredPopover } from '../overlay/AnchoredPopover';
 import { MenuItem, MenuLinkItem, MenuPanel } from '../overlay/MenuItems';
+import { Tooltip } from '../ui/Tooltip';
 
 interface AccountMenuProps {
     menuLabel: string;
@@ -33,17 +34,18 @@ export function AccountMenu({
 }: AccountMenuProps) {
     return (
         <div className="relative" ref={menuRef}>
-            <button
-                aria-label={menuLabel}
-                className="flex items-center gap-2 rounded border border-slate-300 px-3 py-2 text-slate-700 hover:bg-slate-100"
-                onClick={onToggle}
-                title={menuLabel}
-                type="button"
-            >
-                <FaUser aria-hidden="true" className="size-4" />
-                <span className="hidden sm:inline">{profileLabel}</span>
-                <DropdownChevron isOpen={open} />
-            </button>
+            <Tooltip label={menuLabel}>
+                <button
+                    aria-label={menuLabel}
+                    className="flex items-center gap-2 rounded border border-slate-300 px-3 py-2 text-slate-700 hover:bg-slate-100"
+                    onClick={onToggle}
+                    type="button"
+                >
+                    <FaUser aria-hidden="true" className="size-4" />
+                    <span className="hidden sm:inline">{profileLabel}</span>
+                    <DropdownChevron isOpen={open} />
+                </button>
+            </Tooltip>
 
             <AnchoredPopover
                 align="right"

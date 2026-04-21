@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { FaDisplay, FaMoon, FaSun } from 'react-icons/fa6';
 
 import { MenuItem } from '../overlay/MenuItems';
+import { Tooltip } from '../ui/Tooltip';
 
 interface ThemeToggleProps {
     mode: 'dark' | 'light' | 'system';
@@ -13,24 +14,25 @@ export function ThemeToggle({ mode, onOpenChange, open }: ThemeToggleProps) {
     const label = mode === 'system' ? 'Theme: system' : `Theme: ${mode}`;
 
     return (
-        <button
-            aria-expanded={open}
-            aria-label={label}
-            className="inline-flex size-10 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-            onClick={() => {
-                onOpenChange(!open);
-            }}
-            title={label}
-            type="button"
-        >
-            {mode === 'system' ? (
-                <FaDisplay aria-hidden="true" className="size-4" />
-            ) : mode === 'dark' ? (
-                <FaMoon aria-hidden="true" className="size-4" />
-            ) : (
-                <FaSun aria-hidden="true" className="size-4" />
-            )}
-        </button>
+        <Tooltip label={label}>
+            <button
+                aria-expanded={open}
+                aria-label={label}
+                className="inline-flex size-10 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                onClick={() => {
+                    onOpenChange(!open);
+                }}
+                type="button"
+            >
+                {mode === 'system' ? (
+                    <FaDisplay aria-hidden="true" className="size-4" />
+                ) : mode === 'dark' ? (
+                    <FaMoon aria-hidden="true" className="size-4" />
+                ) : (
+                    <FaSun aria-hidden="true" className="size-4" />
+                )}
+            </button>
+        </Tooltip>
     );
 }
 

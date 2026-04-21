@@ -11,6 +11,7 @@ import {
 import { useSearchFilter } from '../../hooks/useSearchFilter';
 import { AnchoredPopover } from '../overlay/AnchoredPopover';
 import { MenuPanel } from '../overlay/MenuItems';
+import { Tooltip } from '../ui/Tooltip';
 import { DropdownChevron } from './DropdownChevron';
 import { DropdownSearchInput } from './DropdownSearchInput';
 import { Field } from './Field';
@@ -90,34 +91,35 @@ export function PhoneField({
         <Field error={error} label={label} required={required}>
             <div className="grid gap-3 sm:grid-cols-[minmax(0,7.25rem)_1fr] sm:items-start">
                 <div className="relative">
-                    <button
-                        aria-label="Choose phone country"
-                        className={clsx(
-                            'w-full rounded border border-slate-300 px-3 py-2',
-                            'flex cursor-pointer items-center justify-between gap-2 pr-3 text-left'
-                        )}
-                        onClick={() => {
-                            setIsCountryMenuOpen((current) => !current);
-                        }}
-                        ref={countryButtonRef}
-                        title="Choose phone country"
-                        type="button"
-                    >
-                        <span className="inline-flex min-w-0 items-center gap-2.5 text-sm text-slate-900">
-                            <span className="shrink-0">
-                                {selectedOption.flag}
+                    <Tooltip className="w-full" label="Choose phone country">
+                        <button
+                            aria-label="Choose phone country"
+                            className={clsx(
+                                'w-full rounded border border-slate-300 px-3 py-2',
+                                'flex cursor-pointer items-center justify-between gap-2 pr-3 text-left'
+                            )}
+                            onClick={() => {
+                                setIsCountryMenuOpen((current) => !current);
+                            }}
+                            ref={countryButtonRef}
+                            type="button"
+                        >
+                            <span className="inline-flex min-w-0 items-center gap-2.5 text-sm text-slate-900">
+                                <span className="shrink-0">
+                                    {selectedOption.flag}
+                                </span>
+
+                                <span className="truncate">
+                                    +{selectedOption.dialCode}
+                                </span>
                             </span>
 
-                            <span className="truncate">
-                                +{selectedOption.dialCode}
-                            </span>
-                        </span>
-
-                        <DropdownChevron
-                            className="shrink-0"
-                            isOpen={isCountryMenuOpen}
-                        />
-                    </button>
+                            <DropdownChevron
+                                className="shrink-0"
+                                isOpen={isCountryMenuOpen}
+                            />
+                        </button>
+                    </Tooltip>
 
                     <AnchoredPopover
                         anchorRef={countryButtonRef}
@@ -138,38 +140,43 @@ export function PhoneField({
 
                             <div className="max-h-64 overflow-y-auto">
                                 {filteredOptions.map((option) => (
-                                    <button
-                                        className={clsx(
-                                            'inline-flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 hover:text-slate-900',
-                                            'flex cursor-pointer items-center justify-between gap-3',
-                                            option.code === country &&
-                                                'bg-slate-50'
-                                        )}
+                                    <Tooltip
+                                        className="w-full"
                                         key={option.code}
-                                        onClick={() => {
-                                            setIsCountryMenuOpen(false);
-                                            onCountryChange(option.code);
-
-                                            if (!value.trim()) return;
-
-                                            onNumberChange(
-                                                formatPhoneInput(
-                                                    value,
-                                                    option.code
-                                                )
-                                            );
-                                        }}
-                                        title={option.dropdownLabel}
-                                        type="button"
+                                        label={option.dropdownLabel}
+                                        side="right"
                                     >
-                                        <span className="truncate text-slate-900">
-                                            {option.dropdownLabel}
-                                        </span>
+                                        <button
+                                            className={clsx(
+                                                'inline-flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 hover:text-slate-900',
+                                                'flex cursor-pointer items-center justify-between gap-3',
+                                                option.code === country &&
+                                                    'bg-slate-50'
+                                            )}
+                                            onClick={() => {
+                                                setIsCountryMenuOpen(false);
+                                                onCountryChange(option.code);
 
-                                        <span className="shrink-0 text-slate-500">
-                                            {option.code}
-                                        </span>
-                                    </button>
+                                                if (!value.trim()) return;
+
+                                                onNumberChange(
+                                                    formatPhoneInput(
+                                                        value,
+                                                        option.code
+                                                    )
+                                                );
+                                            }}
+                                            type="button"
+                                        >
+                                            <span className="truncate text-slate-900">
+                                                {option.dropdownLabel}
+                                            </span>
+
+                                            <span className="shrink-0 text-slate-500">
+                                                {option.code}
+                                            </span>
+                                        </button>
+                                    </Tooltip>
                                 ))}
 
                                 {filteredOptions.length === 0 ? (
@@ -201,7 +208,6 @@ export function PhoneField({
                     }}
                     placeholder="0412 345 678"
                     ref={inputRef}
-                    title={fieldLabel}
                     type="tel"
                     value={displayValue}
                 />

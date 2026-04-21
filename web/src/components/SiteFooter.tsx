@@ -3,6 +3,7 @@ import { FaGithub } from 'react-icons/fa6';
 
 import { getJson } from '../services/http';
 import { TextAnchor, TextLink } from './form/TextLink';
+import { Tooltip } from './ui/Tooltip';
 
 const DEFAULT_CONTACT_EMAIL = 'support@iotbay.com';
 const GITHUB_REPOSITORY_URL =
@@ -68,16 +69,17 @@ export default function SiteFooter() {
                             Credits
                         </h2>
                         <p>ISD 2026</p>
-                        <TextAnchor
-                            aria-label="IoTBay on GitHub"
-                            href={GITHUB_REPOSITORY_URL}
-                            rel="noreferrer"
-                            target="_blank"
-                            title="View IoTBay on GitHub"
-                        >
-                            <FaGithub aria-hidden="true" size={20} />
-                            <span>IoTBay</span>
-                        </TextAnchor>
+                        <Tooltip label="View IoTBay on GitHub">
+                            <TextAnchor
+                                aria-label="IoTBay on GitHub"
+                                href={GITHUB_REPOSITORY_URL}
+                                rel="noreferrer"
+                                target="_blank"
+                            >
+                                <FaGithub aria-hidden="true" size={20} />
+                                <span>IoTBay</span>
+                            </TextAnchor>
+                        </Tooltip>
                     </div>
                 </section>
             </div>

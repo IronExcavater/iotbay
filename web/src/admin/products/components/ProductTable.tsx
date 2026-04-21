@@ -10,6 +10,7 @@ import {
     TableLoadingRow,
     TableMessageRow,
 } from '../../../components/table/Table';
+import { Tooltip } from '../../../components/ui/Tooltip';
 import type { Product } from '../../../products/api';
 import { DateTimeValue } from '../../../types/DateTimeValue';
 import { Money } from '../../../types/Money';
@@ -142,19 +143,20 @@ export function ProductTable({
                                             {Money.format(product.priceCents)}
                                         </span>
                                     </td>
-                                    <td
-                                        className="px-5 py-3 text-slate-500"
-                                        title={DateTimeValue.format(
-                                            product.updatedAt,
-                                            'long'
-                                        )}
-                                    >
-                                        <span className="flex min-h-8 items-center">
-                                            {DateTimeValue.format(
+                                    <td className="px-5 py-3 text-slate-500">
+                                        <Tooltip
+                                            label={DateTimeValue.format(
                                                 product.updatedAt,
-                                                'relative'
+                                                'long'
                                             )}
-                                        </span>
+                                        >
+                                            <span className="flex min-h-8 items-center">
+                                                {DateTimeValue.format(
+                                                    product.updatedAt,
+                                                    'relative'
+                                                )}
+                                            </span>
+                                        </Tooltip>
                                     </td>
                                     <TableActionCell>
                                         <ActionMenu

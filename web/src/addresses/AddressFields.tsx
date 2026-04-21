@@ -5,6 +5,7 @@ import { FaChevronDown } from 'react-icons/fa6';
 import { Button } from '../components/form/Button';
 import { Field } from '../components/form/Field';
 import { Input } from '../components/form/Input';
+import { Tooltip } from '../components/ui/Tooltip';
 import { BackendError } from '../services/http';
 import { AddressText } from '../types/AddressText';
 import { addressApi, type AddressSuggestion } from './api';
@@ -558,30 +559,35 @@ function AddressSuggestionPanel({
     return (
         <div className="bg-surface-0 absolute z-10 mt-1 grid w-full gap-1 rounded border border-slate-200 p-1 shadow-lg">
             {suggestions.map((suggestion) => (
-                <button
-                    className="grid gap-0.5 rounded px-3 py-2 text-left text-sm hover:bg-slate-50"
+                <Tooltip
+                    className="w-full"
                     key={suggestion.id}
-                    onMouseDown={(event) => {
-                        event.preventDefault();
-                        void onSelect(suggestion);
-                    }}
-                    title={
+                    label={
                         suggestion.subtitle
                             ? `${suggestion.label}, ${suggestion.subtitle}`
                             : suggestion.label
                     }
-                    type="button"
+                    side="right"
                 >
-                    <span className="font-medium text-slate-900">
-                        {suggestion.label}
-                    </span>
-
-                    {suggestion.subtitle ? (
-                        <span className="text-slate-500">
-                            {suggestion.subtitle}
+                    <button
+                        className="grid w-full gap-0.5 rounded px-3 py-2 text-left text-sm hover:bg-slate-50"
+                        onMouseDown={(event) => {
+                            event.preventDefault();
+                            void onSelect(suggestion);
+                        }}
+                        type="button"
+                    >
+                        <span className="font-medium text-slate-900">
+                            {suggestion.label}
                         </span>
-                    ) : null}
-                </button>
+
+                        {suggestion.subtitle ? (
+                            <span className="text-slate-500">
+                                {suggestion.subtitle}
+                            </span>
+                        ) : null}
+                    </button>
+                </Tooltip>
             ))}
         </div>
     );

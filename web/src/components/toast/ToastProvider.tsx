@@ -10,6 +10,8 @@ import {
 import clsx from 'clsx';
 import { FaXmark } from 'react-icons/fa6';
 
+import { Tooltip } from '../ui/Tooltip';
+
 type Toast = {
     id: number;
     message: string;
@@ -111,15 +113,16 @@ function ToastItem({
             )}
         >
             <p className="min-w-0 flex-1 text-sm">{children}</p>
-            <button
-                aria-label="Dismiss notification"
-                className="cursor-pointer text-slate-400 transition-colors hover:text-white"
-                onClick={handleDismiss}
-                title="Dismiss notification"
-                type="button"
-            >
-                <FaXmark aria-hidden="true" size={16} />
-            </button>
+            <Tooltip label="Dismiss notification">
+                <button
+                    aria-label="Dismiss notification"
+                    className="cursor-pointer text-slate-400 transition-colors hover:text-white"
+                    onClick={handleDismiss}
+                    type="button"
+                >
+                    <FaXmark aria-hidden="true" size={16} />
+                </button>
+            </Tooltip>
         </div>
     );
 }

@@ -9,6 +9,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthProvider';
 import { Button } from '../components/form/Button';
+import { Tooltip } from '../components/ui/Tooltip';
 import { useStoredBoolean } from '../hooks/useStoredBoolean';
 
 export default function AdminLayout() {
@@ -130,28 +131,33 @@ export default function AdminLayout() {
                         const Icon = item.icon;
 
                         return (
-                            <NavLink
-                                className={({ isActive }) =>
-                                    clsx(
-                                        'flex h-11 items-center rounded-lg px-3 text-sm font-medium',
-                                        !isCollapsed && 'gap-3',
-                                        isActive
-                                            ? 'bg-primary text-primary-fg'
-                                            : 'text-slate-700 hover:bg-slate-100'
-                                    )
-                                }
+                            <Tooltip
+                                className="w-full"
                                 key={item.to}
-                                title={item.label}
-                                to={item.to}
+                                label={isCollapsed ? item.label : undefined}
+                                side="right"
                             >
-                                <Icon
-                                    aria-hidden="true"
-                                    className="size-4 shrink-0"
-                                />
-                                {!isCollapsed ? (
-                                    <span>{item.label}</span>
-                                ) : null}
-                            </NavLink>
+                                <NavLink
+                                    className={({ isActive }) =>
+                                        clsx(
+                                            'flex h-11 items-center rounded-lg px-3 text-sm font-medium',
+                                            !isCollapsed && 'gap-3',
+                                            isActive
+                                                ? 'bg-primary text-primary-fg'
+                                                : 'text-slate-700 hover:bg-slate-100'
+                                        )
+                                    }
+                                    to={item.to}
+                                >
+                                    <Icon
+                                        aria-hidden="true"
+                                        className="size-4 shrink-0"
+                                    />
+                                    {!isCollapsed ? (
+                                        <span>{item.label}</span>
+                                    ) : null}
+                                </NavLink>
+                            </Tooltip>
                         );
                     })}
                 </nav>

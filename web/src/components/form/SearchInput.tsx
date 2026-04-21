@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import clsx from 'clsx';
 import { FaMagnifyingGlass } from 'react-icons/fa6';
 
+import { Tooltip } from '../ui/Tooltip';
 import { Input } from './Input';
 
 export function SearchInput({
@@ -29,17 +30,21 @@ export function SearchInput({
                 value={value}
             />
 
-            <button
-                aria-label="Focus search"
-                className="absolute inset-y-0 right-0 inline-flex w-11 items-center justify-center rounded-r border-l border-transparent text-slate-500 transition hover:text-slate-900"
-                onClick={() => {
-                    inputRef.current?.focus();
-                }}
-                title="Focus search"
-                type="button"
+            <Tooltip
+                className="absolute inset-y-0 right-0"
+                label="Focus search"
             >
-                <FaMagnifyingGlass aria-hidden="true" className="size-4" />
-            </button>
+                <button
+                    aria-label="Focus search"
+                    className="inline-flex h-full w-11 items-center justify-center rounded-r border-l border-transparent text-slate-500 transition hover:text-slate-900"
+                    onClick={() => {
+                        inputRef.current?.focus();
+                    }}
+                    type="button"
+                >
+                    <FaMagnifyingGlass aria-hidden="true" className="size-4" />
+                </button>
+            </Tooltip>
         </div>
     );
 }
