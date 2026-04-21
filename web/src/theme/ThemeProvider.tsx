@@ -6,7 +6,6 @@ import {
     useRef,
     useState,
     type ReactNode,
-    type RefObject,
 } from 'react';
 
 export type ThemeMode = 'dark' | 'light' | 'system';
@@ -20,34 +19,34 @@ interface ThemeContextValue {
 
 const STORAGE_KEY = 'theme-mode';
 const SYSTEM_DARK_QUERY = '(prefers-color-scheme: dark)';
+const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 const THEME_TRANSITION_CLASS = 'theme-transition';
 const ThemeContext = createContext<ThemeContextValue | null>(null);
+type ThemeTransitionTimeout = { current: number | null };
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
     const [mode, setMode] = useState<ThemeMode>(() => readInitialTheme());
     const [systemMode, setSystemMode] = useState<ResolvedThemeMode>(() =>
         resolveSystemMode()
     );
-    const previousResolvedMode = useRef<ResolvedThemeMode | null>(null);
+    const hasAppliedTheme = useRef(false);
     const transitionTimeout = useRef<number | null>(null);
-    const transitionFrames = useRef<number[]>([]);
     const resolvedMode = mode === 'system' ? systemMode : mode;
 
     useLayoutEffect(() => {
-        startThemeTransition(
-            previousResolvedMode.current !== null &&
-                previousResolvedMode.current !== resolvedMode,
-            transitionTimeout,
-            transitionFrames
-        );
+        const root = document.documentElement;
+
+        if (hasAppliedTheme.current && !prefersReducedMotion()) {
+            startThemeTransition(root, transitionTimeout);
+        }
+
         applyDocumentTheme(resolvedMode);
-        previousResolvedMode.current = resolvedMode;
+        hasAppliedTheme.current = true;
     }, [resolvedMode]);
 
     useEffect(() => {
         return () => {
-            clearThemeTransitionSchedule(transitionTimeout, transitionFrames);
-            document.documentElement.classList.remove(THEME_TRANSITION_CLASS);
+            stopThemeTransition(document.documentElement, transitionTimeout);
         };
     }, []);
 
@@ -129,74 +128,49 @@ function isThemeMode(value: string | null): value is ThemeMode {
 
 function applyDocumentTheme(resolvedMode: ResolvedThemeMode) {
     document.documentElement.dataset.theme = resolvedMode;
-    document.documentElement.style.colorScheme = resolvedMode;
 }
 
 function startThemeTransition(
-    shouldTransition: boolean,
-    timeoutRef: RefObject<number | null>,
-    frameRef: RefObject<number[]>
+    root: HTMLElement,
+    timeoutRef: ThemeTransitionTimeout
 ) {
-    if (!shouldTransition || prefersReducedMotion()) return;
+    stopThemeTransition(root, timeoutRef);
 
-    clearThemeTransitionSchedule(timeoutRef, frameRef);
-
-    const root = document.documentElement;
     root.classList.add(THEME_TRANSITION_CLASS);
-    // Make the transition rule active before changing data-theme.
+    // Make the transition rule active before the token values change.
     void root.offsetWidth;
 
-    timeoutRef.current = window.setTimeout(() => {
-        timeoutRef.current = null;
-        removeThemeTransitionAfterPaint(root, frameRef);
-    }, getThemeTransitionTime(root));
+    timeoutRef.current = window.setTimeout(
+        () => {
+            stopThemeTransition(root, timeoutRef);
+        },
+        getThemeTransitionTime(root) + 50
+    );
 }
 
-function removeThemeTransitionAfterPaint(
+function stopThemeTransition(
     root: HTMLElement,
-    frameRef: RefObject<number[]>
-) {
-    // Let the final transitioned colors paint before restoring local transitions.
-    frameRef.current = [
-        window.requestAnimationFrame(() => {
-            frameRef.current = [
-                window.requestAnimationFrame(() => {
-                    root.classList.remove(THEME_TRANSITION_CLASS);
-                    frameRef.current = [];
-                }),
-            ];
-        }),
-    ];
-}
-
-function clearThemeTransitionSchedule(
-    timeoutRef: RefObject<number | null>,
-    frameRef: RefObject<number[]>
+    timeoutRef: ThemeTransitionTimeout
 ) {
     if (timeoutRef.current !== null) {
         window.clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
     }
 
-    for (const frame of frameRef.current) {
-        window.cancelAnimationFrame(frame);
-    }
-    frameRef.current = [];
+    root.classList.remove(THEME_TRANSITION_CLASS);
 }
 
 function prefersReducedMotion() {
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    return window.matchMedia(REDUCED_MOTION_QUERY).matches;
 }
 
 function getThemeTransitionTime(element: Element) {
-    const styles = window.getComputedStyle(element);
-    return parseTransitionTime(
-        styles.getPropertyValue('--theme-transition-duration').trim()
-    );
-}
+    const duration = window
+        .getComputedStyle(element)
+        .getPropertyValue('--theme-transition-duration')
+        .trim();
 
-function parseTransitionTime(value: string) {
-    if (value.endsWith('ms')) return Number.parseFloat(value);
-    if (value.endsWith('s')) return Number.parseFloat(value) * 1000;
+    if (duration.endsWith('ms')) return Number.parseFloat(duration);
+    if (duration.endsWith('s')) return Number.parseFloat(duration) * 1000;
     return 0;
 }
