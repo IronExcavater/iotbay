@@ -8,7 +8,10 @@
     ],
     "scripts": {
         "prepare": "husky",
-        "lint:staged": "lint-staged --config lint-staged.config.js"
+        "postinstall": "npm run -w api sync",
+        "dev": "concurrently \"npm run -w web dev\" \"npm run -w api dev\"",
+        "fix:staged": "lint-staged --config lint-staged.config.js",
+        "fix:all": "npm run -w web fix:all && npm run -w api fix:all"
     },
     "devDependencies": {
         "husky": "^9.0.11",
