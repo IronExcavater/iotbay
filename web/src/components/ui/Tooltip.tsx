@@ -13,20 +13,27 @@ import {
 import clsx from 'clsx';
 import { createPortal } from 'react-dom';
 
-type TooltipSide = 'bottom' | 'left' | 'right' | 'top';
+import {
+    getHiddenOverlayPosition,
+    getOverlayPosition,
+    type OverlayAlign,
+    type OverlaySide,
+} from '../overlay/positioning';
+
 type TooltipTrigger = ReactElement<{ 'aria-describedby'?: string }>;
-type TooltipPosition = Pick<CSSProperties, 'left' | 'top' | 'transform'>;
 
 interface TooltipProps {
+    align?: OverlayAlign;
     children: TooltipTrigger;
     className?: string;
     label?: ReactNode;
-    side?: TooltipSide;
+    side?: OverlaySide;
 }
 
 const TOOLTIP_GAP = 8;
 
 export function Tooltip({
+    align = 'center',
     children,
     className,
     label,
@@ -34,16 +41,22 @@ export function Tooltip({
 }: TooltipProps) {
     const id = useId();
     const triggerRef = useRef<HTMLSpanElement | null>(null);
+    const tooltipRef = useRef<HTMLSpanElement | null>(null);
     const [isOpen, setIsOpen] = useState(false);
-    const [position, setPosition] = useState<TooltipPosition>(() =>
-        getHiddenPosition()
-    );
+    const [position, setPosition] = useState(() => getHiddenOverlayPosition());
 
     const updatePosition = useCallback(() => {
-        if (triggerRef.current === null) return;
+        if (triggerRef.current === null || tooltipRef.current === null) return;
 
-        setPosition(getTooltipPosition(triggerRef.current, side));
-    }, [side]);
+        setPosition(
+            getOverlayPosition(triggerRef.current, tooltipRef.current, {
+                align,
+                gap: TOOLTIP_GAP,
+                padding: 8,
+                side,
+            })
+        );
+    }, [align, side]);
 
     useLayoutEffect(() => {
         if (!isOpen) return;
@@ -90,58 +103,20 @@ export function Tooltip({
                       <span
                           className="pointer-events-none fixed z-80 max-w-64 rounded bg-black px-2 py-1 text-xs font-medium whitespace-nowrap text-white opacity-95 shadow-lg ring-1 ring-white/20"
                           id={id}
+                          ref={tooltipRef}
                           role="tooltip"
-                          style={position}
+                          style={position.style as CSSProperties}
                       >
                           {label}
+                          <span
+                              aria-hidden="true"
+                              className="absolute size-2 bg-black"
+                              style={position.arrowStyle}
+                          />
                       </span>,
                       document.body
                   )
                 : null}
         </span>
     );
-}
-
-function getTooltipPosition(
-    element: HTMLElement,
-    side: TooltipSide
-): TooltipPosition {
-    const rect = element.getBoundingClientRect();
-
-    if (side === 'bottom') {
-        return {
-            left: rect.left + rect.width / 2,
-            top: rect.bottom + TOOLTIP_GAP,
-            transform: 'translateX(-50%)',
-        };
-    }
-
-    if (side === 'left') {
-        return {
-            left: rect.left - TOOLTIP_GAP,
-            top: rect.top + rect.height / 2,
-            transform: 'translate(-100%, -50%)',
-        };
-    }
-
-    if (side === 'right') {
-        return {
-            left: rect.right + TOOLTIP_GAP,
-            top: rect.top + rect.height / 2,
-            transform: 'translateY(-50%)',
-        };
-    }
-
-    return {
-        left: rect.left + rect.width / 2,
-        top: rect.top - TOOLTIP_GAP,
-        transform: 'translate(-50%, -100%)',
-    };
-}
-
-function getHiddenPosition(): TooltipPosition {
-    return {
-        left: -9999,
-        top: -9999,
-    };
 }

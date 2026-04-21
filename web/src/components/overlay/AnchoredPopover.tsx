@@ -8,14 +8,21 @@ import {
 import clsx from 'clsx';
 import { createPortal } from 'react-dom';
 
+import {
+    getOverlayPosition,
+    type OverlayAlign,
+    type OverlaySide,
+} from './positioning';
+
 interface AnchoredPopoverProps {
-    align?: 'left' | 'right';
+    align?: 'center' | 'end' | 'left' | 'right' | 'start';
     anchorRef: RefObject<HTMLElement | null>;
     children: ReactNode;
     className?: string;
     matchAnchorWidth?: boolean;
     onClose: () => void;
     open: boolean;
+    side?: OverlaySide;
 }
 
 export function AnchoredPopover({
@@ -26,6 +33,7 @@ export function AnchoredPopover({
     matchAnchorWidth = false,
     onClose,
     open,
+    side = 'bottom',
 }: AnchoredPopoverProps) {
     const panelRef = useRef<HTMLDivElement | null>(null);
     const frameRef = useRef<number | null>(null);
@@ -43,16 +51,21 @@ export function AnchoredPopover({
             }
 
             const rect = anchor.getBoundingClientRect();
-            const left =
-                align === 'right'
-                    ? Math.max(12, rect.right)
-                    : Math.max(12, rect.left);
+            if (matchAnchorWidth) {
+                panel.style.minWidth = `${rect.width}px`;
+            } else {
+                panel.style.minWidth = '';
+            }
 
-            panel.style.left = `${left}px`;
-            panel.style.top = `${rect.bottom + 4}px`;
-            panel.style.minWidth = matchAnchorWidth ? `${rect.width}px` : '';
-            panel.style.transform =
-                align === 'right' ? 'translateX(-100%)' : 'none';
+            const position = getOverlayPosition(anchor, panel, {
+                align: normalizePopoverAlign(align),
+                gap: 4,
+                padding: 12,
+                side,
+            });
+
+            panel.style.left = `${position.style.left}px`;
+            panel.style.top = `${position.style.top}px`;
             panel.style.opacity = '1';
         }
 
@@ -79,7 +92,7 @@ export function AnchoredPopover({
             window.removeEventListener('resize', queueUpdatePosition);
             window.removeEventListener('scroll', queueUpdatePosition, true);
         };
-    }, [align, anchorRef, matchAnchorWidth, open]);
+    }, [align, anchorRef, matchAnchorWidth, open, side]);
 
     useEffect(() => {
         if (!open) {
@@ -135,4 +148,12 @@ export function AnchoredPopover({
         </div>,
         document.body
     );
+}
+
+function normalizePopoverAlign(
+    align: AnchoredPopoverProps['align']
+): OverlayAlign {
+    if (align === 'right') return 'end';
+    if (align === 'left') return 'start';
+    return align ?? 'start';
 }

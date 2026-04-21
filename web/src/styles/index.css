@@ -1,6 +1,5 @@
-@import './tokens.scss';
+@import './tailwind-tokens.css';
 @import 'tailwindcss';
-@import '../theme/theme.scss';
 
 html,
 body,

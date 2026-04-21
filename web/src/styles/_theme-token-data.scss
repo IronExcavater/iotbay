@@ -1,0 +1,58 @@
+$color-tokens:
+    surface-0, surface-50, surface-100, surface-200, surface-300, ink-400,
+    ink-500, ink-600, ink-700, ink-900, ink-950, primary-bg, primary-bg-hover,
+    primary-fg, danger-50, danger-500, danger-700;
+$light-colors: (
+    surface-0: #fff,
+    surface-50: #f8fafc,
+    surface-100: #f1f5f9,
+    surface-200: #e2e8f0,
+    surface-300: #cbd5e1,
+    ink-400: #94a3b8,
+    ink-500: #64748b,
+    ink-600: #475569,
+    ink-700: #334155,
+    ink-900: #0f172a,
+    ink-950: #020617,
+    primary-bg: #020617,
+    primary-bg-hover: #334155,
+    primary-fg: #fff,
+    danger-50: #fef2f2,
+    danger-500: #ef4444,
+    danger-700: #b91c1c,
+);
+$dark-colors: (
+    surface-0: #111,
+    surface-50: #050505,
+    surface-100: #1a1a1a,
+    surface-200: #2a2a2a,
+    surface-300: #3a3a3a,
+    ink-400: #858585,
+    ink-500: #a3a3a3,
+    ink-600: #c7c7c7,
+    ink-700: #e5e5e5,
+    ink-900: #f5f5f5,
+    ink-950: #fff,
+    primary-bg: #fff,
+    primary-bg-hover: #e5e5e5,
+    primary-fg: #050505,
+    danger-50: #2b1111,
+    danger-500: #ef4444,
+    danger-700: #fca5a5,
+);
+
+@mixin register-color-tokens {
+    @each $token in $color-tokens {
+        @property --#{$token} {
+            syntax: '<color>';
+            inherits: true;
+            initial-value: transparent;
+        }
+    }
+}
+
+@mixin color-vars($colors) {
+    @each $token, $value in $colors {
+        --#{$token}: #{$value};
+    }
+}

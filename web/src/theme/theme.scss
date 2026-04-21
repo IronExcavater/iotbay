@@ -1,23 +1,22 @@
+@use 'sass:list';
+@use '../styles/theme-token-data' as theme;
+
+$theme-token-transitions: ();
+
+@each $token in theme.$color-tokens {
+    $theme-token-transitions: list.append(
+        $theme-token-transitions,
+        --#{$token} var(--theme-transition-duration) ease,
+        comma
+    );
+}
+
 :root {
     --theme-transition-duration: 180ms;
 }
 
 :root.theme-transition {
-    transition:
-        --surface-0 var(--theme-transition-duration) ease,
-        --surface-50 var(--theme-transition-duration) ease,
-        --surface-100 var(--theme-transition-duration) ease,
-        --surface-200 var(--theme-transition-duration) ease,
-        --surface-300 var(--theme-transition-duration) ease,
-        --ink-400 var(--theme-transition-duration) ease,
-        --ink-500 var(--theme-transition-duration) ease,
-        --ink-600 var(--theme-transition-duration) ease,
-        --ink-700 var(--theme-transition-duration) ease,
-        --ink-900 var(--theme-transition-duration) ease,
-        --ink-950 var(--theme-transition-duration) ease,
-        --danger-50 var(--theme-transition-duration) ease,
-        --danger-500 var(--theme-transition-duration) ease,
-        --danger-700 var(--theme-transition-duration) ease;
+    transition: $theme-token-transitions;
 }
 
 @media (prefers-reduced-motion: reduce) {
