@@ -103,7 +103,7 @@ function ToastItem({
     return (
         <div
             className={clsx(
-                'pointer-events-auto flex items-start gap-3 rounded bg-slate-950 px-4 py-3 text-white shadow-lg transition-all duration-200',
+                'pointer-events-auto flex items-start gap-3 rounded bg-black/90 px-4 py-3 text-white shadow-lg transition-all duration-200',
                 isVisible && !isLeaving
                     ? 'translate-y-0 opacity-100'
                     : '-translate-y-2 opacity-0',

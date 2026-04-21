@@ -1,22 +1,29 @@
-// Runs synchronously before React mounts to set the theme class on <html>,
+// Runs synchronously before React mounts to set theme attributes on <html>,
 // preventing a flash of the wrong colour scheme on page load.
 (() => {
-    try {
-        const stored = window.localStorage.getItem('theme-mode');
-        const resolvedMode = window.matchMedia('(prefers-color-scheme: dark)')
-            .matches
-            ? 'dark'
-            : 'light';
+    const STORAGE_KEY = 'theme-mode';
+    const SYSTEM_DARK_QUERY = '(prefers-color-scheme: dark)';
 
-        if (stored === 'light' || stored === 'dark') {
-            document.documentElement.dataset.theme = stored;
-            document.documentElement.style.colorScheme = stored;
-            return;
-        }
+    function isThemeMode(value) {
+        return value === 'light' || value === 'dark' || value === 'system';
+    }
 
-        document.documentElement.removeAttribute('data-theme');
+    function resolveSystemMode() {
+        return window.matchMedia(SYSTEM_DARK_QUERY).matches ? 'dark' : 'light';
+    }
+
+    function applyTheme(resolvedMode) {
+        document.documentElement.dataset.theme = resolvedMode;
         document.documentElement.style.colorScheme = resolvedMode;
+    }
+
+    try {
+        const stored = window.localStorage.getItem(STORAGE_KEY);
+        const mode = isThemeMode(stored) ? stored : 'system';
+        const resolvedMode = mode === 'system' ? resolveSystemMode() : mode;
+
+        applyTheme(resolvedMode);
     } catch {
-        // Ignore storage access failures and fall back to CSS defaults.
+        applyTheme(resolveSystemMode());
     }
 })();

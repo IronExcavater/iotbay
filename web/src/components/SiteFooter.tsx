@@ -36,7 +36,7 @@ export default function SiteFooter() {
     }, []);
 
     return (
-        <footer className="border-t border-slate-200 bg-white">
+        <footer className="bg-surface-0 border-t border-slate-200">
             <div className="mx-auto flex w-full max-w-6xl flex-wrap justify-center gap-x-8 gap-y-8 px-4 py-8 text-sm text-slate-600 sm:px-6">
                 <section className="flex min-w-0 flex-[1_1_12rem] justify-center">
                     <div className="flex w-fit flex-col items-start gap-2 text-left">

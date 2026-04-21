@@ -556,7 +556,7 @@ function AddressSuggestionPanel({
     suggestions: AddressSuggestion[];
 }) {
     return (
-        <div className="absolute z-10 mt-1 grid w-full gap-1 rounded border border-slate-200 bg-white p-1 shadow-lg">
+        <div className="bg-surface-0 absolute z-10 mt-1 grid w-full gap-1 rounded border border-slate-200 p-1 shadow-lg">
             {suggestions.map((suggestion) => (
                 <button
                     className="grid gap-0.5 rounded px-3 py-2 text-left text-sm hover:bg-slate-50"

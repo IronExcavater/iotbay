@@ -32,7 +32,7 @@ export default function SiteNav() {
     }
 
     return (
-        <header className="sticky top-0 z-30 border-b border-slate-200/90 bg-white/95 backdrop-blur">
+        <header className="bg-surface-0/95 sticky top-0 z-30 border-b border-slate-200/90 backdrop-blur">
             <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-3 px-4 py-4 sm:px-6">
                 <div aria-hidden="true" className="size-10" />
 
@@ -61,14 +61,14 @@ export default function SiteNav() {
                             ) : (
                                 <>
                                     <Link
-                                        className="rounded border border-slate-300 px-3 py-2 hover:bg-slate-100"
+                                        className="rounded border border-slate-300 px-3 py-2 text-slate-900 hover:bg-slate-100"
                                         to="/sign-in"
                                     >
                                         Sign in
                                     </Link>
 
                                     <Link
-                                        className="rounded bg-slate-900 px-3 py-2 text-white hover:bg-slate-700"
+                                        className="bg-primary text-primary-fg hover:bg-primary-hover rounded px-3 py-2"
                                         to="/sign-up"
                                     >
                                         Sign up

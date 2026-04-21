@@ -40,7 +40,7 @@ export function ProductTable({
     setSearch,
 }: ProductTableProps) {
     return (
-        <section className="overflow-hidden rounded border border-slate-200 bg-white">
+        <section className="bg-surface-0 overflow-hidden rounded border border-slate-200">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
                 <div className="flex items-center gap-2">
                     <h2 className="text-xl font-semibold text-slate-900">

@@ -26,7 +26,7 @@ export default function AdminPage() {
         <section className="grid gap-3 sm:grid-cols-2">
             {links.map((link) => (
                 <Link
-                    className="rounded border border-slate-200 bg-white px-4 py-4 text-base font-medium text-slate-900 transition hover:border-slate-300 hover:bg-slate-50"
+                    className="bg-surface-0 rounded border border-slate-200 px-4 py-4 text-base font-medium text-slate-900 transition hover:border-slate-300 hover:bg-slate-50"
                     key={link.to}
                     to={link.to}
                 >

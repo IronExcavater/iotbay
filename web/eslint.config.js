@@ -70,6 +70,7 @@ export default defineConfig([
                     cssPath: './src/styles/index.css',
                 },
             ],
+            'tailwindcss/classnames-order': 'off',
         },
     },
 ]);

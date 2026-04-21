@@ -37,7 +37,7 @@ export default function AdminLayout() {
 
     return (
         <section className="min-h-[calc(100vh-73px)] md:grid md:grid-cols-[auto_minmax(0,1fr)]">
-            <div className="border-b border-slate-200 bg-white px-4 py-4 sm:px-6 md:hidden">
+            <div className="bg-surface-0 border-b border-slate-200 px-4 py-4 sm:px-6 md:hidden">
                 <div className="grid gap-3">
                     <h1 className="text-lg font-semibold tracking-tight text-slate-900">
                         Admin
@@ -53,7 +53,7 @@ export default function AdminLayout() {
                                         clsx(
                                             'inline-flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium transition',
                                             isActive
-                                                ? 'bg-slate-900 text-white'
+                                                ? 'bg-primary text-primary-fg'
                                                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                                         )
                                     }
@@ -74,7 +74,7 @@ export default function AdminLayout() {
 
             <aside
                 className={clsx(
-                    'hidden overflow-hidden border-b border-slate-200 bg-white transition-[width] duration-200 ease-out md:sticky md:top-18 md:block md:h-[calc(100vh-72px)] md:self-start md:border-r md:border-b-0',
+                    'bg-surface-0 hidden overflow-hidden border-b border-slate-200 transition-[width] duration-200 ease-out md:sticky md:top-18 md:block md:h-[calc(100vh-72px)] md:self-start md:border-r md:border-b-0',
                     isCollapsed ? 'md:w-19' : 'md:w-60'
                 )}
             >
@@ -136,7 +136,7 @@ export default function AdminLayout() {
                                         'flex h-11 items-center rounded-lg px-3 text-sm font-medium',
                                         !isCollapsed && 'gap-3',
                                         isActive
-                                            ? 'bg-slate-900 text-white'
+                                            ? 'bg-primary text-primary-fg'
                                             : 'text-slate-700 hover:bg-slate-100'
                                     )
                                 }
