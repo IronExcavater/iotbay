@@ -1,5 +1,6 @@
 {
     "name": "iotbay-api",
+    "description": "Flask backend for IoTBay",
     "version": "0.0.1",
     "private": true,
     "scripts": {
