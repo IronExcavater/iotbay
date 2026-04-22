@@ -1,6 +1,5 @@
 import { Button } from '../../../components/form/Button';
 import { Field } from '../../../components/form/Field';
-import { FormNotice } from '../../../components/form/FormNotice';
 import { Input } from '../../../components/form/Input';
 import { MoneyField } from '../../../components/form/MoneyField';
 import { OverlayDialog } from '../../../components/overlay/OverlayDialog';
@@ -15,7 +14,6 @@ interface ProductFormDialogProps {
         inputRef: React.Ref<HTMLInputElement>;
     };
     fieldErrors: ProductFieldErrors;
-    formError: string | null;
     formTitle: string;
     isOpen: boolean;
     isSubmitting: boolean;
@@ -36,7 +34,6 @@ interface ProductFormDialogProps {
 export function ProductFormDialog({
     codeInput,
     fieldErrors,
-    formError,
     formTitle,
     isOpen,
     isSubmitting,
@@ -54,10 +51,6 @@ export function ProductFormDialog({
     return (
         <OverlayDialog onClose={onClose} title={formTitle}>
             <form className="grid gap-4" onSubmit={onSubmit}>
-                {formError ? (
-                    <FormNotice tone="error">{formError}</FormNotice>
-                ) : null}
-
                 <Field error={fieldErrors.name} label="Name" required>
                     <Input
                         hasError={Boolean(fieldErrors.name)}

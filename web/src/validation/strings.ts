@@ -48,7 +48,9 @@ export class StringValidator extends Validator<string, string> {
             normalized = normalized.toUpperCase();
         }
         if (this.options.maxLength !== undefined) {
-            normalized = normalized.slice(0, this.options.maxLength);
+            normalized = [...normalized]
+                .slice(0, this.options.maxLength)
+                .join('');
         }
         return normalized;
     }
@@ -71,7 +73,7 @@ export class StringValidator extends Validator<string, string> {
 
         if (
             this.options.maxLength !== undefined &&
-            normalized.length > this.options.maxLength
+            [...normalized].length > this.options.maxLength
         ) {
             this.fail(
                 `${this.options.fieldName} must be ${this.options.maxLength} characters or fewer`,

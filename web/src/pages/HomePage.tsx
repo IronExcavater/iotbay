@@ -50,7 +50,7 @@ export default function HomePage() {
         <section className="grid gap-6">
             <PageHeader title="Products" />
 
-            <div className="bg-surface-0 overflow-hidden rounded border border-slate-200">
+            <div className="bg-ui-0 border-ui-200 overflow-hidden rounded border">
                 <div className="overflow-x-auto">
                     <Table>
                         <colgroup>
@@ -90,10 +90,10 @@ export default function HomePage() {
                             ) : (
                                 products.map((product) => (
                                     <tr
-                                        className="border-t border-slate-200 align-top"
+                                        className="border-ui-200 border-t align-top"
                                         key={product.id}
                                     >
-                                        <td className="px-5 py-3 font-mono text-xs text-slate-600">
+                                        <td className="text-ui-600 px-5 py-3 font-mono text-xs">
                                             {product.code}
                                         </td>
                                         <td className="px-5 py-3">
@@ -102,7 +102,7 @@ export default function HomePage() {
                                         <td className="px-5 py-3">
                                             {Money.format(product.priceCents)}
                                         </td>
-                                        <td className="px-5 py-3 text-slate-500">
+                                        <td className="text-ui-500 px-5 py-3">
                                             <Tooltip
                                                 label={DateTimeValue.format(
                                                     product.updatedAt,

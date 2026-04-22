@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 
 import { ProductFormDialog } from '../admin/products/components/ProductFormDialog';
 import { ProductTable } from '../admin/products/components/ProductTable';
+import { useToast } from '../components/toast/ToastProvider';
 import { useFormattedInput } from '../hooks/useFormattedInput';
 import { useSearchFilter } from '../hooks/useSearchFilter';
 import { productApi, type Product } from '../products/api';
@@ -18,6 +19,7 @@ import { Money } from '../types/Money';
 import { ProductCode, ProductName } from '../types/ProductText';
 
 export default function AdminProductsPage() {
+    const { showToast } = useToast();
     const [products, setProducts] = useState<Product[]>([]);
     const [isLoadingProducts, setIsLoadingProducts] = useState(true);
     const [productsError, setProductsError] = useState<string | null>(null);
@@ -26,7 +28,6 @@ export default function AdminProductsPage() {
         createProductFormValues()
     );
     const [fieldErrors, setFieldErrors] = useState<ProductFieldErrors>({});
-    const [formError, setFormError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [editingProductId, setEditingProductId] = useState<string | null>(
         null
@@ -104,7 +105,6 @@ export default function AdminProductsPage() {
     function closeForm() {
         setEditingProductId(null);
         setFieldErrors({});
-        setFormError(null);
         setFormValues(createProductFormValues());
         setIsFormOpen(false);
     }
@@ -112,7 +112,6 @@ export default function AdminProductsPage() {
     function handleCreate() {
         setEditingProductId(null);
         setFieldErrors({});
-        setFormError(null);
         setFormValues(createProductFormValues());
         setIsFormOpen(true);
     }
@@ -120,7 +119,6 @@ export default function AdminProductsPage() {
     function handleEdit(product: Product) {
         setEditingProductId(product.id);
         setFieldErrors({});
-        setFormError(null);
         setFormValues(toProductFormValues(product));
         setIsFormOpen(true);
     }
@@ -158,7 +156,6 @@ export default function AdminProductsPage() {
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        setFormError(null);
 
         const assessment = assessProductForm(formValues);
         setFieldErrors(assessment.fieldErrors);
@@ -179,7 +176,7 @@ export default function AdminProductsPage() {
         } catch (error) {
             const nextState = toProductErrorState(error);
             setFieldErrors(nextState.fieldErrors);
-            setFormError(nextState.formError);
+            if (nextState.formError) showToast(nextState.formError);
         } finally {
             setIsSubmitting(false);
         }
@@ -207,7 +204,6 @@ export default function AdminProductsPage() {
             <ProductFormDialog
                 codeInput={codeInput}
                 fieldErrors={fieldErrors}
-                formError={formError}
                 formTitle={formTitle}
                 isOpen={isFormOpen}
                 isSubmitting={isSubmitting}
