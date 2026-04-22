@@ -24,7 +24,6 @@ import {
     validatePhoneNumber,
 } from '../auth/phone';
 import { buildVerifyEmailPath } from '../auth/redirects';
-import { FormNotice } from '../components/form/FormNotice';
 import { useToast } from '../components/toast/ToastProvider';
 import { downloadHtml } from '../services/download';
 import { backendErrorMessage, resolveBackendError } from '../services/http';
@@ -110,7 +109,6 @@ export default function AccountPage() {
     const [initialValues, setInitialValues] =
         useState<ProfileValues>(DEFAULT_VALUES);
     const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-    const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
 
@@ -164,7 +162,6 @@ export default function AccountPage() {
 
     async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
         event.preventDefault();
-        setError(null);
 
         if (!hasChanges) return;
 
@@ -216,7 +213,7 @@ export default function AccountPage() {
         } catch (caughtError) {
             const nextErrorState = toAccountError(caughtError);
             setFieldErrors(nextErrorState.fieldErrors);
-            setError(nextErrorState.formError);
+            if (nextErrorState.formError) showToast(nextErrorState.formError);
         } finally {
             setIsSubmitting(false);
         }
@@ -228,16 +225,12 @@ export default function AccountPage() {
                 Account
             </h1>
 
-            <section className="bg-surface-0 rounded border border-slate-200 p-5">
+            <section className="bg-ui-0 border-ui-200 rounded border p-5">
                 <div className="grid gap-1">
                     <h2 className="text-lg font-semibold">Manage details</h2>
                 </div>
 
                 <form className="mt-5 grid gap-6" onSubmit={handleSubmit}>
-                    {error ? (
-                        <FormNotice tone="error">{error}</FormNotice>
-                    ) : null}
-
                     <AccountPersonalSection
                         fieldErrors={fieldErrors}
                         onEmailBlur={() => {

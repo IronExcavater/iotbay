@@ -36,7 +36,7 @@ export function AccountPersonalSection({
 }) {
     return (
         <section className="grid gap-4">
-            <h3 className="text-sm font-semibold tracking-[0.08em] text-slate-700 uppercase">
+            <h3 className="text-ui-700 text-sm font-semibold tracking-[0.08em] uppercase">
                 Personal
             </h3>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -104,8 +104,8 @@ export function AccountContactSection({
     values: ProfileValues;
 }) {
     return (
-        <section className="grid gap-4 border-t border-slate-200 pt-6">
-            <h3 className="text-sm font-semibold tracking-[0.08em] text-slate-700 uppercase">
+        <section className="border-ui-200 grid gap-4 border-t pt-6">
+            <h3 className="text-ui-700 text-sm font-semibold tracking-[0.08em] uppercase">
                 Contact
             </h3>
             <PhoneField
@@ -140,8 +140,8 @@ export function AccountStaffSection({
     values: ProfileValues;
 }) {
     return (
-        <section className="grid gap-4 border-t border-slate-200 pt-6">
-            <h3 className="text-sm font-semibold tracking-[0.08em] text-slate-700 uppercase">
+        <section className="border-ui-200 grid gap-4 border-t pt-6">
+            <h3 className="text-ui-700 text-sm font-semibold tracking-[0.08em] uppercase">
                 Staff
             </h3>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -201,7 +201,7 @@ export function AccountActionsSection({
     return (
         <section
             className={clsx(
-                'border-t border-slate-200 pt-6',
+                'border-ui-200 border-t pt-6',
                 hasChanges
                     ? 'grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start'
                     : 'flex justify-end'
@@ -212,7 +212,7 @@ export function AccountActionsSection({
                     error={error}
                     hint={currentPasswordHint}
                     label="Password"
-                    metaPlacement="below"
+                    metaPlacement="inline"
                     required
                 >
                     <PasswordInput
