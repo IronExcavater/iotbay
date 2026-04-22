@@ -1,6 +1,6 @@
-# IOTBay Marketplace
+# IoTBay Marketplace
 
-IOTBay is a monorepo with two workspaces:
+IoTBay is a monorepo with two workspaces:
 
 - `web`: React + Vite frontend
 - `api`: Flask backend with a SQLite database
