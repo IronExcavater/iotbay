@@ -1,4 +1,63 @@
 export default {
-    plugins: ['stylelint-prettier'],
-    extends: ['stylelint-config-standard', 'stylelint-config-tailwindcss'],
+    extends: [
+        'stylelint-config-standard-scss',
+        'stylelint-config-tailwindcss',
+        'stylelint-prettier/recommended',
+    ],
+    overrides: [
+        {
+            files: ['**/*.scss'],
+            customSyntax: 'postcss-scss',
+        },
+    ],
+    rules: {
+        'at-rule-no-unknown': [
+            true,
+            {
+                ignoreAtRules: [
+                    'apply',
+                    'config',
+                    'custom-variant',
+                    'each',
+                    'layer',
+                    'plugin',
+                    'reference',
+                    'responsive',
+                    'screen',
+                    'source',
+                    'tailwind',
+                    'theme',
+                    'use',
+                    'utility',
+                    'variant',
+                ],
+            },
+        ],
+        'custom-property-empty-line-before': null,
+        'at-rule-empty-line-before': null,
+        'custom-property-no-missing-var-function': null,
+        'property-no-vendor-prefix': null,
+        'scss/load-partial-extension': null,
+        'scss/at-rule-no-unknown': [
+            true,
+            {
+                ignoreAtRules: [
+                    'apply',
+                    'config',
+                    'custom-variant',
+                    'each',
+                    'layer',
+                    'plugin',
+                    'reference',
+                    'responsive',
+                    'screen',
+                    'source',
+                    'tailwind',
+                    'theme',
+                    'utility',
+                    'variant',
+                ],
+            },
+        ],
+    },
 };

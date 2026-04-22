@@ -103,19 +103,18 @@ function ToastItem({
     return (
         <div
             className={clsx(
-                'pointer-events-auto flex items-start gap-3 rounded bg-slate-950 px-4 py-3 text-white shadow-lg transition-all duration-200',
+                'bg-ui-950 text-ui-0 pointer-events-auto flex items-start gap-3 rounded px-4 py-3 shadow-lg transition-[opacity,transform] duration-200',
                 isVisible && !isLeaving
                     ? 'translate-y-0 opacity-100'
                     : '-translate-y-2 opacity-0',
-                'ring-1 ring-white/10'
+                'ring-ui-700/20 ring-1'
             )}
         >
             <p className="min-w-0 flex-1 text-sm">{children}</p>
             <button
                 aria-label="Dismiss notification"
-                className="cursor-pointer text-slate-400 transition-colors hover:text-white"
+                className="text-ui-300 hover:text-ui-0 cursor-pointer transition-colors"
                 onClick={handleDismiss}
-                title="Dismiss notification"
                 type="button"
             >
                 <FaXmark aria-hidden="true" size={16} />

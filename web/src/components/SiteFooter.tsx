@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { FaGithub } from 'react-icons/fa6';
-import { Link } from 'react-router-dom';
 
 import { getJson } from '../services/http';
-import { textButtonClassName } from './form/Button';
+import { TextAnchor, TextLink } from './form/TextLink';
 
 const DEFAULT_CONTACT_EMAIL = 'support@iotbay.com';
 const GITHUB_REPOSITORY_URL =
@@ -37,59 +36,41 @@ export default function SiteFooter() {
     }, []);
 
     return (
-        <footer className="border-t border-slate-200 bg-white">
-            <div className="mx-auto flex w-full max-w-6xl flex-wrap justify-center gap-x-8 gap-y-8 px-4 py-8 text-sm text-slate-600 sm:px-6">
+        <footer className="bg-ui-0 border-ui-200 border-t">
+            <div className="text-ui-600 mx-auto flex w-full max-w-6xl flex-wrap justify-center gap-x-8 gap-y-8 px-4 py-8 text-sm sm:px-6">
                 <section className="flex min-w-0 flex-[1_1_12rem] justify-center">
                     <div className="flex w-fit flex-col items-start gap-2 text-left">
-                        <h2 className="font-semibold text-slate-900">
-                            Sitemap
-                        </h2>
-                        <Link className={textButtonClassName} to="/">
-                            Home
-                        </Link>
-                        <Link className={textButtonClassName} to="/account">
-                            Account
-                        </Link>
-                        <Link
-                            className={textButtonClassName}
-                            to="/staff/sign-in?next=/admin"
-                        >
+                        <h2 className="text-ui-900 font-semibold">Sitemap</h2>
+                        <TextLink to="/">Home</TextLink>
+                        <TextLink to="/account">Account</TextLink>
+                        <TextLink to="/staff/sign-in?next=/admin">
                             Staff portal
-                        </Link>
+                        </TextLink>
                     </div>
                 </section>
 
                 <section className="flex min-w-0 flex-[1_1_12rem] justify-center">
                     <div className="flex w-fit flex-col items-start gap-2 text-left">
-                        <h2 className="font-semibold text-slate-900">
-                            Contact
-                        </h2>
-                        <a
-                            className={textButtonClassName}
-                            href={`mailto:${contactEmail}`}
-                        >
+                        <h2 className="text-ui-900 font-semibold">Contact</h2>
+                        <TextAnchor href={`mailto:${contactEmail}`}>
                             {contactEmail}
-                        </a>
+                        </TextAnchor>
                     </div>
                 </section>
 
                 <section className="flex min-w-0 flex-[1_1_12rem] justify-center">
                     <div className="flex w-fit flex-col items-start gap-2 text-left">
-                        <h2 className="font-semibold text-slate-900">
-                            Credits
-                        </h2>
+                        <h2 className="text-ui-900 font-semibold">Credits</h2>
                         <p>ISD 2026</p>
-                        <a
+                        <TextAnchor
                             aria-label="IoTBay on GitHub"
-                            className={textButtonClassName}
                             href={GITHUB_REPOSITORY_URL}
                             rel="noreferrer"
-                            title="View IoTBay on GitHub"
                             target="_blank"
                         >
                             <FaGithub aria-hidden="true" size={20} />
                             <span>IoTBay</span>
-                        </a>
+                        </TextAnchor>
                     </div>
                 </section>
             </div>

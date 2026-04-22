@@ -4,12 +4,11 @@ from http import HTTPStatus
 
 from flask import g, request
 from src.auth.security import hash_session_token
-from src.common.app import app_extension, app_str
+from src.common.app import app_str, services
 from src.common.clock import UtcTime
 from src.common.text import stripped_or_none
 from src.common.web import ApiError
 from src.users.models import User
-from src.users.repository import UserRepository
 
 
 def login_required(view: Callable) -> Callable:
@@ -55,10 +54,9 @@ def _load_authenticated_user() -> User:
     if session_token is None:
         raise _authentication_required()
 
-    repository = app_extension("user_repository", UserRepository)
     # Sessions are looked up by hash so the database never stores or compares
     # the raw cookie value sent by the browser.
-    user = repository.select_user_by_session_token_hash(
+    user = services().user_repository.select_user_by_session_token_hash(
         session_token_hash=hash_session_token(session_token),
         now_iso=UtcTime.now().iso,
     )

@@ -1,25 +1,34 @@
 import clsx from 'clsx';
+import {
+    FaBoxArchive,
+    FaChevronLeft,
+    FaChevronRight,
+    FaUsers,
+} from 'react-icons/fa6';
 import { NavLink, Outlet } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthProvider';
-import { PageHeader } from '../components/PageHeader';
+import { Button } from '../components/form/Button';
+import { Tooltip } from '../components/ui/Tooltip';
+import { useStoredBoolean } from '../hooks/useStoredBoolean';
 
 export default function AdminLayout() {
     const { user } = useAuth();
     const isSuperadmin =
         user?.userType === 'staff' && user.permission === 'superadmin';
+    const [isCollapsed, setIsCollapsed] = useStoredBoolean(
+        'admin-nav-collapsed'
+    );
     const navItems = [
         {
-            label: 'Overview',
-            to: '/admin',
-        },
-        {
+            icon: FaBoxArchive,
             label: 'Products',
             to: '/admin/products',
         },
         ...(isSuperadmin
             ? [
                   {
+                      icon: FaUsers,
                       label: 'Users',
                       to: '/admin/users',
                   },
@@ -28,33 +37,143 @@ export default function AdminLayout() {
     ];
 
     return (
-        <section className="grid gap-6">
-            <PageHeader
-                description="Manage the catalogue, staff operations, and customer accounts."
-                title="Admin"
-            />
+        <section className="min-h-[calc(100vh-73px)] md:flex md:items-start">
+            <div className="bg-ui-0 border-ui-200 border-b px-4 py-4 sm:px-6 md:hidden">
+                <div className="grid gap-3">
+                    <h1 className="text-ui-900 text-lg font-semibold tracking-tight">
+                        Admin
+                    </h1>
 
-            <nav className="flex flex-wrap gap-2 rounded border border-slate-200 bg-white p-2">
-                {navItems.map((item) => (
-                    <NavLink
-                        className={({ isActive }) =>
-                            clsx(
-                                'rounded px-3 py-2 text-sm font-medium transition',
-                                isActive
-                                    ? 'bg-slate-900 text-white'
-                                    : 'text-slate-700 hover:bg-slate-100'
-                            )
-                        }
-                        end={item.to === '/admin'}
-                        key={item.to}
-                        to={item.to}
+                    <nav className="flex flex-wrap gap-2">
+                        {navItems.map((item) => {
+                            const Icon = item.icon;
+
+                            return (
+                                <NavLink
+                                    className={({ isActive }) =>
+                                        clsx(
+                                            'inline-flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium transition',
+                                            isActive
+                                                ? 'bg-ui-950 text-ui-0'
+                                                : 'bg-ui-100 text-ui-700 hover:bg-ui-200'
+                                        )
+                                    }
+                                    key={item.to}
+                                    to={item.to}
+                                >
+                                    <Icon
+                                        aria-hidden="true"
+                                        className="size-4 shrink-0"
+                                    />
+                                    <span>{item.label}</span>
+                                </NavLink>
+                            );
+                        })}
+                    </nav>
+                </div>
+            </div>
+
+            <aside
+                className={clsx(
+                    'bg-ui-0 border-ui-200 hidden overflow-hidden border-b transition-[width] duration-200 ease-out md:sticky md:top-18.25 md:block md:h-[calc(100dvh-73px)] md:shrink-0 md:self-start md:border-r md:border-b-0',
+                    isCollapsed ? 'md:w-12' : 'md:w-56'
+                )}
+            >
+                <div
+                    className={clsx(
+                        'border-ui-200 h-16 overflow-hidden border-b px-2',
+                        'flex items-center'
+                    )}
+                >
+                    <span
+                        aria-hidden={isCollapsed}
+                        className={clsx(
+                            'text-ui-900 overflow-hidden text-xl font-semibold tracking-tight whitespace-nowrap transition-[width,padding,opacity] duration-200 ease-out',
+                            isCollapsed
+                                ? 'w-0 px-0 opacity-0'
+                                : 'w-32 px-2 opacity-100'
+                        )}
                     >
-                        {item.label}
-                    </NavLink>
-                ))}
-            </nav>
+                        Admin
+                    </span>
 
-            <Outlet />
+                    <Button
+                        aria-label={
+                            isCollapsed
+                                ? 'Expand admin sidebar'
+                                : 'Collapse admin sidebar'
+                        }
+                        className={clsx(
+                            'inline-flex shrink-0 items-center justify-center rounded-full p-0 transition-[height,margin,width] duration-200 ease-out',
+                            isCollapsed ? 'mx-auto size-8' : 'ml-auto size-9'
+                        )}
+                        onClick={() => {
+                            setIsCollapsed(!isCollapsed);
+                        }}
+                        type="button"
+                        variant="ghost"
+                    >
+                        {isCollapsed ? (
+                            <FaChevronRight
+                                aria-hidden="true"
+                                className="size-3.5"
+                            />
+                        ) : (
+                            <FaChevronLeft
+                                aria-hidden="true"
+                                className="size-3.5"
+                            />
+                        )}
+                    </Button>
+                </div>
+
+                <nav
+                    className={clsx(
+                        'grid gap-1 pt-1',
+                        isCollapsed ? 'p-1' : 'p-2'
+                    )}
+                >
+                    {navItems.map((item) => {
+                        const Icon = item.icon;
+
+                        return (
+                            <Tooltip
+                                className="w-full"
+                                key={item.to}
+                                label={isCollapsed ? item.label : undefined}
+                                side="right"
+                            >
+                                <NavLink
+                                    className={({ isActive }) =>
+                                        clsx(
+                                            'flex h-11 w-full items-center rounded-lg text-sm font-medium transition-[background-color,color,gap,padding]',
+                                            isCollapsed
+                                                ? 'h-10 justify-center px-0'
+                                                : 'gap-3 px-3',
+                                            isActive
+                                                ? 'bg-ui-950 text-ui-0'
+                                                : 'text-ui-700 hover:bg-ui-100'
+                                        )
+                                    }
+                                    to={item.to}
+                                >
+                                    <Icon
+                                        aria-hidden="true"
+                                        className="size-4 shrink-0"
+                                    />
+                                    {!isCollapsed ? (
+                                        <span>{item.label}</span>
+                                    ) : null}
+                                </NavLink>
+                            </Tooltip>
+                        );
+                    })}
+                </nav>
+            </aside>
+
+            <div className="px-4 py-4 sm:px-6 md:w-0 md:flex-1 md:px-8">
+                <Outlet />
+            </div>
         </section>
     );
 }

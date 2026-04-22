@@ -1,4 +1,4 @@
-import { hasSelectedAddress, validateAddressField } from '../auth/validation';
+import { AddressText } from '../types/AddressText';
 
 export interface AddressFormValues {
     addressLineOne: string;
@@ -40,7 +40,7 @@ export function validateAddressValues(
     values: AddressFormValues,
     required = false
 ): AddressFieldErrors {
-    if (!hasSelectedAddress(values)) {
+    if (!AddressText.hasSelectedAddress(values)) {
         if (!required) {
             return {};
         }
@@ -55,19 +55,19 @@ export function validateAddressValues(
 
     const fieldErrors: AddressFieldErrors = {
         addressLineOne:
-            validateAddressField(
+            AddressText.validate(
                 values.addressLineOne,
                 'Address line 1',
                 true
             ) || undefined,
         country:
-            validateAddressField(values.country, 'Country', true) || undefined,
+            AddressText.validate(values.country, 'Country', true) || undefined,
         postcode:
-            validateAddressField(values.postcode, 'Postcode', true) ||
+            AddressText.validate(values.postcode, 'Postcode', true) ||
             undefined,
-        state: validateAddressField(values.state, 'State', true) || undefined,
+        state: AddressText.validate(values.state, 'State', true) || undefined,
         suburb:
-            validateAddressField(values.suburb, 'Suburb', true) || undefined,
+            AddressText.validate(values.suburb, 'Suburb', true) || undefined,
     };
 
     return fieldErrors;

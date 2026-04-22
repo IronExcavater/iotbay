@@ -1,12 +1,22 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type KeyboardEvent,
+    type ReactNode,
+    type RefCallback,
+} from 'react';
 import clsx from 'clsx';
-import { FaChevronDown } from 'react-icons/fa6';
+import { FaXmark } from 'react-icons/fa6';
 
-import { sanitizeAddressField } from '../auth/validation';
-import { Button } from '../components/form/Button';
 import { Field } from '../components/form/Field';
-import { inputClassName } from '../components/form/Input';
+import { InlineInput } from '../components/form/InlineInput';
+import { Input } from '../components/form/Input';
+import { TextButton } from '../components/form/TextLink';
+import { Tooltip } from '../components/ui/Tooltip';
 import { BackendError } from '../services/http';
+import { AddressText } from '../types/AddressText';
 import { addressApi, type AddressSuggestion } from './api';
 import { getBrowserAddressLocale } from './browserLocale';
 import type {
@@ -22,77 +32,70 @@ interface AddressFieldsProps {
     values: AddressFormValues;
 }
 
-type SearchFieldName =
-    | 'search'
-    | 'addressLineOne'
-    | 'suburb'
-    | 'state'
-    | 'postcode'
-    | 'country';
+type SuggestionFieldName = Exclude<AddressFieldName, 'addressLineTwo'>;
 
 const SEARCH_DEBOUNCE_MS = 400;
 
-interface AddressPlaceholders {
-    country: string;
-    postcode: string;
-    state: string;
-    suburb: string;
+const SUGGESTION_FIELDS = new Set<AddressFieldName>([
+    'addressLineOne',
+    'suburb',
+    'state',
+    'postcode',
+    'country',
+]);
+
+interface CollapsedAddressPart {
+    autoComplete: string;
+    field: AddressFieldName;
+    htmlName: string;
+    label: string;
+    placeholder: string;
 }
 
-const FALLBACK_REGION_NAMES = new Intl.DisplayNames(['en'], { type: 'region' });
-
-const DEFAULT_PLACEHOLDERS: AddressPlaceholders = {
-    country: 'Australia',
-    postcode: '2000',
-    state: 'NSW',
-    suburb: 'Sydney',
-};
-
-const PLACEHOLDERS: Record<string, AddressPlaceholders> = {
-    AU: DEFAULT_PLACEHOLDERS,
-    CA: {
-        country: 'Canada',
-        postcode: 'M5V 2T6',
-        state: 'ON',
-        suburb: 'Toronto',
+const COLLAPSED_ADDRESS_PARTS: CollapsedAddressPart[] = [
+    {
+        autoComplete: 'section-address shipping address-line1',
+        field: 'addressLineOne',
+        htmlName: 'address-line1',
+        label: 'Address line 1',
+        placeholder: 'Address line 1',
     },
-    GB: {
-        country: 'United Kingdom',
-        postcode: 'SW1A 1AA',
-        state: 'Greater London',
-        suburb: 'London',
+    {
+        autoComplete: 'section-address shipping address-line2',
+        field: 'addressLineTwo',
+        htmlName: 'address-line2',
+        label: 'Address line 2',
+        placeholder: 'Address line 2',
     },
-    IN: {
-        country: 'India',
-        postcode: '400001',
-        state: 'Maharashtra',
-        suburb: 'Mumbai',
+    {
+        autoComplete: 'section-address shipping address-level2',
+        field: 'suburb',
+        htmlName: 'address-level2',
+        label: 'Suburb',
+        placeholder: 'Suburb',
     },
-    NZ: {
-        country: 'New Zealand',
-        postcode: '6011',
-        state: 'Wellington',
-        suburb: 'Wellington',
+    {
+        autoComplete: 'section-address shipping address-level1',
+        field: 'state',
+        htmlName: 'address-level1',
+        label: 'State',
+        placeholder: 'State',
     },
-    PH: {
-        country: 'Philippines',
-        postcode: '1226',
-        state: 'Metro Manila',
-        suburb: 'Makati',
+    {
+        autoComplete: 'section-address shipping postal-code',
+        field: 'postcode',
+        htmlName: 'postal-code',
+        label: 'Postcode',
+        placeholder: 'Postcode',
     },
-    SG: {
-        country: 'Singapore',
-        postcode: '018989',
-        state: 'Central Singapore',
-        suburb: 'Singapore',
+    {
+        autoComplete: 'section-address shipping country-name',
+        field: 'country',
+        htmlName: 'country',
+        label: 'Country',
+        placeholder: 'Country',
     },
-    US: {
-        country: 'United States',
-        postcode: '10001',
-        state: 'NY',
-        suburb: 'New York',
-    },
-};
+];
 
 export function AddressFields({
     countryCode,
@@ -101,38 +104,33 @@ export function AddressFields({
     values,
 }: AddressFieldsProps) {
     const rootRef = useRef<HTMLDivElement | null>(null);
-    const autoResolvedQueryRef = useRef('');
+    const collapsedInputRefs = useRef<
+        Partial<Record<AddressFieldName, HTMLInputElement | null>>
+    >({});
     const suggestionsCacheRef = useRef(new Map<string, AddressSuggestion[]>());
     const browserLocale = useMemo(() => getBrowserAddressLocale(), []);
     const suggestionCountry = countryCode ?? browserLocale.country;
     const suggestionLanguage = browserLocale.language;
 
-    const placeholders = getAddressPlaceholders(
-        suggestionCountry,
-        suggestionLanguage
-    );
-    const collapsedPlaceholder = buildCollapsedAddressPlaceholder(placeholders);
+    const collapsedError = getCollapsedAddressError(errors);
 
-    const [searchValue, setSearchValue] = useState('');
     const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
+    const [isCollapsedAutofilled, setIsCollapsedAutofilled] = useState(false);
     const [showDetails, setShowDetails] = useState(false);
-    const [activeField, setActiveField] = useState<SearchFieldName | null>(
+    const [activeField, setActiveField] = useState<SuggestionFieldName | null>(
         null
     );
 
-    const collapsedAddressValue = buildCollapsedAddressValue(values);
-    const isSearchActive = activeField === 'search';
-    const searchInputValue = isSearchActive
-        ? searchValue
-        : collapsedAddressValue;
-
-    const query = showDetails
-        ? buildSuggestionQuery(values)
-        : searchValue.trim();
+    const hasCollapsedAddressValue = COLLAPSED_ADDRESS_PARTS.some((part) =>
+        values[part.field].trim()
+    );
+    const query = activeField ? buildSuggestionQuery(values) : '';
 
     useEffect(() => {
-        if (showDetails || activeField !== 'search') setSearchValue('');
-    }, [activeField, showDetails]);
+        if (hasCollapsedAddressValue) return;
+
+        setIsCollapsedAutofilled(false);
+    }, [hasCollapsedAddressValue]);
 
     useEffect(() => {
         if (!activeField || query.length < 3) {
@@ -186,7 +184,6 @@ export function AddressFields({
     async function handleSuggestionSelect(suggestion: AddressSuggestion) {
         setSuggestions([]);
         setActiveField(null);
-        setSearchValue('');
 
         try {
             const address = await addressApi.resolve(suggestion.id, {
@@ -194,12 +191,14 @@ export function AddressFields({
                 language: suggestionLanguage,
             });
 
-            onFieldChange('addressLineOne', address.addressLineOne);
-            onFieldChange('addressLineTwo', '');
-            onFieldChange('suburb', address.suburb);
-            onFieldChange('state', address.state);
-            onFieldChange('postcode', address.postcode);
-            onFieldChange('country', address.country);
+            applyStructuredAddress({
+                addressLineOne: address.addressLineOne,
+                addressLineTwo: '',
+                country: address.country,
+                postcode: address.postcode,
+                state: address.state,
+                suburb: address.suburb,
+            });
         } catch {
             setSuggestions([]);
         }
@@ -214,13 +213,7 @@ export function AddressFields({
         value: string,
         label: string
     ) {
-        handleFieldChange(name, sanitizeAddressField(value, label));
-    }
-
-    function handleSearchFieldChange(value: string) {
-        const sanitized = sanitizeAddressField(value, 'Address');
-        setSearchValue(sanitized);
-        onFieldChange('addressLineOne', sanitized);
+        handleFieldChange(name, AddressText.formatInput(value, label));
     }
 
     function handleAddressBlur() {
@@ -228,33 +221,36 @@ export function AddressFields({
             const activeElement = document.activeElement;
 
             if (!rootRef.current?.contains(activeElement)) {
-                if (activeField === 'search') void applyCollapsedSearchValue();
-
                 setActiveField(null);
             }
         }, 100);
     }
 
-    async function applyCollapsedSearchValue() {
-        const normalized = searchValue.trim();
-
-        if (!normalized) return;
-
-        if (autoResolvedQueryRef.current === normalized) return;
-
-        const [suggestion] = suggestions;
-
-        if (suggestions.length === 1 && suggestion) {
-            autoResolvedQueryRef.current = normalized;
-            await handleSuggestionSelect(suggestion);
-            return;
-        }
-
-        if (!hasStructuredAddress(values))
-            onFieldChange('addressLineOne', normalized);
+    function applyStructuredAddress(nextValues: AddressFormValues) {
+        onFieldChange('addressLineOne', nextValues.addressLineOne);
+        onFieldChange('addressLineTwo', nextValues.addressLineTwo);
+        onFieldChange('suburb', nextValues.suburb);
+        onFieldChange('state', nextValues.state);
+        onFieldChange('postcode', nextValues.postcode);
+        onFieldChange('country', nextValues.country);
     }
 
-    function getSuggestionPanel(fieldName: SearchFieldName) {
+    function clearCollapsedAddress() {
+        applyStructuredAddress({
+            addressLineOne: '',
+            addressLineTwo: '',
+            country: '',
+            postcode: '',
+            state: '',
+            suburb: '',
+        });
+        setIsCollapsedAutofilled(false);
+        setActiveField(null);
+        setSuggestions([]);
+        focusCollapsedField('addressLineOne');
+    }
+
+    function getSuggestionPanel(fieldName: SuggestionFieldName) {
         if (activeField !== fieldName || suggestions.length === 0) return null;
 
         return (
@@ -265,41 +261,140 @@ export function AddressFields({
         );
     }
 
+    function setCollapsedInputRef(
+        fieldName: AddressFieldName
+    ): RefCallback<HTMLInputElement> {
+        return (element) => {
+            collapsedInputRefs.current[fieldName] = element;
+        };
+    }
+
+    function focusCollapsedField(fieldName?: AddressFieldName) {
+        if (!fieldName) return;
+
+        const input = collapsedInputRefs.current[fieldName];
+        if (!input) return;
+
+        input.focus();
+        const cursorPosition = input.value.length;
+        input.setSelectionRange(cursorPosition, cursorPosition);
+    }
+
+    function handleCollapsedFieldFocus(fieldName: AddressFieldName) {
+        setActiveField(
+            SUGGESTION_FIELDS.has(fieldName)
+                ? (fieldName as SuggestionFieldName)
+                : null
+        );
+    }
+
+    function handleCollapsedFieldChange(
+        part: CollapsedAddressPart,
+        value: string
+    ) {
+        const partIndex = COLLAPSED_ADDRESS_PARTS.findIndex(
+            (item) => item.field === part.field
+        );
+        const followingParts = COLLAPSED_ADDRESS_PARTS.slice(partIndex + 1);
+        const segments = value.split(',');
+
+        if (segments.length === 1 || followingParts.length === 0) {
+            handleSanitizedFieldChange(part.field, value, part.label);
+            return;
+        }
+
+        handleSanitizedFieldChange(part.field, segments[0] ?? '', part.label);
+
+        segments.slice(1).forEach((segment, index) => {
+            const nextPart = followingParts[index];
+            if (!nextPart) return;
+
+            handleSanitizedFieldChange(nextPart.field, segment, nextPart.label);
+        });
+
+        focusCollapsedField(
+            followingParts[
+                Math.min(segments.length - 2, followingParts.length - 1)
+            ]?.field
+        );
+    }
+
+    function handleCollapsedFieldKeyDown(
+        event: KeyboardEvent<HTMLInputElement>,
+        part: CollapsedAddressPart
+    ) {
+        const partIndex = COLLAPSED_ADDRESS_PARTS.findIndex(
+            (item) => item.field === part.field
+        );
+        const previousPart = COLLAPSED_ADDRESS_PARTS[partIndex - 1];
+        const nextPart = COLLAPSED_ADDRESS_PARTS[partIndex + 1];
+        const selectionStart = event.currentTarget.selectionStart ?? 0;
+        const selectionEnd = event.currentTarget.selectionEnd ?? selectionStart;
+        const hasSelection = selectionStart !== selectionEnd;
+        const isEmpty = event.currentTarget.value === '';
+
+        if (event.key === ',' && nextPart) {
+            event.preventDefault();
+            focusCollapsedField(nextPart.field);
+            return;
+        }
+
+        if (
+            event.key === 'Backspace' &&
+            isEmpty &&
+            !hasSelection &&
+            selectionStart === 0 &&
+            previousPart
+        ) {
+            event.preventDefault();
+            focusCollapsedField(previousPart.field);
+            return;
+        }
+
+        if (
+            event.key === 'Delete' &&
+            isEmpty &&
+            !hasSelection &&
+            selectionStart === event.currentTarget.value.length &&
+            nextPart
+        ) {
+            event.preventDefault();
+            focusCollapsedField(nextPart.field);
+        }
+    }
+
     function handleDetailsToggle() {
         setActiveField(null);
         setSuggestions([]);
         setShowDetails((current) => !current);
     }
 
+    function renderDetailsToggle() {
+        return (
+            <TextButton onClick={handleDetailsToggle} size="small">
+                {showDetails ? 'Hide details' : 'Show details'}
+            </TextButton>
+        );
+    }
+
     function renderCollapsedField() {
         return (
-            <>
-                <HiddenAutofillFields
-                    onFieldChange={handleSanitizedFieldChange}
-                    values={values}
-                />
-
-                <Field error={errors.addressLineOne} label="Address">
-                    <AddressInputField
-                        autoComplete="section-address shipping address-line1"
-                        error={errors.addressLineOne}
-                        name="address-line1"
-                        onBlur={handleAddressBlur}
-                        onChange={handleSearchFieldChange}
-                        onFocus={() => {
-                            setActiveField('search');
-                            setSearchValue((current) => {
-                                if (current) return current;
-
-                                return values.addressLineOne.trim();
-                            });
-                        }}
-                        panel={getSuggestionPanel('search')}
-                        placeholder={collapsedPlaceholder}
-                        value={searchInputValue}
-                    />
-                </Field>
-            </>
+            <CollapsedAddressField
+                autofilled={isCollapsedAutofilled}
+                error={collapsedError}
+                onBlur={handleAddressBlur}
+                onAutoFill={() => {
+                    setIsCollapsedAutofilled(true);
+                }}
+                onClear={clearCollapsedAddress}
+                onChange={handleCollapsedFieldChange}
+                onFocus={handleCollapsedFieldFocus}
+                onKeyDown={handleCollapsedFieldKeyDown}
+                panel={activeField ? getSuggestionPanel(activeField) : null}
+                parts={COLLAPSED_ADDRESS_PARTS}
+                setInputRef={setCollapsedInputRef}
+                values={values}
+            />
         );
     }
 
@@ -324,12 +419,13 @@ export function AddressFields({
                             setActiveField('addressLineOne');
                         }}
                         panel={getSuggestionPanel('addressLineOne')}
-                        placeholder="12 Harbour Road"
+                        placeholder="Address line 1"
                         value={values.addressLineOne}
                     />
 
                     <AddressInputField
                         autoComplete="section-address shipping address-line2"
+                        action={renderDetailsToggle()}
                         label="Address line 2"
                         name="address-line2"
                         onChange={(value) => {
@@ -339,7 +435,11 @@ export function AddressFields({
                                 'Address line 2'
                             );
                         }}
-                        placeholder="Apartment 4B"
+                        onFocus={() => {
+                            setActiveField(null);
+                            setSuggestions([]);
+                        }}
+                        placeholder="Address line 2"
                         value={values.addressLineTwo}
                     />
                 </div>
@@ -362,7 +462,7 @@ export function AddressFields({
                             setActiveField('suburb');
                         }}
                         panel={getSuggestionPanel('suburb')}
-                        placeholder={placeholders.suburb}
+                        placeholder="Suburb"
                         value={values.suburb}
                     />
 
@@ -379,7 +479,7 @@ export function AddressFields({
                             setActiveField('state');
                         }}
                         panel={getSuggestionPanel('state')}
-                        placeholder={placeholders.state}
+                        placeholder="State"
                         value={values.state}
                     />
                 </div>
@@ -402,7 +502,7 @@ export function AddressFields({
                             setActiveField('postcode');
                         }}
                         panel={getSuggestionPanel('postcode')}
-                        placeholder={placeholders.postcode}
+                        placeholder="Postcode"
                         value={values.postcode}
                     />
 
@@ -423,7 +523,7 @@ export function AddressFields({
                             setActiveField('country');
                         }}
                         panel={getSuggestionPanel('country')}
-                        placeholder={placeholders.country}
+                        placeholder="Country"
                         value={values.country}
                     />
                 </div>
@@ -432,37 +532,133 @@ export function AddressFields({
     }
 
     return (
-        <div className="grid gap-1" ref={rootRef}>
-            {!showDetails && renderCollapsedField()}
+        <div className="grid gap-2" ref={rootRef}>
+            {showDetails ? (
+                renderDetailedFields()
+            ) : (
+                <div className="grid gap-1">
+                    <div className="flex items-center justify-between gap-4 text-sm">
+                        <span>Address</span>
+                        {renderDetailsToggle()}
+                    </div>
 
-            {showDetails && renderDetailedFields()}
+                    {renderCollapsedField()}
 
-            <Button
-                className="self-start whitespace-nowrap"
-                onClick={handleDetailsToggle}
-                type="button"
-                variant="text"
+                    {collapsedError ? (
+                        <span className="text-sm text-red-700">
+                            {collapsedError}
+                        </span>
+                    ) : null}
+                </div>
+            )}
+        </div>
+    );
+}
+
+interface CollapsedAddressFieldProps {
+    autofilled: boolean;
+    error?: string;
+    onAutoFill: () => void;
+    onBlur: () => void;
+    onClear: () => void;
+    onChange: (part: CollapsedAddressPart, value: string) => void;
+    onFocus: (fieldName: AddressFieldName) => void;
+    onKeyDown: (
+        event: KeyboardEvent<HTMLInputElement>,
+        part: CollapsedAddressPart
+    ) => void;
+    panel?: ReactNode;
+    parts: CollapsedAddressPart[];
+    setInputRef: (fieldName: AddressFieldName) => RefCallback<HTMLInputElement>;
+    values: AddressFormValues;
+}
+
+function CollapsedAddressField({
+    autofilled,
+    error,
+    onAutoFill,
+    onBlur,
+    onClear,
+    onChange,
+    onFocus,
+    onKeyDown,
+    panel,
+    parts,
+    setInputRef,
+    values,
+}: CollapsedAddressFieldProps) {
+    return (
+        <div className="relative">
+            <div
+                className={clsx(
+                    'text-ui-900 flex min-h-10 flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded border-0 py-1.5 pr-2 pl-3 text-sm ring-1 transition-[background-color,box-shadow,color] outline-none',
+                    autofilled ? 'bg-blue-50' : 'bg-ui-0',
+                    error
+                        ? 'ring-red-500 focus-within:ring-2 focus-within:ring-red-500'
+                        : 'ring-ui-300 focus-within:ring-ui-900 focus-within:ring-2'
+                )}
+                data-address-inline-field="true"
             >
-                <FaChevronDown
-                    aria-hidden="true"
-                    className={clsx(
-                        'h-4 w-4 shrink-0 transition-transform duration-200 ease-out',
-                        showDetails && 'rotate-180'
-                    )}
-                />
+                {parts.map((part, index) => (
+                    <span
+                        className="relative inline-flex max-w-full min-w-0 items-center gap-x-0.5"
+                        key={part.field}
+                    >
+                        <InlineInput
+                            aria-label={part.label}
+                            autoComplete={part.autoComplete}
+                            className="placeholder:text-ui-500 h-5 bg-transparent px-0 py-0 leading-5 outline-none disabled:pointer-events-none"
+                            name={part.htmlName}
+                            onAutoFill={onAutoFill}
+                            onBlur={onBlur}
+                            onValueChange={(value) => {
+                                onChange(part, value);
+                            }}
+                            onFocus={() => {
+                                onFocus(part.field);
+                            }}
+                            onKeyDown={(event) => {
+                                onKeyDown(event, part);
+                            }}
+                            placeholder={part.placeholder}
+                            ref={setInputRef(part.field)}
+                            value={values[part.field]}
+                        />
 
-                <span className="whitespace-nowrap">
-                    {showDetails
-                        ? 'Hide address details'
-                        : 'Show address details'}
-                </span>
-            </Button>
+                        {index < parts.length - 1 ? (
+                            <span
+                                aria-hidden="true"
+                                className="text-ui-400 select-none"
+                            >
+                                ,
+                            </span>
+                        ) : null}
+                    </span>
+                ))}
+
+                {parts.some((part) => values[part.field].trim()) ? (
+                    <button
+                        aria-label="Clear address"
+                        className={clsx(
+                            'text-ui-400 hover:text-ui-900 focus-visible:ring-ui-900 ml-auto inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset'
+                        )}
+                        onClick={onClear}
+                        type="button"
+                    >
+                        <FaXmark aria-hidden="true" className="size-3" />
+                    </button>
+                ) : null}
+            </div>
+
+            {panel}
         </div>
     );
 }
 
 interface AddressInputFieldProps {
+    action?: ReactNode;
     autoComplete: string;
+    disabled?: boolean;
     error?: string;
     label?: ReactNode;
     name: string;
@@ -475,7 +671,9 @@ interface AddressInputFieldProps {
 }
 
 function AddressInputField({
+    action,
     autoComplete,
+    disabled = false,
     error,
     label,
     name,
@@ -487,9 +685,10 @@ function AddressInputField({
     value,
 }: AddressInputFieldProps) {
     const input = (
-        <input
+        <Input
             autoComplete={autoComplete}
-            className={inputClassName(Boolean(error))}
+            disabled={disabled}
+            hasError={Boolean(error)}
             name={name}
             onBlur={onBlur}
             onChange={(event) => {
@@ -501,8 +700,8 @@ function AddressInputField({
         />
     );
 
-    return (
-        <Field error={error} label={label}>
+    const field = (
+        <>
             {panel ? (
                 <div className="relative">
                     {input}
@@ -511,6 +710,25 @@ function AddressInputField({
             ) : (
                 input
             )}
+        </>
+    );
+
+    if (action) {
+        return (
+            <div className="grid gap-1 text-sm">
+                <div className="flex items-center justify-between gap-4">
+                    <span>{label}</span>
+                    {action}
+                </div>
+                {field}
+                {error ? <span className="text-red-700">{error}</span> : null}
+            </div>
+        );
+    }
+
+    return (
+        <Field error={error} label={label}>
+            {field}
         </Field>
     );
 }
@@ -523,65 +741,42 @@ function AddressSuggestionPanel({
     suggestions: AddressSuggestion[];
 }) {
     return (
-        <div className="absolute z-10 mt-1 grid w-full gap-1 rounded border border-slate-200 bg-white p-1 shadow-lg">
+        <div className="bg-ui-0 border-ui-200 absolute z-10 mt-1 grid w-full gap-1 rounded border p-1 shadow-lg">
             {suggestions.map((suggestion) => (
-                <button
-                    className="grid gap-0.5 rounded px-3 py-2 text-left text-sm hover:bg-slate-50"
+                <Tooltip
+                    className="w-full"
                     key={suggestion.id}
-                    onMouseDown={(event) => {
-                        event.preventDefault();
-                        void onSelect(suggestion);
-                    }}
-                    title={
+                    label={
                         suggestion.subtitle
                             ? `${suggestion.label}, ${suggestion.subtitle}`
                             : suggestion.label
                     }
-                    type="button"
+                    side="right"
                 >
-                    <span className="font-medium text-slate-900">
-                        {suggestion.label}
-                    </span>
-
-                    {suggestion.subtitle ? (
-                        <span className="text-slate-500">
-                            {suggestion.subtitle}
+                    <button
+                        className={clsx(
+                            'hover:bg-ui-50 focus-visible:ring-ui-900 grid w-full gap-0.5 rounded px-3 py-2 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-inset'
+                        )}
+                        onMouseDown={(event) => {
+                            event.preventDefault();
+                            void onSelect(suggestion);
+                        }}
+                        type="button"
+                    >
+                        <span className="text-ui-900 font-medium">
+                            {suggestion.label}
                         </span>
-                    ) : null}
-                </button>
+
+                        {suggestion.subtitle ? (
+                            <span className="text-ui-500">
+                                {suggestion.subtitle}
+                            </span>
+                        ) : null}
+                    </button>
+                </Tooltip>
             ))}
         </div>
     );
-}
-
-function getAddressPlaceholders(countryCode?: string, language = 'en') {
-    const normalizedCountryCode = countryCode?.trim().toUpperCase();
-    const matchedPlaceholders =
-        (normalizedCountryCode && PLACEHOLDERS[normalizedCountryCode]) ||
-        DEFAULT_PLACEHOLDERS;
-
-    return {
-        ...matchedPlaceholders,
-        country:
-            resolveRegionName(normalizedCountryCode, language) ??
-            matchedPlaceholders.country,
-    };
-}
-
-function resolveRegionName(countryCode: string | undefined, language: string) {
-    if (!countryCode) return undefined;
-
-    try {
-        return (
-            new Intl.DisplayNames([language || 'en'], {
-                type: 'region',
-            }).of(countryCode) ??
-            FALLBACK_REGION_NAMES.of(countryCode) ??
-            undefined
-        );
-    } catch {
-        return FALLBACK_REGION_NAMES.of(countryCode) ?? undefined;
-    }
 }
 
 function buildSuggestionQuery(values: AddressFormValues) {
@@ -597,111 +792,12 @@ function buildSuggestionQuery(values: AddressFormValues) {
         .join(', ');
 }
 
-function buildCollapsedAddressValue(values: AddressFormValues) {
-    const locality = [values.suburb, values.state, values.postcode]
-        .map((value) => value.trim())
-        .filter(Boolean)
-        .join(' ');
-
-    return [
-        values.addressLineOne.trim(),
-        locality,
-        values.country.trim(),
-        values.addressLineTwo.trim(),
-    ]
-        .filter(Boolean)
-        .join(', ');
-}
-
-function buildCollapsedAddressPlaceholder(placeholders: AddressPlaceholders) {
-    return [
-        '12 Harbour Road',
-        `${placeholders.suburb} ${placeholders.state} ${placeholders.postcode}`,
-        placeholders.country,
-        'Apartment 4B',
-    ].join(', ');
-}
-
-function hasStructuredAddress(values: AddressFormValues) {
-    return Boolean(
-        values.addressLineOne.trim() ||
-        values.addressLineTwo.trim() ||
-        values.suburb.trim() ||
-        values.state.trim() ||
-        values.postcode.trim() ||
-        values.country.trim()
-    );
-}
-
-function HiddenAutofillFields({
-    onFieldChange,
-    values,
-}: {
-    onFieldChange: (
-        name: AddressFieldName,
-        value: string,
-        label: string
-    ) => void;
-    values: AddressFormValues;
-}) {
-    // Browsers and password managers often know how to autofill the standard
-    // address fields but not the collapsed search UI, so mirror those fields
-    // off-screen and feed the values back into the real form state.
+function getCollapsedAddressError(errors: AddressFieldErrors) {
     return (
-        <div aria-hidden="true" className="sr-only">
-            <input
-                autoComplete="section-address shipping address-line2"
-                name="address-line2"
-                onChange={(event) => {
-                    onFieldChange(
-                        'addressLineTwo',
-                        event.target.value,
-                        'Address line 2'
-                    );
-                }}
-                tabIndex={-1}
-                value={values.addressLineTwo}
-            />
-
-            <input
-                autoComplete="section-address shipping address-level2"
-                name="address-level2"
-                onChange={(event) => {
-                    onFieldChange('suburb', event.target.value, 'Suburb');
-                }}
-                tabIndex={-1}
-                value={values.suburb}
-            />
-
-            <input
-                autoComplete="section-address shipping address-level1"
-                name="address-level1"
-                onChange={(event) => {
-                    onFieldChange('state', event.target.value, 'State');
-                }}
-                tabIndex={-1}
-                value={values.state}
-            />
-
-            <input
-                autoComplete="section-address shipping postal-code"
-                name="postal-code"
-                onChange={(event) => {
-                    onFieldChange('postcode', event.target.value, 'Postcode');
-                }}
-                tabIndex={-1}
-                value={values.postcode}
-            />
-
-            <input
-                autoComplete="section-address shipping country-name"
-                name="country"
-                onChange={(event) => {
-                    onFieldChange('country', event.target.value, 'Country');
-                }}
-                tabIndex={-1}
-                value={values.country}
-            />
-        </div>
+        errors.addressLineOne ||
+        errors.suburb ||
+        errors.state ||
+        errors.postcode ||
+        errors.country
     );
 }

@@ -1,204 +1,175 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, type FormEvent } from 'react';
+import { Outlet } from 'react-router-dom';
 
-import { Button } from '../components/form/Button';
-import { inputClassName } from '../components/form/Input';
+import { ManagedUserDialog } from '../admin/users/components/ManagedUserDialog';
+import { UsersTable } from '../admin/users/components/UsersTable';
+import { useAuth } from '../auth/AuthProvider';
+import { ButtonLink } from '../components/form/Button';
+import { useToast } from '../components/toast/ToastProvider';
+import { useManagedUsers } from '../hooks/useManagedUsers';
+import { useSearchFilter } from '../hooks/useSearchFilter';
 import { toErrorMessage } from '../services/http';
-import type { ManagedUser } from '../users/api';
-import { usersApi } from '../users/api';
+import { usersApi, type ManagedUser } from '../users/api';
+import {
+    assessManagedUserForm,
+    formatManagedUserField,
+    toManagedUserErrorState,
+    toManagedUserFormValues,
+    type ManagedUserFieldErrors,
+    type ManagedUserFormValues,
+} from '../users/form';
+import {
+    manageablePermissionOptions,
+    canChangeManagedUserStatus,
+    canEditManagedUser,
+} from '../users/permissions';
 
 export default function AdminUsersPage() {
-    const [users, setUsers] = useState<ManagedUser[]>([]);
-    const [isLoadingUsers, setIsLoadingUsers] = useState(true);
-    const [usersError, setUsersError] = useState<string | null>(null);
+    const { user } = useAuth();
+    const { showToast } = useToast();
+    const { isLoadingUsers, loadUsers, replaceUser, users, usersError } =
+        useManagedUsers();
     const [search, setSearch] = useState('');
+    const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
+    const [formValues, setFormValues] = useState<ManagedUserFormValues | null>(
+        null
+    );
+    const [fieldErrors, setFieldErrors] = useState<ManagedUserFieldErrors>({});
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [actionError, setActionError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const abortController = new AbortController();
+    const filteredUsers = useSearchFilter(users, search, (managedUser) => [
+        managedUser.email,
+        managedUser.firstName,
+        managedUser.lastName,
+        `${managedUser.firstName} ${managedUser.lastName}`,
+        managedUser.userType,
+        managedUser.status,
+        managedUser.permission ?? '',
+        managedUser.designation ?? '',
+        managedUser.staffId ?? '',
+        managedUser.phoneNumber ?? '',
+        managedUser.addressLabel ?? '',
+        managedUser.country ?? '',
+    ]);
 
-        async function loadUsers() {
-            try {
-                setUsers(await usersApi.list(abortController.signal));
-                setUsersError(null);
-            } catch (error) {
-                if (!abortController.signal.aborted) {
-                    setUsersError(
-                        toErrorMessage(error, 'Unable to load registered users')
-                    );
-                }
-            } finally {
-                if (!abortController.signal.aborted) {
-                    setIsLoadingUsers(false);
-                }
-            }
+    function closeEditDialog() {
+        setEditingUser(null);
+        setFormValues(null);
+        setFieldErrors({});
+    }
+
+    // Convenience wrapper so individual field onChange handlers are one-liners.
+    function updateFormValues(
+        name: keyof ManagedUserFormValues,
+        value: string
+    ) {
+        setFormValues((current) =>
+            current
+                ? { ...current, [name]: formatManagedUserField(name, value) }
+                : null
+        );
+    }
+
+    function handleEdit(userToEdit: ManagedUser) {
+        setEditingUser(userToEdit);
+        setFormValues(toManagedUserFormValues(userToEdit));
+        setFieldErrors({});
+    }
+
+    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+
+        if (!editingUser || !formValues) {
+            return;
         }
 
-        void loadUsers();
-        return () => abortController.abort();
-    }, []);
+        const isStaff = editingUser.userType === 'staff';
+        const assessment = assessManagedUserForm(formValues, isStaff);
+        setFieldErrors(assessment.fieldErrors);
 
-    const normalizedSearch = search.trim().toLowerCase();
-    const filteredUsers = users.filter((managedUser) => {
-        if (!normalizedSearch) {
-            return true;
+        if (!assessment.payload) {
+            return;
         }
 
-        return [
-            managedUser.email,
-            managedUser.firstName,
-            managedUser.lastName,
-            managedUser.userType,
-            managedUser.status,
-            managedUser.permission ?? '',
-            managedUser.designation ?? '',
-            managedUser.staffId ?? '',
-        ].some((value) => value.toLowerCase().includes(normalizedSearch));
-    });
+        setIsSubmitting(true);
+        try {
+            const updatedUser = await usersApi.update(
+                editingUser.id,
+                assessment.payload
+            );
+            replaceUser(updatedUser);
+            closeEditDialog();
+        } catch (error) {
+            const nextState = toManagedUserErrorState(error);
+            setFieldErrors(nextState.fieldErrors);
+            if (nextState.formError) showToast(nextState.formError);
+        } finally {
+            setIsSubmitting(false);
+        }
+    }
+
+    async function handleStatusChange(
+        targetUser: ManagedUser,
+        status: 'active' | 'disabled'
+    ) {
+        setActionError(null);
+
+        try {
+            const updatedUser = await usersApi.updateStatus(targetUser.id, {
+                status,
+            });
+            replaceUser(updatedUser);
+        } catch (error) {
+            setActionError(
+                toErrorMessage(error, 'Unable to update user status')
+            );
+        }
+    }
 
     return (
-        <section className="grid gap-6">
-            <header className="grid gap-3 sm:flex sm:items-end sm:justify-between">
-                <div className="grid gap-2">
-                    <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
-                        Manage users
-                    </h2>
-                    <p className="text-sm text-slate-600">
-                        Review registered customers and staff accounts.
-                    </p>
-                </div>
-                <div className="flex gap-3">
-                    <Link to="/admin/users/invite-staff">
-                        <Button type="button" variant="primary">
+        <>
+            <div className="grid gap-4">
+                <UsersTable
+                    actionError={actionError}
+                    canChangeStatus={(managedUser) =>
+                        canChangeManagedUserStatus(user, managedUser)
+                    }
+                    canEdit={(managedUser) =>
+                        canEditManagedUser(user, managedUser)
+                    }
+                    filteredUsers={filteredUsers}
+                    isLoadingUsers={isLoadingUsers}
+                    onEdit={handleEdit}
+                    onRefresh={() => {
+                        void loadUsers();
+                    }}
+                    onSearchChange={setSearch}
+                    onStatusChange={(managedUser, status) => {
+                        void handleStatusChange(managedUser, status);
+                    }}
+                    search={search}
+                    toolbarAction={
+                        <ButtonLink to="/admin/users/invite-staff">
                             Invite staff
-                        </Button>
-                    </Link>
-                    <Link to="/admin">
-                        <Button type="button" variant="secondary">
-                            Back to admin
-                        </Button>
-                    </Link>
-                </div>
-            </header>
+                        </ButtonLink>
+                    }
+                    usersError={usersError}
+                />
+            </div>
 
-            <section className="rounded border border-slate-200 bg-white p-5">
-                <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-                    <label className="grid gap-2">
-                        <span className="text-sm font-medium text-slate-700">
-                            Search users
-                        </span>
-                        <input
-                            className={inputClassName(false)}
-                            onChange={(event) => {
-                                setSearch(event.target.value);
-                            }}
-                            placeholder="Search by name, email, role or status"
-                            value={search}
-                        />
-                    </label>
-                    <p className="text-sm text-slate-500">
-                        {filteredUsers.length} user
-                        {filteredUsers.length === 1 ? '' : 's'}
-                    </p>
-                </div>
+            <ManagedUserDialog
+                editingUser={editingUser}
+                fieldErrors={fieldErrors}
+                formValues={formValues}
+                isSubmitting={isSubmitting}
+                onClose={closeEditDialog}
+                onSubmit={handleSubmit}
+                permissionOptions={manageablePermissionOptions(user)}
+                updateFormValue={updateFormValues}
+            />
 
-                {usersError ? (
-                    <p className="mt-5 text-sm text-red-700">{usersError}</p>
-                ) : isLoadingUsers ? (
-                    <p className="mt-5 text-sm text-slate-500">Loading users</p>
-                ) : filteredUsers.length === 0 ? (
-                    <p className="mt-5 text-sm text-slate-500">
-                        No users matched your search.
-                    </p>
-                ) : (
-                    <div className="mt-5 overflow-x-auto">
-                        <table className="min-w-full text-left text-sm">
-                            <thead className="border-b border-slate-200 bg-slate-100 text-xs font-semibold tracking-[0.12em] text-slate-700 uppercase">
-                                <tr>
-                                    <th className="px-4 py-3">User</th>
-                                    <th className="px-4 py-3">Type</th>
-                                    <th className="px-4 py-3">Status</th>
-                                    <th className="px-4 py-3">Contact</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredUsers.map((managedUser) => (
-                                    <tr
-                                        className="border-t border-slate-200 align-top"
-                                        key={managedUser.id}
-                                    >
-                                        <td className="px-4 py-3">
-                                            <div className="grid gap-1">
-                                                <span className="font-medium text-slate-900">
-                                                    {managedUser.firstName}{' '}
-                                                    {managedUser.lastName}
-                                                </span>
-                                                <span className="text-slate-600">
-                                                    {managedUser.email}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="grid gap-1">
-                                                <span className="text-slate-900 capitalize">
-                                                    {managedUser.userType}
-                                                </span>
-                                                {managedUser.permission ? (
-                                                    <span className="text-slate-600 capitalize">
-                                                        {managedUser.permission}
-                                                    </span>
-                                                ) : managedUser.designation ? (
-                                                    <span className="text-slate-600">
-                                                        {
-                                                            managedUser.designation
-                                                        }
-                                                    </span>
-                                                ) : null}
-                                                {managedUser.staffId ? (
-                                                    <span className="text-slate-600">
-                                                        Staff ID:{' '}
-                                                        {managedUser.staffId}
-                                                    </span>
-                                                ) : null}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <span className="text-slate-900 capitalize">
-                                                {managedUser.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="grid gap-1 text-slate-600">
-                                                {managedUser.phoneNumber ? (
-                                                    <span>
-                                                        {
-                                                            managedUser.phoneNumber
-                                                        }
-                                                    </span>
-                                                ) : null}
-                                                {managedUser.addressLabel ? (
-                                                    <span>
-                                                        {
-                                                            managedUser.addressLabel
-                                                        }
-                                                    </span>
-                                                ) : managedUser.country ? (
-                                                    <span>
-                                                        {managedUser.country}
-                                                    </span>
-                                                ) : (
-                                                    <span>
-                                                        No contact details
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </section>
-        </section>
+            <Outlet />
+        </>
     );
 }

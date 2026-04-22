@@ -6,15 +6,12 @@ import {
     normalizeMessage,
     resolveBackendError,
 } from '../services/http';
+import { Email } from '../types/Email';
+import { FirstName, LastName } from '../types/Name';
+import { Password } from '../types/Password';
 import { collectFieldErrors } from '../validation/forms';
 import type { RegisterInput } from './api';
 import { validatePhoneNumber } from './phone';
-import {
-    assessEmail,
-    assessFirstName,
-    assessLastName,
-    assessPassword,
-} from './validation';
 
 export interface AuthFormValues {
     addressLineOne: string;
@@ -47,7 +44,7 @@ export function validateAuthForm(
 ) {
     // Sign-in and sign-up share one screen, but sign-up needs the extra field
     // set and stronger client-side validation before the request is sent.
-    const email = assessEmail(values.email);
+    const email = Email.assess(values.email);
     const fieldErrors: AuthFieldErrors = collectFieldErrors<AuthFieldName>({
         email,
     });
@@ -55,7 +52,7 @@ export function validateAuthForm(
     if (!values.password) {
         fieldErrors.password = 'Password is required';
     } else if (isSignUp) {
-        const password = assessPassword(values.password, {
+        const password = Password.assess(values.password, {
             email: values.email,
             firstName: values.firstName,
             lastName: values.lastName,
@@ -74,8 +71,8 @@ export function validateAuthForm(
     Object.assign(
         fieldErrors,
         collectFieldErrors<AuthFieldName>({
-            firstName: assessFirstName(values.firstName),
-            lastName: assessLastName(values.lastName),
+            firstName: FirstName.assess(values.firstName),
+            lastName: LastName.assess(values.lastName),
         })
     );
 
@@ -124,6 +121,10 @@ export function toAuthErrorState(error: unknown, isSignUp: boolean) {
                 formError: null,
             }),
             ADDRESS_LOOKUP_UNAVAILABLE: (backendError) => ({
+                fieldErrors: {},
+                formError: backendErrorMessage(backendError.code),
+            }),
+            CUSTOMER_ACCOUNT_REQUIRED: (backendError) => ({
                 fieldErrors: {},
                 formError: backendErrorMessage(backendError.code),
             }),
