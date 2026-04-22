@@ -41,10 +41,10 @@ export function ProductTable({
     setSearch,
 }: ProductTableProps) {
     return (
-        <section className="bg-surface-0 overflow-hidden rounded border border-slate-200">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+        <section className="bg-ui-0 border-ui-200 overflow-hidden rounded border">
+            <div className="border-ui-200 flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
                 <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-semibold text-slate-900">
+                    <h2 className="text-ui-900 text-xl font-semibold">
                         Products
                     </h2>
 
@@ -52,7 +52,6 @@ export function ProductTable({
                         aria-label="Refresh products"
                         className="inline-flex size-9 shrink-0 items-center justify-center rounded-full p-0"
                         onClick={onRefresh}
-                        title="Refresh products"
                         type="button"
                         variant="ghost"
                     >
@@ -125,16 +124,16 @@ export function ProductTable({
                         ) : (
                             products.map((product) => (
                                 <tr
-                                    className="border-t border-slate-200 align-top"
+                                    className="border-ui-200 border-t align-top"
                                     key={product.id}
                                 >
                                     <td className="px-5 py-3">
-                                        <span className="flex min-h-8 items-center font-mono text-xs text-slate-500">
+                                        <span className="text-ui-500 flex min-h-8 items-center font-mono text-xs">
                                             {product.code}
                                         </span>
                                     </td>
                                     <td className="px-5 py-3.5">
-                                        <span className="flex min-h-8 items-center truncate font-medium text-slate-900">
+                                        <span className="text-ui-900 flex min-h-8 items-center truncate font-medium">
                                             {product.name}
                                         </span>
                                     </td>
@@ -143,7 +142,7 @@ export function ProductTable({
                                             {Money.format(product.priceCents)}
                                         </span>
                                     </td>
-                                    <td className="px-5 py-3 text-slate-500">
+                                    <td className="text-ui-500 px-5 py-3">
                                         <Tooltip
                                             label={DateTimeValue.format(
                                                 product.updatedAt,

@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react';
-import { Link, Outlet } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 
 import { ManagedUserDialog } from '../admin/users/components/ManagedUserDialog';
 import { UsersTable } from '../admin/users/components/UsersTable';
 import { useAuth } from '../auth/AuthProvider';
-import { Button } from '../components/form/Button';
+import { ButtonLink } from '../components/form/Button';
+import { useToast } from '../components/toast/ToastProvider';
 import { useManagedUsers } from '../hooks/useManagedUsers';
 import { useSearchFilter } from '../hooks/useSearchFilter';
 import { toErrorMessage } from '../services/http';
@@ -25,6 +26,7 @@ import {
 
 export default function AdminUsersPage() {
     const { user } = useAuth();
+    const { showToast } = useToast();
     const { isLoadingUsers, loadUsers, replaceUser, users, usersError } =
         useManagedUsers();
     const [search, setSearch] = useState('');
@@ -33,7 +35,6 @@ export default function AdminUsersPage() {
         null
     );
     const [fieldErrors, setFieldErrors] = useState<ManagedUserFieldErrors>({});
-    const [formError, setFormError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [actionError, setActionError] = useState<string | null>(null);
 
@@ -56,7 +57,6 @@ export default function AdminUsersPage() {
         setEditingUser(null);
         setFormValues(null);
         setFieldErrors({});
-        setFormError(null);
     }
 
     // Convenience wrapper so individual field onChange handlers are one-liners.
@@ -75,7 +75,6 @@ export default function AdminUsersPage() {
         setEditingUser(userToEdit);
         setFormValues(toManagedUserFormValues(userToEdit));
         setFieldErrors({});
-        setFormError(null);
     }
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -88,7 +87,6 @@ export default function AdminUsersPage() {
         const isStaff = editingUser.userType === 'staff';
         const assessment = assessManagedUserForm(formValues, isStaff);
         setFieldErrors(assessment.fieldErrors);
-        setFormError(null);
 
         if (!assessment.payload) {
             return;
@@ -105,7 +103,7 @@ export default function AdminUsersPage() {
         } catch (error) {
             const nextState = toManagedUserErrorState(error);
             setFieldErrors(nextState.fieldErrors);
-            setFormError(nextState.formError);
+            if (nextState.formError) showToast(nextState.formError);
         } finally {
             setIsSubmitting(false);
         }
@@ -132,14 +130,6 @@ export default function AdminUsersPage() {
     return (
         <>
             <div className="grid gap-4">
-                <div className="flex justify-end">
-                    <Link to="/admin/users/invite-staff">
-                        <Button type="button" variant="primary">
-                            Invite staff
-                        </Button>
-                    </Link>
-                </div>
-
                 <UsersTable
                     actionError={actionError}
                     canChangeStatus={(managedUser) =>
@@ -159,6 +149,11 @@ export default function AdminUsersPage() {
                         void handleStatusChange(managedUser, status);
                     }}
                     search={search}
+                    toolbarAction={
+                        <ButtonLink to="/admin/users/invite-staff">
+                            Invite staff
+                        </ButtonLink>
+                    }
                     usersError={usersError}
                 />
             </div>
@@ -166,7 +161,6 @@ export default function AdminUsersPage() {
             <ManagedUserDialog
                 editingUser={editingUser}
                 fieldErrors={fieldErrors}
-                formError={formError}
                 formValues={formValues}
                 isSubmitting={isSubmitting}
                 onClose={closeEditDialog}

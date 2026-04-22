@@ -5,7 +5,6 @@ import { authApi } from '../auth/api';
 import { useAuth } from '../auth/AuthProvider';
 import { Button } from '../components/form/Button';
 import { Field } from '../components/form/Field';
-import { FormNotice } from '../components/form/FormNotice';
 import { Input } from '../components/form/Input';
 import { MenuSelect } from '../components/form/MenuSelect';
 import { OverlayDialog } from '../components/overlay/OverlayDialog';
@@ -44,12 +43,10 @@ export default function InviteStaffPage() {
     const { showToast } = useToast();
     const [values, setValues] = useState(DEFAULT_VALUES);
     const [fieldErrors, setFieldErrors] = useState<InviteStaffFieldErrors>({});
-    const [formError, setFormError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        setFormError(null);
 
         // Assess once, derive both validation errors and the payload values.
         const designation = Designation.assess(values.designation);
@@ -95,9 +92,7 @@ export default function InviteStaffPage() {
             setFieldErrors({});
             navigate('/admin/users');
         } catch (error) {
-            setFormError(
-                toErrorMessage(error, 'Unable to invite staff member')
-            );
+            showToast(toErrorMessage(error, 'Unable to invite staff member'));
         } finally {
             setIsSubmitting(false);
         }
@@ -112,10 +107,6 @@ export default function InviteStaffPage() {
         >
             <section>
                 <form className="grid gap-4" onSubmit={handleSubmit}>
-                    {formError ? (
-                        <FormNotice tone="error">{formError}</FormNotice>
-                    ) : null}
-
                     <Field
                         error={fieldErrors.email}
                         label="Staff email"

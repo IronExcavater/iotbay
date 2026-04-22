@@ -1,5 +1,6 @@
-import { isRouteErrorResponse, Link, useRouteError } from 'react-router-dom';
+import { isRouteErrorResponse, useRouteError } from 'react-router-dom';
 
+import { ButtonLink } from '../components/form/Button';
 import { PageHeader } from '../components/PageHeader';
 
 export default function ErrorPage() {
@@ -10,15 +11,12 @@ export default function ErrorPage() {
         <section className="mx-auto grid max-w-3xl gap-4">
             <PageHeader title={details.title} />
 
-            <p className="text-base text-slate-600">{details.message}</p>
+            <p className="text-ui-600 text-base">{details.message}</p>
 
             <div>
-                <Link
-                    className="inline-flex rounded border border-slate-300 px-3 py-2 text-sm hover:bg-slate-100"
-                    to="/"
-                >
+                <ButtonLink to="/" variant="secondary">
                     Return home
-                </Link>
+                </ButtonLink>
             </div>
         </section>
     );

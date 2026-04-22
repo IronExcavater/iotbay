@@ -7,8 +7,6 @@ const PRODUCT_NAME_VALIDATOR = new StringValidator({
     fieldName: 'Name',
     required: true,
     maxLength: PRODUCT_NAME_MAX_LENGTH,
-    asciiOnly: true,
-    printableAsciiOnly: true,
 });
 const PRODUCT_CODE_VALIDATOR = new StringValidator({
     fieldName: 'Code',

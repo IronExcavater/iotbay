@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import {
     FaArrowsRotate,
     FaBan,
@@ -31,6 +32,7 @@ interface UsersTableProps {
     onSearchChange: (value: string) => void;
     onStatusChange: (user: ManagedUser, status: 'active' | 'disabled') => void;
     search: string;
+    toolbarAction?: ReactNode;
     usersError: string | null;
 }
 
@@ -45,13 +47,14 @@ export function UsersTable({
     onSearchChange,
     onStatusChange,
     search,
+    toolbarAction,
     usersError,
 }: UsersTableProps) {
     return (
-        <section className="bg-surface-0 overflow-hidden rounded border border-slate-200">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+        <section className="bg-ui-0 border-ui-200 overflow-hidden rounded border">
+            <div className="border-ui-200 flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
                 <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-semibold tracking-tight text-slate-900">
+                    <h2 className="text-ui-900 text-xl font-semibold tracking-tight">
                         Users
                     </h2>
 
@@ -59,7 +62,6 @@ export function UsersTable({
                         aria-label="Refresh users"
                         className="inline-flex size-9 shrink-0 items-center justify-center rounded-full p-0"
                         onClick={onRefresh}
-                        title="Refresh users"
                         type="button"
                         variant="ghost"
                     >
@@ -70,13 +72,17 @@ export function UsersTable({
                     </Button>
                 </div>
 
-                <div className="flex min-w-0 flex-1 items-center justify-end gap-3">
+                <div className="flex flex-1 flex-wrap items-center justify-end gap-3 sm:flex-nowrap">
                     <SearchInput
-                        className="max-w-full sm:w-72 md:w-80"
+                        className="w-full sm:w-72 md:w-80"
                         onChange={onSearchChange}
                         placeholder="Search users"
                         value={search}
                     />
+
+                    {toolbarAction ? (
+                        <div className="shrink-0">{toolbarAction}</div>
+                    ) : null}
                 </div>
             </div>
 
@@ -126,36 +132,36 @@ export function UsersTable({
                         ) : (
                             filteredUsers.map((managedUser) => (
                                 <tr
-                                    className="border-t border-slate-200 align-top"
+                                    className="border-ui-200 border-t align-top"
                                     key={managedUser.id}
                                 >
                                     <td className="px-5 py-3">
                                         <TableStackCell>
-                                            <span className="font-medium text-slate-900">
+                                            <span className="text-ui-900 font-medium">
                                                 {managedUser.firstName}{' '}
                                                 {managedUser.lastName}
                                             </span>
-                                            <span className="truncate text-xs text-slate-500">
+                                            <span className="text-ui-500 truncate text-xs">
                                                 {managedUser.email}
                                             </span>
                                         </TableStackCell>
                                     </td>
                                     <td className="px-4 py-3">
                                         <TableStackCell>
-                                            <span className="text-slate-900 capitalize">
+                                            <span className="text-ui-900 capitalize">
                                                 {managedUser.userType}
                                             </span>
                                             {managedUser.permission ? (
-                                                <span className="text-xs text-slate-500 capitalize">
+                                                <span className="text-ui-500 text-xs capitalize">
                                                     {managedUser.permission}
                                                 </span>
                                             ) : managedUser.designation ? (
-                                                <span className="text-xs text-slate-500">
+                                                <span className="text-ui-500 text-xs">
                                                     {managedUser.designation}
                                                 </span>
                                             ) : null}
                                             {managedUser.staffId ? (
-                                                <span className="text-xs text-slate-500">
+                                                <span className="text-ui-500 text-xs">
                                                     Staff ID:{' '}
                                                     {managedUser.staffId}
                                                 </span>
@@ -163,12 +169,12 @@ export function UsersTable({
                                         </TableStackCell>
                                     </td>
                                     <td className="px-4 py-3">
-                                        <TableSingleLineCell className="text-slate-900 capitalize">
+                                        <TableSingleLineCell className="text-ui-900 capitalize">
                                             {managedUser.status}
                                         </TableSingleLineCell>
                                     </td>
                                     <td className="px-5 py-3">
-                                        <TableStackCell className="text-xs text-slate-500">
+                                        <TableStackCell className="text-ui-500 text-xs">
                                             {managedUser.phoneNumber ? (
                                                 <span className="truncate">
                                                     {managedUser.phoneNumber}
@@ -239,7 +245,7 @@ export function UsersTable({
             </div>
 
             {actionError ? (
-                <div className="border-t border-slate-200 px-5 py-3">
+                <div className="border-ui-200 border-t px-5 py-3">
                     <FormNotice tone="error">{actionError}</FormNotice>
                 </div>
             ) : null}

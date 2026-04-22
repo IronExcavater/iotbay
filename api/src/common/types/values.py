@@ -112,8 +112,6 @@ class ProductName:
         field_name="name",
         required=True,
         max_length=PRODUCT_NAME_MAX_LENGTH,
-        ascii_only=True,
-        printable_ascii_only=True,
         required_code="PRODUCT_NAME_REQUIRED",
         too_long_code="PRODUCT_NAME_TOO_LONG",
         invalid_code="PRODUCT_NAME_INVALID",

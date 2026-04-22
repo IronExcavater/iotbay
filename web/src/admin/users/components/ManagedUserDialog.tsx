@@ -1,6 +1,5 @@
 import { Button } from '../../../components/form/Button';
 import { Field } from '../../../components/form/Field';
-import { FormNotice } from '../../../components/form/FormNotice';
 import { Input } from '../../../components/form/Input';
 import { MenuSelect } from '../../../components/form/MenuSelect';
 import { OverlayDialog } from '../../../components/overlay/OverlayDialog';
@@ -22,7 +21,6 @@ interface PermissionOption {
 interface ManagedUserDialogProps {
     editingUser: ManagedUser | null;
     fieldErrors: ManagedUserFieldErrors;
-    formError: string | null;
     formValues: ManagedUserFormValues | null;
     isSubmitting: boolean;
     onClose: () => void;
@@ -34,7 +32,6 @@ interface ManagedUserDialogProps {
 export function ManagedUserDialog({
     editingUser,
     fieldErrors,
-    formError,
     formValues,
     isSubmitting,
     onClose,
@@ -49,10 +46,6 @@ export function ManagedUserDialog({
     return (
         <OverlayDialog onClose={onClose} title="Edit user">
             <form className="grid gap-4" onSubmit={onSubmit}>
-                {formError ? (
-                    <FormNotice tone="error">{formError}</FormNotice>
-                ) : null}
-
                 <div className="grid gap-4 sm:grid-cols-2">
                     <Field
                         error={fieldErrors.firstName}
