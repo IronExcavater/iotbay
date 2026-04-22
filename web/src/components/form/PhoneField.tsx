@@ -180,11 +180,11 @@ export function PhoneField({
                                     </button>
                                 ))}
 
-                                {filteredOptions.length === 0 ? (
+                                {filteredOptions.length === 0 && (
                                     <div className="text-ui-500 px-3 py-2 text-sm">
                                         No matches
                                     </div>
-                                ) : null}
+                                )}
                             </div>
                         </MenuPanel>
                     </AnchoredPopover>

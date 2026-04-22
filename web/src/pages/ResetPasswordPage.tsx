@@ -156,7 +156,7 @@ export default function ResetPasswordPage() {
             <PageHeader title={pageTitle} />
 
             <form
-                className="bg-ui-0 border-ui-200 grid gap-4 rounded border p-5"
+                className="bg-ui-0 border-ui-200 grid gap-3 rounded border p-5"
                 noValidate
                 onSubmit={handleSubmit}
             >
@@ -265,16 +265,20 @@ export default function ResetPasswordPage() {
                     </Field>
                 )}
 
-                <Button
-                    disabled={isSubmitting}
-                    loading={isSubmitting}
-                    type="submit"
-                    variant="primary"
-                >
-                    {submitLabel}
-                </Button>
+                <div className="grid gap-1.5 pt-1">
+                    <Button
+                        disabled={isSubmitting}
+                        loading={isSubmitting}
+                        type="submit"
+                        variant="primary"
+                    >
+                        {submitLabel}
+                    </Button>
 
-                <TextLink to={signInPath}>Back to sign in</TextLink>
+                    <TextLink className="justify-self-center" to={signInPath}>
+                        Back to sign in
+                    </TextLink>
+                </div>
             </form>
         </section>
     );

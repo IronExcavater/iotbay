@@ -80,9 +80,9 @@ export function UsersTable({
                         value={search}
                     />
 
-                    {toolbarAction ? (
+                    {toolbarAction && (
                         <div className="shrink-0">{toolbarAction}</div>
-                    ) : null}
+                    )}
                 </div>
             </div>
 
@@ -151,21 +151,25 @@ export function UsersTable({
                                             <span className="text-ui-900 capitalize">
                                                 {managedUser.userType}
                                             </span>
-                                            {managedUser.permission ? (
+                                            {managedUser.permission && (
                                                 <span className="text-ui-500 text-xs capitalize">
                                                     {managedUser.permission}
                                                 </span>
-                                            ) : managedUser.designation ? (
-                                                <span className="text-ui-500 text-xs">
-                                                    {managedUser.designation}
-                                                </span>
-                                            ) : null}
-                                            {managedUser.staffId ? (
+                                            )}
+                                            {!managedUser.permission &&
+                                                managedUser.designation && (
+                                                    <span className="text-ui-500 text-xs">
+                                                        {
+                                                            managedUser.designation
+                                                        }
+                                                    </span>
+                                                )}
+                                            {managedUser.staffId && (
                                                 <span className="text-ui-500 text-xs">
                                                     Staff ID:{' '}
                                                     {managedUser.staffId}
                                                 </span>
-                                            ) : null}
+                                            )}
                                         </TableStackCell>
                                     </td>
                                     <td className="px-4 py-3">
@@ -175,11 +179,11 @@ export function UsersTable({
                                     </td>
                                     <td className="px-5 py-3">
                                         <TableStackCell className="text-ui-500 text-xs">
-                                            {managedUser.phoneNumber ? (
+                                            {managedUser.phoneNumber && (
                                                 <span className="truncate">
                                                     {managedUser.phoneNumber}
                                                 </span>
-                                            ) : null}
+                                            )}
                                             {managedUser.addressLabel ? (
                                                 <span className="truncate">
                                                     {managedUser.addressLabel}
@@ -244,11 +248,11 @@ export function UsersTable({
                 </Table>
             </div>
 
-            {actionError ? (
+            {actionError && (
                 <div className="border-ui-200 border-t px-5 py-3">
                     <FormNotice tone="error">{actionError}</FormNotice>
                 </div>
-            ) : null}
+            )}
         </section>
     );
 }

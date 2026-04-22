@@ -221,7 +221,7 @@ export default function VerifyEmailPage() {
             <PageHeader title="Verify email" />
 
             <section className="bg-ui-0 border-ui-200 grid gap-5 rounded border p-5">
-                {screen !== 'pending' ? (
+                {screen !== 'pending' && (
                     <p
                         className={clsx(
                             'text-sm',
@@ -230,9 +230,9 @@ export default function VerifyEmailPage() {
                     >
                         {message}
                     </p>
-                ) : null}
+                )}
 
-                {email ? (
+                {email && (
                     <section className="border-ui-200 grid gap-3 border-b pb-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
                         <div className="grid gap-1">
                             <span className="text-ui-500 text-xs font-semibold tracking-[0.18em] uppercase">
@@ -243,7 +243,7 @@ export default function VerifyEmailPage() {
                             </strong>
                         </div>
 
-                        {showPendingActions ? (
+                        {showPendingActions && (
                             <div className="flex justify-start sm:justify-end sm:self-end">
                                 <Button
                                     disabled={isResending}
@@ -257,11 +257,11 @@ export default function VerifyEmailPage() {
                                     Resend verification
                                 </Button>
                             </div>
-                        ) : null}
+                        )}
                     </section>
-                ) : null}
+                )}
 
-                {showPendingActions ? (
+                {showPendingActions && (
                     <form
                         className="grid gap-4 pt-1"
                         onSubmit={handleChangeEmail}
@@ -313,7 +313,7 @@ export default function VerifyEmailPage() {
                                     : 'flex justify-end'
                             )}
                         >
-                            {hasChangedEmail ? (
+                            {hasChangedEmail && (
                                 <Field
                                     error={fieldErrors.password}
                                     hint={
@@ -359,7 +359,7 @@ export default function VerifyEmailPage() {
                                         value={password}
                                     />
                                 </Field>
-                            ) : null}
+                            )}
 
                             <Button
                                 disabled={isChangingEmail || !hasChangedEmail}
@@ -371,7 +371,7 @@ export default function VerifyEmailPage() {
                             </Button>
                         </section>
                     </form>
-                ) : null}
+                )}
             </section>
         </section>
     );

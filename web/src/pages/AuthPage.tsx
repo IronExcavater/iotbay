@@ -236,11 +236,11 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
             <PageHeader title={pageCopy.title} />
 
             <form
-                className="bg-ui-0 border-ui-200 grid gap-4 rounded border p-5"
+                className="bg-ui-0 border-ui-200 grid gap-3 rounded border p-5"
                 noValidate
                 onSubmit={handleSubmit}
             >
-                {isSignUp ? (
+                {isSignUp && (
                     <AuthSignUpFields
                         fieldErrors={fieldErrors}
                         onAddressFieldChange={handleAddressFieldChange}
@@ -275,7 +275,7 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
                         }}
                         values={values}
                     />
-                ) : null}
+                )}
 
                 <Field error={fieldErrors.email} label="Email" required>
                     <Input
@@ -297,33 +297,43 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
                     />
                 </Field>
 
-                <Field error={fieldErrors.password} label="Password" required>
-                    <PasswordInput
-                        autoComplete={passwordAutoComplete}
-                        hasError={Boolean(fieldErrors.password)}
-                        maxLength={Password.MAX_LENGTH}
-                        name="password"
-                        onBlur={() => {
-                            setFieldError(
-                                'password',
-                                validateCurrentForm().password
-                            );
-                        }}
-                        onChange={handlePasswordChange}
-                        onToggle={() => {
-                            setShowPassword((current) => !current);
-                        }}
-                        placeholder={passwordPlaceholder}
-                        showPassword={showPassword}
-                        value={values.password}
-                    />
+                <div className="grid gap-1">
+                    <Field
+                        error={fieldErrors.password}
+                        label="Password"
+                        required
+                    >
+                        <PasswordInput
+                            autoComplete={passwordAutoComplete}
+                            hasError={Boolean(fieldErrors.password)}
+                            maxLength={Password.MAX_LENGTH}
+                            name="password"
+                            onBlur={() => {
+                                setFieldError(
+                                    'password',
+                                    validateCurrentForm().password
+                                );
+                            }}
+                            onChange={handlePasswordChange}
+                            onToggle={() => {
+                                setShowPassword((current) => !current);
+                            }}
+                            placeholder={passwordPlaceholder}
+                            showPassword={showPassword}
+                            value={values.password}
+                        />
 
-                    {isSignUp ? (
-                        <PasswordRuleList rules={passwordRules} />
-                    ) : null}
-                </Field>
+                        {isSignUp && <PasswordRuleList rules={passwordRules} />}
+                    </Field>
 
-                {isSignUp ? (
+                    {!isSignUp && (
+                        <TextLink to={forgotPasswordPath}>
+                            Forgot password
+                        </TextLink>
+                    )}
+                </div>
+
+                {isSignUp && (
                     <Field
                         error={fieldErrors.confirmPassword}
                         label="Confirm password"
@@ -352,22 +362,25 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
                             value={values.confirmPassword}
                         />
                     </Field>
-                ) : (
-                    <TextLink to={forgotPasswordPath}>Forgot password</TextLink>
                 )}
 
-                <Button
-                    disabled={isSubmitting}
-                    loading={isSubmitting}
-                    type="submit"
-                    variant="primary"
-                >
-                    {pageCopy.submitLabel}
-                </Button>
+                <div className="grid gap-1.5 pt-1">
+                    <Button
+                        disabled={isSubmitting}
+                        loading={isSubmitting}
+                        type="submit"
+                        variant="primary"
+                    >
+                        {pageCopy.submitLabel}
+                    </Button>
 
-                <TextLink to={pageCopy.switchLink.to}>
-                    {pageCopy.switchLink.label}
-                </TextLink>
+                    <TextLink
+                        className="justify-self-center"
+                        to={pageCopy.switchLink.to}
+                    >
+                        {pageCopy.switchLink.label}
+                    </TextLink>
+                </div>
             </form>
         </section>
     );

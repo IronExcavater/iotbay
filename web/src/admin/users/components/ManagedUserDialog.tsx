@@ -89,7 +89,7 @@ export function ManagedUserDialog({
                     />
                 </Field>
 
-                {editingUser.userType === 'staff' ? (
+                {editingUser.userType === 'staff' && (
                     <>
                         <div className="grid gap-4 sm:grid-cols-2">
                             <Field error={fieldErrors.staffId} label="Staff ID">
@@ -135,7 +135,7 @@ export function ManagedUserDialog({
                             value={formValues.permission}
                         />
                     </>
-                ) : null}
+                )}
 
                 <div className="grid gap-3 pt-2">
                     <Button

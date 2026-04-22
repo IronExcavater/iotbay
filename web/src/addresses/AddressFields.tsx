@@ -390,7 +390,7 @@ export function AddressFields({
                 onChange={handleCollapsedFieldChange}
                 onFocus={handleCollapsedFieldFocus}
                 onKeyDown={handleCollapsedFieldKeyDown}
-                panel={activeField ? getSuggestionPanel(activeField) : null}
+                panel={activeField && getSuggestionPanel(activeField)}
                 parts={COLLAPSED_ADDRESS_PARTS}
                 setInputRef={setCollapsedInputRef}
                 values={values}
@@ -544,11 +544,11 @@ export function AddressFields({
 
                     {renderCollapsedField()}
 
-                    {collapsedError ? (
+                    {collapsedError && (
                         <span className="text-sm text-red-700">
                             {collapsedError}
                         </span>
-                    ) : null}
+                    )}
                 </div>
             )}
         </div>
@@ -624,18 +624,18 @@ function CollapsedAddressField({
                             value={values[part.field]}
                         />
 
-                        {index < parts.length - 1 ? (
+                        {index < parts.length - 1 && (
                             <span
                                 aria-hidden="true"
                                 className="text-ui-400 select-none"
                             >
                                 ,
                             </span>
-                        ) : null}
+                        )}
                     </span>
                 ))}
 
-                {parts.some((part) => values[part.field].trim()) ? (
+                {parts.some((part) => values[part.field].trim()) && (
                     <button
                         aria-label="Clear address"
                         className={clsx(
@@ -646,7 +646,7 @@ function CollapsedAddressField({
                     >
                         <FaXmark aria-hidden="true" className="size-3" />
                     </button>
-                ) : null}
+                )}
             </div>
 
             {panel}
@@ -720,7 +720,7 @@ function AddressInputField({
                     {action}
                 </div>
                 {field}
-                {error ? <span className="text-red-700">{error}</span> : null}
+                {error && <span className="text-red-700">{error}</span>}
             </div>
         );
     }
@@ -766,11 +766,11 @@ function AddressSuggestionPanel({
                             {suggestion.label}
                         </span>
 
-                        {suggestion.subtitle ? (
+                        {suggestion.subtitle && (
                             <span className="text-ui-500">
                                 {suggestion.subtitle}
                             </span>
-                        ) : null}
+                        )}
                     </button>
                 </Tooltip>
             ))}

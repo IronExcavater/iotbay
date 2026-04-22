@@ -97,7 +97,7 @@ export function MenuSelect({
                     open={isOpen}
                 >
                     <MenuPanel>
-                        {searchable ? (
+                        {searchable && (
                             <div>
                                 <DropdownSearchInput
                                     inputRef={searchInputRef}
@@ -106,7 +106,7 @@ export function MenuSelect({
                                     value={search}
                                 />
                             </div>
-                        ) : null}
+                        )}
 
                         <div className="max-h-64 overflow-y-auto" tabIndex={-1}>
                             {filteredOptions.map((option) => (
@@ -126,20 +126,20 @@ export function MenuSelect({
                                         <span className="text-ui-900">
                                             {option.label}
                                         </span>
-                                        {option.description ? (
+                                        {option.description && (
                                             <span className="text-ui-500">
                                                 {option.description}
                                             </span>
-                                        ) : null}
+                                        )}
                                     </span>
                                 </button>
                             ))}
 
-                            {filteredOptions.length === 0 ? (
+                            {filteredOptions.length === 0 && (
                                 <div className="text-ui-500 px-3 py-2 text-sm">
                                     No matches
                                 </div>
-                            ) : null}
+                            )}
                         </div>
                     </MenuPanel>
                 </AnchoredPopover>
