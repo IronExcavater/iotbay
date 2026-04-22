@@ -591,13 +591,12 @@ function CollapsedAddressField({
         <div className="relative">
             <div
                 className={clsx(
-                    'text-ui-900 flex min-h-10 flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded border-0 py-1.5 pr-2 pl-3 text-sm ring-1 transition-[background-color,box-shadow,color] outline-none',
+                    'text-ui-900 has-browser-autofill:bg-blue-50 flex min-h-10 flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded border-0 py-1.5 pr-2 pl-3 text-sm ring-1 transition-[background-color,box-shadow,color] outline-none',
                     autofilled ? 'bg-blue-50' : 'bg-ui-0',
                     error
                         ? 'ring-red-500 focus-within:ring-2 focus-within:ring-red-500'
                         : 'ring-ui-300 focus-within:ring-ui-900 focus-within:ring-2'
                 )}
-                data-address-inline-field="true"
             >
                 {parts.map((part, index) => (
                     <span
@@ -607,7 +606,7 @@ function CollapsedAddressField({
                         <InlineInput
                             aria-label={part.label}
                             autoComplete={part.autoComplete}
-                            className="placeholder:text-ui-500 h-5 bg-transparent px-0 py-0 leading-5 outline-none disabled:pointer-events-none"
+                            className="placeholder:text-ui-500 browser-autofill:shadow-[inset_0_0_0_1000px_var(--blue-50)] browser-autofill:[-webkit-text-fill-color:var(--ui-900)] h-5 bg-transparent px-0 py-0 leading-5 outline-none disabled:pointer-events-none"
                             name={part.htmlName}
                             onAutoFill={onAutoFill}
                             onBlur={onBlur}

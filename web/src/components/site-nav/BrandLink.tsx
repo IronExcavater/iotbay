@@ -1,11 +1,4 @@
-import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
-
-const brandMarkStyle = {
-    backgroundColor: 'currentColor',
-    WebkitMask: 'url("/iotbay_icon.svg") center / contain no-repeat',
-    mask: 'url("/iotbay_icon.svg") center / contain no-repeat',
-} satisfies CSSProperties;
 
 export function BrandLink() {
     return (
@@ -15,8 +8,7 @@ export function BrandLink() {
         >
             <span
                 aria-hidden="true"
-                className="inline-block size-8 shrink-0"
-                style={brandMarkStyle}
+                className="mask-iotbay-icon inline-block size-8 shrink-0 bg-current"
             />
             <span className="truncate transition-[letter-spacing,transform] duration-200 ease-out group-hover:tracking-[0.24em] group-focus-visible:-translate-y-0.5 group-focus-visible:tracking-[0.24em]">
                 IoTBay
