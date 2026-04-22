@@ -7,31 +7,51 @@ IOTBay is a monorepo with two workspaces:
 
 ## Quick Start
 
-### 1. Install Prerequisites
+### 1. Toolchain
 
-- Install `Node.js` (includes `npm`): https://nodejs.org/en/download
-- Install `uv`: https://docs.astral.sh/uv/getting-started/installation/
+This repo pins Node.js and `uv` in `.mise.toml`. Install `mise` once, then let
+it install the project tools.
+
+Windows:
+
+```powershell
+winget install jdx.mise
+```
+
+macOS:
+
+```bash
+brew install mise
+```
+
+From the repository root:
+
+```bash
+mise install --yes
+```
 
 ### 2. Environment File
 
-Create a copy of `.env.example` to `.env`. Open `.env` and set the values you need:
+Create `.env` from `.env.example`.
 
-- `IOTBAY_API_KEY`: required for local API access
-- `IOTBAY_GOOGLE_MAPS_API_KEY`: optional, only needed for address suggestions
-- `IOTBAY_SMTP_*`: optional, only needed if you want real emails to send
+Local development needs only `IOTBAY_API_KEY`. The default value in
+`.env.example` matches the quick API check below.
+
+Leave these blank unless you use the integration:
+
+- `IOTBAY_GOOGLE_MAPS_API_KEY`: address suggestions
+- `IOTBAY_SMTP_*`: real email sending
 
 ### 3. Sync Local Project
 
-Run these commands once after cloning the repository:
+Run this once after cloning the repository:
 
 ```bash
 npm run sync
 ```
 
-What this does:
-
-- installs all JavaScript dependencies for the monorepo
-- runs workspace sync scripts, including the API virtual environment, SQLite migrations and seed data
+This installs JavaScript dependencies, prepares the API virtual environment,
+runs SQLite migrations, and loads seed data.
 
 ### 4. Start The App
 
@@ -55,25 +75,14 @@ Use the `IOTBAY_API_KEY` value from your `.env` file.
 
 ## Daily Use
 
-After `git pull`, the safest manual reset is:
+After `git pull`, run:
 
 ```bash
 npm run sync
 ```
 
-You do not need to run the full sync every single time. Use this rule:
-
-- if any `package.json` changed, run `npm install`
-- if `api/pyproject.toml` changed, run `npm run -w api sync`
-- if anything in `api/migrations/*` changed, run `npm run -w api migrate`
-- if you want to reset shared local data, run `npm run -w api seed`
-
 The Git post-merge and post-rewrite hooks run `npm run sync` after pulls,
-merges, and rebases. `npm install` also runs workspace sync scripts through
-`postinstall`, skipping workspaces that do not define `sync`.
-
-For workspace-wide optional scripts, use `--if-present`; for example,
-`npm run sync --workspaces --if-present`.
+merges, and rebases.
 
 ## Optional Integrations
 
@@ -99,23 +108,13 @@ Address suggestions are also optional for local development and use Google-backe
 
 Before committing, run:
 
-```text
-npm run check:all     # Frontend and backend read-only quality gate
-npm test              # Runs workspace test scripts
-npm run build         # Builds all buildable workspaces
-
-npm run -w web fix:all    # Frontend quality gate
-  npm run typecheck       # Runs TypeScript static typing
-  npm run eslint:fix      # Finds and fixes JS issues
-  npm run stylelint:fix   # Finds and fixes CSS issues
-  npm run prettier:fix    # Applies consistent code formatting
-
-npm run -w api fix:all    # Backend quality gate
-  npm run typecheck       # Runs Pyright static typing
-  npm run ruff:fix        # Finds and fixes Python issues
-
-npm run -w api test       # Runs backend unit tests
+```bash
+npm run check:all
+npm run test
+npm run build
 ```
+
+Use `npm run fix:all` when you want lint and formatting fixes applied.
 
 Pull requests and pushes to `main` run the same checks in GitHub Actions.
 
@@ -123,50 +122,44 @@ Pull requests and pushes to `main` run the same checks in GitHub Actions.
 
 ### Migrations
 
-A schema change means changing database structure, for example:
+Use migrations for schema changes such as tables, columns, constraints, and
+indexes.
 
-- creating a table
-- adding or removing a column
-- changing a constraint
-- adding an index
-
-It does not mean changing row data.
-
-Create a migration file with:
-
-```bash
-npm run -w api migrate:new -- <migration_name>
-```
-
-For example:
+Create a migration:
 
 ```bash
 npm run -w api migrate:new -- add_product_category
 ```
 
-This creates a file at `api/migrations/<number>_<migration_name>.sql`.
-
-After writing the SQL, apply it with:
+This creates a numbered file in `api/migrations/`. Add the SQL, then apply it:
 
 ```bash
 npm run -w api migrate
 ```
 
+The backend also applies pending migrations on startup.
+
 ### Seeding
 
-Database seeding is the automated process of populating a database with initial, reproducible and structured data without needing manual data entry.
+Shared development seed data lives in `api/db/seed.sql`.
 
-Load shared seed data:
+Load the shared seed data into your local database:
 
 ```bash
 npm run -w api seed
 ```
 
-Update the shared seed file from your local database:
+Use this after pulling seed changes, or when you want to reset shared local data
+to the committed baseline.
+
+After intentionally changing shared fixtures in your local database, update the
+seed file:
 
 ```bash
 npm run -w api seed:dump
 ```
+
+Review the `api/db/seed.sql` diff before committing it.
 
 ## API Testing
 

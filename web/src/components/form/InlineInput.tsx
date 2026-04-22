@@ -11,6 +11,7 @@ import clsx from 'clsx';
 
 const DEFAULT_MIN_WIDTH = 8;
 const DEFAULT_WIDTH_BUFFER = 0;
+const AUTOFILL_DETECT_ANIMATION_NAME = 'autofill-detect';
 
 interface InlineInputProps extends Omit<
     InputHTMLAttributes<HTMLInputElement>,
@@ -48,6 +49,10 @@ export const InlineInput = forwardRef<HTMLInputElement, InlineInputProps>(
         const placeholderValue = placeholder ? String(placeholder) : '';
         const widthSource =
             textValue || (usePlaceholderWidth ? placeholderValue : '');
+        const inputClassName = clsx(
+            className,
+            onAutoFill && 'browser-autofill:animate-autofill-detect'
+        );
 
         const setInputRef = useCallback(
             (element: HTMLInputElement | null) => {
@@ -99,11 +104,14 @@ export const InlineInput = forwardRef<HTMLInputElement, InlineInputProps>(
 
                 <input
                     {...props}
-                    className={className}
+                    className={inputClassName}
                     onAnimationStart={(event) => {
                         onAnimationStart?.(event);
 
-                        if (event.animationName !== 'address-inline-autofill')
+                        if (
+                            event.animationName !==
+                            AUTOFILL_DETECT_ANIMATION_NAME
+                        )
                             return;
 
                         const element = event.currentTarget;
