@@ -4,17 +4,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { authApi } from '../auth/api';
 import { normalizeNextPath, resolvePostAuthPath } from '../auth/redirects';
-import {
-    assessEmail,
-    EMAIL_MAX_LENGTH,
-    PASSWORD_MAX_LENGTH,
-    sanitizeEmail,
-    sanitizePasswordInput,
-} from '../auth/validation';
 import { Button } from '../components/form/Button';
 import { Field } from '../components/form/Field';
-import { FormNotice } from '../components/form/FormNotice';
-import { inputClassName } from '../components/form/Input';
+import { Input } from '../components/form/Input';
 import { PasswordInput } from '../components/form/PasswordInput';
 import { PageHeader } from '../components/PageHeader';
 import { useToast } from '../components/toast/ToastProvider';
@@ -24,6 +16,8 @@ import {
     backendErrorMessage,
     resolveBackendError,
 } from '../services/http';
+import { Email } from '../types/Email';
+import { Password } from '../types/Password';
 import {
     collectFieldErrors,
     hasFieldErrors,
@@ -68,7 +62,6 @@ export default function VerifyEmailPage() {
     const [fieldErrors, setFieldErrors] = useState<
         FieldErrors<VerificationFieldName>
     >({});
-    const [formError, setFormError] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
 
     const hasToken = Boolean(token);
@@ -100,7 +93,6 @@ export default function VerifyEmailPage() {
         setChangeEmail('');
         setPassword('');
         setFieldErrors({});
-        setFormError(null);
         setPendingAction(null);
         setShowPassword(false);
 
@@ -145,14 +137,12 @@ export default function VerifyEmailPage() {
             ...current,
             email: undefined,
         }));
-        setFormError(null);
     }
 
     async function handleResend() {
         if (!email || isResending) return;
 
         setFieldErrors({});
-        setFormError(null);
         setPendingAction('resend');
 
         try {
@@ -167,7 +157,7 @@ export default function VerifyEmailPage() {
         } catch (error) {
             const nextState = toVerificationErrorState(error);
             setFieldErrors(nextState.fieldErrors);
-            setFormError(nextState.formError);
+            if (nextState.formError) showToast(nextState.formError);
         } finally {
             setPendingAction(null);
         }
@@ -175,10 +165,9 @@ export default function VerifyEmailPage() {
 
     async function handleChangeEmail(event: SubmitEvent<HTMLFormElement>) {
         event.preventDefault();
-        setFormError(null);
 
         if (!email) {
-            setFormError('Verification details are missing');
+            showToast('Verification details are missing');
             return;
         }
 
@@ -193,7 +182,7 @@ export default function VerifyEmailPage() {
             return;
         }
 
-        const normalizedEmail = assessEmail(nextEmail).value;
+        const normalizedEmail = Email.assess(nextEmail).value;
         if (!normalizedEmail) {
             return;
         }
@@ -221,7 +210,7 @@ export default function VerifyEmailPage() {
         } catch (error) {
             const nextState = toVerificationErrorState(error);
             setFieldErrors(nextState.fieldErrors);
-            setFormError(nextState.formError);
+            if (nextState.formError) showToast(nextState.formError);
         } finally {
             setPendingAction(null);
         }
@@ -231,32 +220,30 @@ export default function VerifyEmailPage() {
         <section className="mx-auto grid max-w-xl gap-6">
             <PageHeader title="Verify email" />
 
-            <section className="grid gap-5 rounded border border-slate-200 bg-white p-5">
-                {screen !== 'pending' ? (
+            <section className="bg-ui-0 border-ui-200 grid gap-5 rounded border p-5">
+                {screen !== 'pending' && (
                     <p
                         className={clsx(
                             'text-sm',
-                            screen === 'error'
-                                ? 'text-red-700'
-                                : 'text-slate-600'
+                            screen === 'error' ? 'text-red-700' : 'text-ui-600'
                         )}
                     >
                         {message}
                     </p>
-                ) : null}
+                )}
 
-                {email ? (
-                    <section className="grid gap-3 border-b border-slate-200 pb-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                {email && (
+                    <section className="border-ui-200 grid gap-3 border-b pb-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
                         <div className="grid gap-1">
-                            <span className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
+                            <span className="text-ui-500 text-xs font-semibold tracking-[0.18em] uppercase">
                                 Email
                             </span>
-                            <strong className="text-base font-medium break-all text-slate-900">
+                            <strong className="text-ui-900 text-base font-medium break-all">
                                 {email}
                             </strong>
                         </div>
 
-                        {showPendingActions ? (
+                        {showPendingActions && (
                             <div className="flex justify-start sm:justify-end sm:self-end">
                                 <Button
                                     disabled={isResending}
@@ -270,24 +257,20 @@ export default function VerifyEmailPage() {
                                     Resend verification
                                 </Button>
                             </div>
-                        ) : null}
+                        )}
                     </section>
-                ) : null}
+                )}
 
-                {formError ? (
-                    <FormNotice tone="error">{formError}</FormNotice>
-                ) : null}
-
-                {showPendingActions ? (
+                {showPendingActions && (
                     <form
                         className="grid gap-4 pt-1"
                         onSubmit={handleChangeEmail}
                     >
                         <div className="grid gap-1">
-                            <h2 className="text-base font-semibold text-slate-900">
+                            <h2 className="text-ui-900 text-base font-semibold">
                                 Use a different email
                             </h2>
-                            <p className="text-sm text-slate-600">
+                            <p className="text-ui-600 text-sm">
                                 Send the verification link somewhere else.
                             </p>
                         </div>
@@ -297,24 +280,22 @@ export default function VerifyEmailPage() {
                             label="New email"
                             required
                         >
-                            <input
+                            <Input
                                 autoComplete="email"
-                                className={inputClassName(
-                                    Boolean(fieldErrors.email)
-                                )}
-                                maxLength={EMAIL_MAX_LENGTH}
+                                hasError={Boolean(fieldErrors.email)}
+                                maxLength={Email.MAX_LENGTH}
                                 name="email"
                                 onBlur={() => {
                                     setFieldErrors((current) => ({
                                         ...current,
                                         email:
-                                            assessEmail(nextEmail).error ??
+                                            Email.assess(nextEmail).error ??
                                             undefined,
                                     }));
                                 }}
                                 onChange={(event) => {
                                     handleChangeEmailInput(
-                                        sanitizeEmail(event.target.value)
+                                        Email.formatInput(event.target.value)
                                     );
                                 }}
                                 placeholder="jane.doe@email.com"
@@ -323,8 +304,16 @@ export default function VerifyEmailPage() {
                             />
                         </Field>
 
-                        <section className="grid min-h-18 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-                            {hasChangedEmail ? (
+                        {/* Two-column layout only when the password field is visible;
+                            otherwise just right-align the button. */}
+                        <section
+                            className={clsx(
+                                hasChangedEmail
+                                    ? 'grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end'
+                                    : 'flex justify-end'
+                            )}
+                        >
+                            {hasChangedEmail && (
                                 <Field
                                     error={fieldErrors.password}
                                     hint={
@@ -339,7 +328,7 @@ export default function VerifyEmailPage() {
                                     <PasswordInput
                                         autoComplete="current-password"
                                         hasError={Boolean(fieldErrors.password)}
-                                        maxLength={PASSWORD_MAX_LENGTH}
+                                        maxLength={Password.MAX_LENGTH}
                                         name="currentPassword"
                                         onBlur={() => {
                                             setFieldErrors((current) => ({
@@ -351,7 +340,7 @@ export default function VerifyEmailPage() {
                                         }}
                                         onChange={(event) => {
                                             setPassword(
-                                                sanitizePasswordInput(
+                                                Password.formatInput(
                                                     event.target.value
                                                 )
                                             );
@@ -359,7 +348,6 @@ export default function VerifyEmailPage() {
                                                 ...current,
                                                 password: undefined,
                                             }));
-                                            setFormError(null);
                                         }}
                                         onToggle={() => {
                                             setShowPassword(
@@ -371,25 +359,19 @@ export default function VerifyEmailPage() {
                                         value={password}
                                     />
                                 </Field>
-                            ) : (
-                                <div />
                             )}
 
-                            <div className="flex justify-end sm:self-end">
-                                <Button
-                                    disabled={
-                                        isChangingEmail || !hasChangedEmail
-                                    }
-                                    loading={isChangingEmail}
-                                    type="submit"
-                                    variant="primary"
-                                >
-                                    Change email
-                                </Button>
-                            </div>
+                            <Button
+                                disabled={isChangingEmail || !hasChangedEmail}
+                                loading={isChangingEmail}
+                                type="submit"
+                                variant="primary"
+                            >
+                                Change email
+                            </Button>
                         </section>
                     </form>
-                ) : null}
+                )}
             </section>
         </section>
     );
@@ -424,7 +406,7 @@ function validatePendingEmailForm({
     }
 
     return collectFieldErrors<VerificationFieldName>({
-        email: assessEmail(nextEmail),
+        email: Email.assess(nextEmail),
         password: password ? null : 'Password is required',
     });
 }

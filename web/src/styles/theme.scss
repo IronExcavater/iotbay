@@ -1,0 +1,55 @@
+:root.theme-transition {
+    transition: var(--theme-token-transitions);
+}
+
+:root.theme-transition :where(*, *::before, *::after) {
+    transition-property: none;
+}
+
+@keyframes ui-0-text-to-dark {
+    0%,
+    45.9% {
+        color: var(--theme-ui-0-light);
+    }
+
+    46%,
+    100% {
+        color: var(--theme-ui-0-dark);
+    }
+}
+
+@keyframes ui-0-text-to-light {
+    0%,
+    53.9% {
+        color: var(--theme-ui-0-dark);
+    }
+
+    54%,
+    100% {
+        color: var(--theme-ui-0-light);
+    }
+}
+
+:root.theme-transition .text-ui-0 {
+    animation-duration: var(--theme-transition-duration);
+    animation-fill-mode: both;
+    animation-timing-function: linear;
+}
+
+:root[data-theme='dark'].theme-transition .text-ui-0 {
+    animation-name: ui-0-text-to-dark;
+}
+
+:root[data-theme='light'].theme-transition .text-ui-0 {
+    animation-name: ui-0-text-to-light;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root.theme-transition {
+        transition: none;
+    }
+
+    :root.theme-transition .text-ui-0 {
+        animation: none;
+    }
+}

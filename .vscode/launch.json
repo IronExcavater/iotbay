@@ -2,22 +2,10 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Api",
+      "name": "Dev",
       "type": "node-terminal",
       "request": "launch",
-      "command": "npm run -w api dev",
-      "presentation": {
-        "hidden": true
-      }
-    },
-    {
-      "name": "Web",
-      "type": "node-terminal",
-      "request": "launch",
-      "command": "npm run -w web dev",
-      "presentation": {
-        "hidden": true
-      }
+      "command": "npm run dev",
     },
     {
       "name": "Browser",
@@ -29,10 +17,9 @@
   ],
   "compounds": [
     {
-      "name": "Dev",
+      "name": "Dev and Browser",
       "configurations": [
-        "Api",
-        "Web",
+        "Dev",
         "Browser"
       ],
       "stopAll": true

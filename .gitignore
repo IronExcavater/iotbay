@@ -211,7 +211,6 @@ __marimo__/
 
 # Node
 node_modules/
-package-lock.json
 
 # Env files
 .env

@@ -1,0 +1,13 @@
+@theme inline {
+    --animate-autofill-detect: autofill-detect 1ms;
+}
+
+@custom-variant browser-autofill (&:is(:autofill, :-webkit-autofill));
+@custom-variant has-browser-autofill (&:has(input:is(:autofill, :-webkit-autofill)));
+
+@keyframes autofill-detect {
+    from,
+    to {
+        opacity: 1;
+    }
+}

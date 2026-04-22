@@ -29,6 +29,7 @@ const BACKEND_ERROR_MESSAGES: Record<string, string> = {
     API_KEY_REQUIRED: 'App access missing',
     CURRENT_PASSWORD_INCORRECT: 'Incorrect password',
     CURRENT_PASSWORD_REQUIRED: 'Password required',
+    CUSTOMER_ACCOUNT_REQUIRED: 'Use staff sign in',
     EMAIL_EXISTS: 'Email already used',
     EMAIL_NOT_VERIFIED: 'Verify your email',
     EMAIL_VERIFICATION_PENDING: 'Verification already pending',
@@ -55,6 +56,9 @@ const BACKEND_ERROR_MESSAGES: Record<string, string> = {
     PRODUCT_PRICE_TOO_LARGE: 'Price is too large',
     STAFF_ACCOUNT_REQUIRED: 'Staff account required',
     STAFF_PERMISSION_REQUIRED: 'Admin access required',
+    USER_MANAGEMENT_NOT_ALLOWED: 'You cannot manage that user',
+    USER_NOT_FOUND: 'User not found',
+    USER_PERMISSION_ESCALATION_NOT_ALLOWED: 'You cannot assign that permission',
 };
 
 export function backendErrorMessage(

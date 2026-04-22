@@ -65,12 +65,13 @@ export class MoneyValidator extends NumberValidator<string> {
         const sanitized = value.replace(/[^\d.,]/g, '');
         const separatorIndex = sanitized.search(/[.,]/);
         if (separatorIndex < 0) {
-            return sanitized;
+            return trimLeadingZeroes(sanitized);
         }
 
-        const integerPart = sanitized
-            .slice(0, separatorIndex)
-            .replace(/[.,]/g, '');
+        const integerPart =
+            trimLeadingZeroes(
+                sanitized.slice(0, separatorIndex).replace(/[.,]/g, '')
+            ) || '0';
         const fractionalPart = sanitized
             .slice(separatorIndex + 1)
             .replace(/[.,]/g, '')
@@ -80,6 +81,14 @@ export class MoneyValidator extends NumberValidator<string> {
         return fractionalPart
             ? `${integerPart}${separator}${fractionalPart}`
             : `${integerPart}${separator}`;
+    }
+
+    caretPosition(value: string, selectionStart: number) {
+        return mapMoneyCaretPosition({
+            nextValue: this.formatInput(value),
+            rawValue: value,
+            selectionStart,
+        });
     }
 
     protected override toNumber(value: string) {
@@ -109,4 +118,66 @@ export class MoneyValidator extends NumberValidator<string> {
     protected override tooLargeMessage() {
         return `${this.fieldName} is too large`;
     }
+}
+
+function trimLeadingZeroes(value: string) {
+    const digits = value.replace(/^0+(?=\d)/, '');
+
+    if (!digits) {
+        return value ? '0' : '';
+    }
+
+    return digits;
+}
+
+function mapMoneyCaretPosition({
+    nextValue,
+    rawValue,
+    selectionStart,
+}: {
+    nextValue: string;
+    rawValue: string;
+    selectionStart: number;
+}) {
+    const rawIntegerPart = rawValue.split(/[.,]/, 1)[0];
+    const firstSignificantDigitIndex = rawIntegerPart.search(/[1-9]/);
+
+    if (
+        firstSignificantDigitIndex > 0 &&
+        selectionStart <= firstSignificantDigitIndex
+    ) {
+        return 0;
+    }
+
+    const digitsBeforeCaret = countDigits(rawValue.slice(0, selectionStart));
+    const rawHasDecimalBeforeCaret = /[.,]/.test(
+        rawValue.slice(0, selectionStart)
+    );
+    const decimalIndex = nextValue.search(/[.,]/);
+
+    if (digitsBeforeCaret === 0) {
+        return rawHasDecimalBeforeCaret && decimalIndex >= 0
+            ? decimalIndex + 1
+            : 0;
+    }
+
+    let digitsSeen = 0;
+    for (let index = 0; index < nextValue.length; index += 1) {
+        if (/\d/.test(nextValue[index])) {
+            digitsSeen += 1;
+            if (digitsSeen === digitsBeforeCaret) {
+                const nextIndex = index + 1;
+                if (rawHasDecimalBeforeCaret && decimalIndex >= 0) {
+                    return Math.max(nextIndex, decimalIndex + 1);
+                }
+                return nextIndex;
+            }
+        }
+    }
+
+    return nextValue.length;
+}
+
+function countDigits(value: string) {
+    return (value.match(/\d/g) ?? []).length;
 }
