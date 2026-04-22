@@ -33,7 +33,6 @@ export function ActionMenu({
                     setIsOpen((current) => !current);
                 }}
                 ref={buttonRef}
-                title={label}
                 type="button"
                 variant="ghost"
             >

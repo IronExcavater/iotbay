@@ -16,12 +16,13 @@ export function DropdownSearchInput({
 }) {
     return (
         <div className="relative">
-            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
+            <span className="text-ui-400 pointer-events-none absolute inset-y-0 left-3 flex items-center">
                 <FaMagnifyingGlass aria-hidden="true" size={14} />
             </span>
 
             <Input
-                className="py-2 pl-9"
+                className="pl-8"
+                inputSize="compact"
                 onChange={(event) => {
                     onChange(event.target.value);
                 }}

@@ -37,10 +37,10 @@ export default function AdminLayout() {
     ];
 
     return (
-        <section className="min-h-[calc(100vh-73px)] md:grid md:grid-cols-[auto_minmax(0,1fr)]">
-            <div className="bg-surface-0 border-b border-slate-200 px-4 py-4 sm:px-6 md:hidden">
+        <section className="min-h-[calc(100vh-73px)] md:flex md:items-start">
+            <div className="bg-ui-0 border-ui-200 border-b px-4 py-4 sm:px-6 md:hidden">
                 <div className="grid gap-3">
-                    <h1 className="text-lg font-semibold tracking-tight text-slate-900">
+                    <h1 className="text-ui-900 text-lg font-semibold tracking-tight">
                         Admin
                     </h1>
 
@@ -54,8 +54,8 @@ export default function AdminLayout() {
                                         clsx(
                                             'inline-flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium transition',
                                             isActive
-                                                ? 'bg-primary text-primary-fg'
-                                                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                                ? 'bg-ui-950 text-ui-0'
+                                                : 'bg-ui-100 text-ui-700 hover:bg-ui-200'
                                         )
                                     }
                                     key={item.to}
@@ -75,21 +75,27 @@ export default function AdminLayout() {
 
             <aside
                 className={clsx(
-                    'bg-surface-0 hidden overflow-hidden border-b border-slate-200 transition-[width] duration-200 ease-out md:sticky md:top-18 md:block md:h-[calc(100vh-72px)] md:self-start md:border-r md:border-b-0',
-                    isCollapsed ? 'md:w-19' : 'md:w-60'
+                    'bg-ui-0 border-ui-200 hidden overflow-hidden border-b transition-[width] duration-200 ease-out md:sticky md:top-18.25 md:block md:h-[calc(100dvh-73px)] md:shrink-0 md:self-start md:border-r md:border-b-0',
+                    isCollapsed ? 'md:w-12' : 'md:w-56'
                 )}
             >
                 <div
                     className={clsx(
-                        'border-b border-slate-200 px-2 py-3',
+                        'border-ui-200 h-16 overflow-hidden border-b px-2',
                         'flex items-center'
                     )}
                 >
-                    {!isCollapsed ? (
-                        <span className="min-w-0 flex-1 px-2 text-xl font-semibold tracking-tight text-slate-900">
-                            Admin
-                        </span>
-                    ) : null}
+                    <span
+                        aria-hidden={isCollapsed}
+                        className={clsx(
+                            'text-ui-900 overflow-hidden text-xl font-semibold tracking-tight whitespace-nowrap transition-[width,padding,opacity] duration-200 ease-out',
+                            isCollapsed
+                                ? 'w-0 px-0 opacity-0'
+                                : 'w-32 px-2 opacity-100'
+                        )}
+                    >
+                        Admin
+                    </span>
 
                     <Button
                         aria-label={
@@ -98,17 +104,12 @@ export default function AdminLayout() {
                                 : 'Collapse admin sidebar'
                         }
                         className={clsx(
-                            'inline-flex size-9 shrink-0 items-center justify-center rounded-full p-0',
-                            !isCollapsed && 'ml-auto'
+                            'inline-flex shrink-0 items-center justify-center rounded-full p-0 transition-[height,margin,width] duration-200 ease-out',
+                            isCollapsed ? 'mx-auto size-8' : 'ml-auto size-9'
                         )}
                         onClick={() => {
                             setIsCollapsed(!isCollapsed);
                         }}
-                        title={
-                            isCollapsed
-                                ? 'Expand admin sidebar'
-                                : 'Collapse admin sidebar'
-                        }
                         type="button"
                         variant="ghost"
                     >
@@ -126,7 +127,12 @@ export default function AdminLayout() {
                     </Button>
                 </div>
 
-                <nav className="grid gap-1 p-2 pt-1">
+                <nav
+                    className={clsx(
+                        'grid gap-1 pt-1',
+                        isCollapsed ? 'p-1' : 'p-2'
+                    )}
+                >
                     {navItems.map((item) => {
                         const Icon = item.icon;
 
@@ -140,11 +146,13 @@ export default function AdminLayout() {
                                 <NavLink
                                     className={({ isActive }) =>
                                         clsx(
-                                            'flex h-11 items-center rounded-lg px-3 text-sm font-medium',
-                                            !isCollapsed && 'gap-3',
+                                            'flex h-11 w-full items-center rounded-lg text-sm font-medium transition-[background-color,color,gap,padding]',
+                                            isCollapsed
+                                                ? 'h-10 justify-center px-0'
+                                                : 'gap-3 px-3',
                                             isActive
-                                                ? 'bg-primary text-primary-fg'
-                                                : 'text-slate-700 hover:bg-slate-100'
+                                                ? 'bg-ui-950 text-ui-0'
+                                                : 'text-ui-700 hover:bg-ui-100'
                                         )
                                     }
                                     to={item.to}
@@ -163,7 +171,7 @@ export default function AdminLayout() {
                 </nav>
             </aside>
 
-            <div className="min-w-0 px-4 py-4 sm:px-6 md:px-8">
+            <div className="px-4 py-4 sm:px-6 md:w-0 md:flex-1 md:px-8">
                 <Outlet />
             </div>
         </section>

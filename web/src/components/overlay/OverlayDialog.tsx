@@ -47,12 +47,12 @@ export function OverlayDialog({
 
             <section
                 className={clsx(
-                    'bg-surface-0 relative z-10 grid w-full max-w-xl gap-5 rounded-xl border border-slate-200 p-6 shadow-2xl',
+                    'bg-ui-0 border-ui-200 relative z-10 grid w-full max-w-xl gap-5 rounded-xl border p-6 shadow-2xl',
                     className
                 )}
             >
                 <header className="flex items-start justify-between gap-4">
-                    <h2 className="text-xl font-semibold tracking-tight text-slate-900">
+                    <h2 className="text-ui-900 text-xl font-semibold tracking-tight">
                         {title}
                     </h2>
 

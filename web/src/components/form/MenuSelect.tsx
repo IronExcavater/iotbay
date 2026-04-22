@@ -65,8 +65,10 @@ export function MenuSelect({
             <div className="relative" ref={rootRef}>
                 <button
                     className={clsx(
-                        'w-full rounded border px-3 py-2',
-                        error ? 'border-red-500' : 'border-slate-300',
+                        'h-10 w-full rounded border-0 px-3 ring-1 transition-[background-color,box-shadow,color] outline-none',
+                        error
+                            ? 'ring-red-500 focus:ring-2 focus:ring-red-500'
+                            : 'ring-ui-300 focus:ring-ui-900 focus:ring-2',
                         'flex cursor-pointer items-center justify-between gap-3 text-left'
                     )}
                     onClick={() => {
@@ -77,7 +79,7 @@ export function MenuSelect({
                     <span
                         className={clsx(
                             'truncate text-sm',
-                            selectedOption ? 'text-slate-900' : 'text-slate-500'
+                            selectedOption ? 'text-ui-900' : 'text-ui-500'
                         )}
                     >
                         {selectedOption?.label ?? placeholder}
@@ -96,7 +98,7 @@ export function MenuSelect({
                 >
                     <MenuPanel>
                         {searchable ? (
-                            <div className="border-b border-slate-200 pb-2">
+                            <div>
                                 <DropdownSearchInput
                                     inputRef={searchInputRef}
                                     onChange={setSearch}
@@ -106,13 +108,12 @@ export function MenuSelect({
                             </div>
                         ) : null}
 
-                        <div className="max-h-64 overflow-y-auto">
+                        <div className="max-h-64 overflow-y-auto" tabIndex={-1}>
                             {filteredOptions.map((option) => (
                                 <button
                                     className={clsx(
-                                        'inline-flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 hover:text-slate-900',
-                                        'flex cursor-pointer items-start justify-between gap-3',
-                                        option.value === value && 'bg-slate-50'
+                                        'text-ui-700 hover:bg-ui-100 hover:text-ui-900 focus-visible:ring-ui-900 flex w-full cursor-pointer items-start justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition outline-none focus-visible:ring-2 focus-visible:ring-inset',
+                                        option.value === value && 'bg-ui-50'
                                     )}
                                     key={option.value}
                                     onClick={() => {
@@ -122,11 +123,11 @@ export function MenuSelect({
                                     type="button"
                                 >
                                     <span className="grid gap-0.5">
-                                        <span className="text-slate-900">
+                                        <span className="text-ui-900">
                                             {option.label}
                                         </span>
                                         {option.description ? (
-                                            <span className="text-slate-500">
+                                            <span className="text-ui-500">
                                                 {option.description}
                                             </span>
                                         ) : null}
@@ -135,7 +136,7 @@ export function MenuSelect({
                             ))}
 
                             {filteredOptions.length === 0 ? (
-                                <div className="px-3 py-2 text-sm text-slate-500">
+                                <div className="text-ui-500 px-3 py-2 text-sm">
                                     No matches
                                 </div>
                             ) : null}

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import clsx from 'clsx';
 import { FaDisplay, FaMoon, FaSun } from 'react-icons/fa6';
 
 import { MenuItem } from '../overlay/MenuItems';
@@ -11,14 +12,16 @@ interface ThemeToggleProps {
 }
 
 export function ThemeToggle({ mode, onOpenChange, open }: ThemeToggleProps) {
-    const label = mode === 'system' ? 'Theme: system' : `Theme: ${mode}`;
+    const label = `Theme set to ${mode}`;
 
     return (
         <Tooltip label={label}>
             <button
                 aria-expanded={open}
                 aria-label={label}
-                className="inline-flex size-10 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                className={clsx(
+                    'text-ui-500 hover:bg-ui-100 hover:text-ui-900 focus-visible:ring-ui-900 inline-flex size-10 items-center justify-center rounded-full transition-[background-color,box-shadow,color] outline-none focus-visible:ring-2 focus-visible:ring-inset'
+                )}
                 onClick={() => {
                     onOpenChange(!open);
                 }}
@@ -51,7 +54,7 @@ export function ThemeMenuItem({
 }: ThemeMenuItemProps) {
     return (
         <MenuItem
-            className={active ? 'bg-slate-100 text-slate-900' : undefined}
+            className={active ? 'bg-ui-100 text-ui-900' : undefined}
             onClick={onSelect}
         >
             {icon}

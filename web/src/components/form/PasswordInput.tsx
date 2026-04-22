@@ -1,7 +1,7 @@
 import type { ChangeEventHandler, FocusEventHandler } from 'react';
+import clsx from 'clsx';
 import { FaEye, FaEyeSlash } from 'react-icons/fa6';
 
-import { Tooltip } from '../ui/Tooltip';
 import { Input } from './Input';
 
 export function PasswordInput({
@@ -43,23 +43,20 @@ export function PasswordInput({
                 type={showPassword ? 'text' : 'password'}
                 value={value}
             />
-            <Tooltip
-                className="absolute top-1/2 right-3 -translate-y-1/2"
-                label={toggleLabel}
+            <button
+                aria-label={toggleLabel}
+                className={clsx(
+                    'text-ui-500 hover:text-ui-800 focus-visible:ring-ui-900 absolute top-1/2 right-1.5 inline-flex size-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-inset'
+                )}
+                onClick={onToggle}
+                type="button"
             >
-                <button
-                    aria-label={toggleLabel}
-                    className="cursor-pointer text-slate-500 hover:text-slate-800"
-                    onClick={onToggle}
-                    type="button"
-                >
-                    {showPassword ? (
-                        <FaEyeSlash aria-hidden="true" size={20} />
-                    ) : (
-                        <FaEye aria-hidden="true" size={20} />
-                    )}
-                </button>
-            </Tooltip>
+                {showPassword ? (
+                    <FaEyeSlash aria-hidden="true" size={20} />
+                ) : (
+                    <FaEye aria-hidden="true" size={20} />
+                )}
+            </button>
         </div>
     );
 }

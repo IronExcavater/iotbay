@@ -2,7 +2,6 @@ import { useRef } from 'react';
 import clsx from 'clsx';
 import { FaMagnifyingGlass } from 'react-icons/fa6';
 
-import { Tooltip } from '../ui/Tooltip';
 import { Input } from './Input';
 
 export function SearchInput({
@@ -21,7 +20,7 @@ export function SearchInput({
     return (
         <div className={clsx('relative w-full', className)}>
             <Input
-                className="pr-12"
+                className="pr-11"
                 onChange={(event) => {
                     onChange(event.target.value);
                 }}
@@ -30,21 +29,18 @@ export function SearchInput({
                 value={value}
             />
 
-            <Tooltip
-                className="absolute inset-y-0 right-0"
-                label="Focus search"
+            <button
+                aria-label="Focus search"
+                className={clsx(
+                    'text-ui-500 hover:text-ui-900 focus-visible:ring-ui-900 absolute top-1/2 right-1.5 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-full transition outline-none focus-visible:ring-2 focus-visible:ring-inset'
+                )}
+                onClick={() => {
+                    inputRef.current?.focus();
+                }}
+                type="button"
             >
-                <button
-                    aria-label="Focus search"
-                    className="inline-flex h-full w-11 items-center justify-center rounded-r border-l border-transparent text-slate-500 transition hover:text-slate-900"
-                    onClick={() => {
-                        inputRef.current?.focus();
-                    }}
-                    type="button"
-                >
-                    <FaMagnifyingGlass aria-hidden="true" className="size-4" />
-                </button>
-            </Tooltip>
+                <FaMagnifyingGlass aria-hidden="true" className="size-4" />
+            </button>
         </div>
     );
 }
