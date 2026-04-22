@@ -19,7 +19,7 @@ export function Field({
     const meta = error ? (
         <span className="text-red-700">{error}</span>
     ) : hint ? (
-        <span className="text-slate-500">{hint}</span>
+        <span className="text-ui-500">{hint}</span>
     ) : null;
 
     return (
@@ -32,12 +32,12 @@ export function Field({
             >
                 <span>
                     {label}
-                    {required ? <span className="text-red-700"> *</span> : null}
+                    {required && <span className="text-red-700"> *</span>}
                 </span>
-                {metaPlacement === 'inline' ? meta : null}
+                {metaPlacement === 'inline' && meta}
             </span>
             {children}
-            {metaPlacement === 'below' ? meta : null}
+            {metaPlacement === 'below' && meta}
         </label>
     );
 }

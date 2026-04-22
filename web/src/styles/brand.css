@@ -1,0 +1,9 @@
+@utility mask-iotbay-icon {
+    -webkit-mask: url('/iotbay_icon.svg') center / contain no-repeat;
+    mask: url('/iotbay_icon.svg') center / contain no-repeat;
+}
+
+@utility mask-uts-icon {
+    -webkit-mask: url('/uts_icon.svg') center / contain no-repeat;
+    mask: url('/uts_icon.svg') center / contain no-repeat;
+}

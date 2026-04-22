@@ -13,9 +13,9 @@ export function PageHeader({
                 {title}
             </h1>
 
-            {description ? (
-                <p className="text-sm text-slate-600">{description}</p>
-            ) : null}
+            {description && (
+                <p className="text-ui-600 text-sm">{description}</p>
+            )}
         </header>
     );
 }

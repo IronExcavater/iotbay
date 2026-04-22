@@ -7,14 +7,19 @@ from src.common.sqlite_model import (
     SqliteRowModel,
     new_id_bytes,
 )
+from src.common.types import (
+    Designation,
+    EmailAddress,
+    FirstName,
+    LastName,
+    PasswordText,
+    PermissionValue,
+    StaffId,
+)
 from src.common.validation import (
-    EMAIL_MAX_LENGTH,
     PASSWORD_MAX_LENGTH,
     PHONE_NUMBER_MAX_LENGTH,
     ChoiceValidator,
-    EmailValidator,
-    NameValidator,
-    PasswordValidator,
     PhoneCountryValidator,
     PhoneValidator,
     StringValidator,
@@ -35,32 +40,9 @@ USER_TOKEN_PURPOSE_EMAIL_VERIFICATION = "email_verification"
 USER_TOKEN_PURPOSE_PASSWORD_RESET = "password_reset"
 USER_TOKEN_PURPOSE_STAFF_INVITATION = "staff_invitation"
 ENTITY_TYPE_USER = "user"
-NAME_MAX_LENGTH = 100
-STAFF_DESIGNATION_MAX_LENGTH = 100
-STAFF_ID_MAX_LENGTH = 50
-
-EMAIL_VALIDATOR = EmailValidator(
-    field_name="email",
-    required=True,
-    max_length=EMAIL_MAX_LENGTH,
-    ascii_only=True,
-    printable_ascii_only=True,
-    lowercase=True,
-)
-FIRST_NAME_VALIDATOR = NameValidator(
-    field_name="firstName",
-    required=True,
-    max_length=NAME_MAX_LENGTH,
-    ascii_only=True,
-    printable_ascii_only=True,
-)
-LAST_NAME_VALIDATOR = NameValidator(
-    field_name="lastName",
-    required=True,
-    max_length=NAME_MAX_LENGTH,
-    ascii_only=True,
-    printable_ascii_only=True,
-)
+EMAIL_VALIDATOR = EmailAddress.VALIDATOR
+FIRST_NAME_VALIDATOR = FirstName.VALIDATOR
+LAST_NAME_VALIDATOR = LastName.VALIDATOR
 PASSWORD_INPUT_VALIDATOR = StringValidator(
     field_name="password",
     required=True,
@@ -75,13 +57,7 @@ CURRENT_PASSWORD_VALIDATOR = StringValidator(
     ascii_only=True,
     printable_ascii_only=True,
 )
-PASSWORD_VALIDATOR = PasswordValidator(
-    field_name="password",
-    required=True,
-    max_length=PASSWORD_MAX_LENGTH,
-    ascii_only=True,
-    printable_ascii_only=True,
-)
+PASSWORD_VALIDATOR = PasswordText.DOMAIN_VALIDATOR
 PHONE_NUMBER_VALIDATOR = StringValidator(
     field_name="phoneNumber",
     max_length=PHONE_NUMBER_MAX_LENGTH,
@@ -97,26 +73,16 @@ DOMAIN_PHONE_NUMBER_VALIDATOR = PhoneValidator(
     ascii_only=True,
     printable_ascii_only=True,
 )
-DESIGNATION_VALIDATOR = StringValidator(
-    field_name="designation",
-    max_length=STAFF_DESIGNATION_MAX_LENGTH,
-    ascii_only=True,
-    printable_ascii_only=True,
-)
-STAFF_ID_VALIDATOR = StringValidator(
-    field_name="staffId",
-    max_length=STAFF_ID_MAX_LENGTH,
-    ascii_only=True,
-    printable_ascii_only=True,
-    uppercase=True,
-)
-PERMISSION_VALIDATOR = ChoiceValidator(
-    field_name="permission",
-    choices=(STAFF_PERMISSION_ADMIN, STAFF_PERMISSION_SUPERADMIN),
-)
+DESIGNATION_VALIDATOR = Designation.VALIDATOR
+STAFF_ID_VALIDATOR = StaffId.VALIDATOR
+PERMISSION_VALIDATOR = PermissionValue.VALIDATOR
 USER_TYPE_VALIDATOR = ChoiceValidator(
     field_name="userType",
-    choices=(USER_TYPE_STAFF,),
+    choices=(USER_TYPE_CUSTOMER, USER_TYPE_STAFF),
+)
+USER_STATUS_VALIDATOR = ChoiceValidator(
+    field_name="status",
+    choices=(USER_STATUS_ACTIVE, USER_STATUS_DISABLED),
 )
 
 
@@ -256,6 +222,14 @@ def build_user_details(
         ),
         validated_address=validated_address,
     )
+
+
+def permission_rank(permission: str | None) -> int:
+    if permission == STAFF_PERMISSION_SUPERADMIN:
+        return 2
+    if permission == STAFF_PERMISSION_ADMIN:
+        return 1
+    return 0
 
 
 def user_has_changes(

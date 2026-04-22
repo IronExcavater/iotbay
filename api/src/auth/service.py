@@ -4,6 +4,8 @@ from urllib.parse import urlencode
 
 from src.addresses.service import AddressService
 from src.auth.requests import (
+    AdminSetUserStatusRequest,
+    AdminUpdateUserRequest,
     ChangePendingEmailRequest,
     CompleteStaffInvitationRequest,
     ForgotPasswordRequest,
@@ -26,6 +28,7 @@ from src.common.clock import UtcTime
 from src.common.web import ApiError
 from src.emails.service import DeliveredEmailArtifact, EmailService
 from src.users.models import (
+    STAFF_PERMISSION_ADMIN,
     USER_STATUS_ACTIVE,
     USER_STATUS_UNVERIFIED,
     USER_TOKEN_PURPOSE_EMAIL_VERIFICATION,
@@ -36,6 +39,7 @@ from src.users.models import (
     User,
     UserDetails,
     build_user_details,
+    permission_rank,
     user_has_changes,
     validate_user_password,
 )
@@ -75,6 +79,15 @@ class StaffAccountRequiredError(ApiError):
             "staff account is required",
             HTTPStatus.FORBIDDEN,
             code="STAFF_ACCOUNT_REQUIRED",
+        )
+
+
+class CustomerAccountRequiredError(ApiError):
+    def __init__(self) -> None:
+        super().__init__(
+            "customer account is required",
+            HTTPStatus.FORBIDDEN,
+            code="CUSTOMER_ACCOUNT_REQUIRED",
         )
 
 
@@ -120,6 +133,33 @@ class PendingVerificationRequiredError(ApiError):
             "email verification is pending",
             HTTPStatus.BAD_REQUEST,
             code="EMAIL_VERIFICATION_PENDING",
+        )
+
+
+class ManagedUserNotFoundError(ApiError):
+    def __init__(self) -> None:
+        super().__init__(
+            "user was not found",
+            HTTPStatus.NOT_FOUND,
+            code="USER_NOT_FOUND",
+        )
+
+
+class UserManagementNotAllowedError(ApiError):
+    def __init__(self) -> None:
+        super().__init__(
+            "you cannot manage that user",
+            HTTPStatus.FORBIDDEN,
+            code="USER_MANAGEMENT_NOT_ALLOWED",
+        )
+
+
+class UserPermissionEscalationError(ApiError):
+    def __init__(self) -> None:
+        super().__init__(
+            "you cannot assign that permission",
+            HTTPStatus.FORBIDDEN,
+            code="USER_PERMISSION_ESCALATION_NOT_ALLOWED",
         )
 
 
@@ -215,7 +255,10 @@ class AuthService:
         if not user.is_active:
             raise AuthenticationError()
         if data.user_type and user.user_type != data.user_type:
-            raise StaffAccountRequiredError()
+            if data.user_type == USER_TYPE_STAFF:
+                raise StaffAccountRequiredError()
+
+            raise CustomerAccountRequiredError()
         return user
 
     def verify_email(self, token: str) -> User:
@@ -403,6 +446,58 @@ class AuthService:
         )
         return updated_user
 
+    def update_managed_user(
+        self,
+        *,
+        actor: User,
+        target_user_id: bytes,
+        data: AdminUpdateUserRequest,
+    ) -> User:
+        target = self.user_repository.select_user_by_id(user_id=target_user_id)
+        if target is None:
+            raise ManagedUserNotFoundError()
+
+        self._require_manageable_target(actor=actor, target=target, for_status=False)
+
+        if target.user_type == USER_TYPE_STAFF:
+            next_permission = data.permission or STAFF_PERMISSION_ADMIN
+            if permission_rank(next_permission) > permission_rank(actor.permission):
+                raise UserPermissionEscalationError()
+        else:
+            next_permission = None
+
+        return self.user_repository.admin_update_user(
+            user_id=target.user_id,
+            email=data.email,
+            first_name=data.first_name,
+            last_name=data.last_name,
+            staff_id=data.staff_id or None,
+            designation=data.designation or None,
+            permission=next_permission,
+            updated_at=UtcTime.now().iso,
+            updated_by_user_id=actor.user_id,
+        )
+
+    def update_managed_user_status(
+        self,
+        *,
+        actor: User,
+        target_user_id: bytes,
+        data: AdminSetUserStatusRequest,
+    ) -> User:
+        target = self.user_repository.select_user_by_id(user_id=target_user_id)
+        if target is None:
+            raise ManagedUserNotFoundError()
+
+        self._require_manageable_target(actor=actor, target=target, for_status=True)
+
+        return self.user_repository.update_user_status(
+            user_id=target.user_id,
+            status=data.status,
+            updated_at=UtcTime.now().iso,
+            updated_by_user_id=actor.user_id,
+        )
+
     def _user_details(
         self,
         data: RegisterRequest | UpdateProfileRequest,
@@ -565,3 +660,23 @@ class AuthService:
         if user_type and user.user_type != user_type:
             raise StaffAccountRequiredError()
         return user
+
+    def _require_manageable_target(
+        self,
+        *,
+        actor: User,
+        target: User,
+        for_status: bool,
+    ) -> None:
+        if actor.user_id == target.user_id:
+            raise UserManagementNotAllowedError()
+        if target.user_type != USER_TYPE_STAFF:
+            return
+
+        actor_rank = permission_rank(actor.permission)
+        target_rank = permission_rank(target.permission)
+
+        if target_rank > actor_rank:
+            raise UserManagementNotAllowedError()
+        if for_status and target_rank >= actor_rank:
+            raise UserManagementNotAllowedError()

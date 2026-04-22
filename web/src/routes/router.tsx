@@ -4,7 +4,6 @@ import { ProtectedRoute } from '../auth/ProtectedRoute';
 import AdminLayout from '../layouts/AdminLayout';
 import SiteLayout from '../layouts/SiteLayout';
 import AccountPage from '../pages/AccountPage';
-import AdminPage from '../pages/AdminPage';
 import AdminProductsPage from '../pages/AdminProductsPage';
 import AdminUsersPage from '../pages/AdminUsersPage';
 import AuthPage from '../pages/AuthPage';
@@ -73,7 +72,9 @@ export const router = createBrowserRouter([
                         children: [
                             {
                                 index: true,
-                                element: <AdminPage />,
+                                element: (
+                                    <Navigate replace to="/admin/products" />
+                                ),
                             },
                             {
                                 path: 'products',
@@ -85,10 +86,12 @@ export const router = createBrowserRouter([
                                     {
                                         path: 'users',
                                         element: <AdminUsersPage />,
-                                    },
-                                    {
-                                        path: 'users/invite-staff',
-                                        element: <InviteStaffPage />,
+                                        children: [
+                                            {
+                                                path: 'invite-staff',
+                                                element: <InviteStaffPage />,
+                                            },
+                                        ],
                                     },
                                 ],
                             },

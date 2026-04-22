@@ -1,0 +1,50 @@
+:root {
+    --scrollbar-thumb: rgb(23 23 23 / 24%);
+    --scrollbar-thumb-hover: rgb(23 23 23 / 34%);
+    --scrollbar-thumb-active: rgb(23 23 23 / 46%);
+}
+
+:root[data-theme='dark'] {
+    --scrollbar-thumb: rgb(250 250 250 / 26%);
+    --scrollbar-thumb-hover: rgb(250 250 250 / 38%);
+    --scrollbar-thumb-active: rgb(250 250 250 / 50%);
+}
+
+@supports (-moz-appearance: none) {
+    * {
+        scrollbar-color: var(--scrollbar-thumb) transparent;
+    }
+}
+
+*::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+    min-width: 32px;
+    min-height: 32px;
+    background-color: var(--scrollbar-thumb);
+    background-clip: padding-box;
+    border: 3px solid transparent;
+    border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+}
+
+*::-webkit-scrollbar-thumb:active {
+    background-color: var(--scrollbar-thumb-active);
+}
+
+*::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+}

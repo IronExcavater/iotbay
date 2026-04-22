@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import type { CountryCode } from 'libphonenumber-js';
-import { FaChevronDown, FaMagnifyingGlass } from 'react-icons/fa6';
 
 import {
     formatPhoneDisplay,
@@ -9,8 +8,13 @@ import {
     PHONE_COUNTRY_OPTIONS,
     PHONE_NUMBER_MAX_LENGTH,
 } from '../../auth/phone';
+import { useSearchFilter } from '../../hooks/useSearchFilter';
+import { AnchoredPopover } from '../overlay/AnchoredPopover';
+import { MenuPanel } from '../overlay/MenuItems';
+import { DropdownChevron } from './DropdownChevron';
+import { DropdownSearchInput } from './DropdownSearchInput';
 import { Field } from './Field';
-import { inputClassName } from './Input';
+import { Input } from './Input';
 
 interface PhoneFieldProps {
     country: CountryCode;
@@ -38,7 +42,7 @@ export function PhoneField({
     const [countrySearch, setCountrySearch] = useState('');
     const inputRef = useRef<HTMLInputElement | null>(null);
     const searchInputRef = useRef<HTMLInputElement | null>(null);
-    const rootRef = useRef<HTMLDivElement | null>(null);
+    const countryButtonRef = useRef<HTMLButtonElement | null>(null);
 
     const fieldLabel =
         typeof label === 'string' || typeof label === 'number'
@@ -49,18 +53,16 @@ export function PhoneField({
         PHONE_COUNTRY_OPTIONS.find((option) => option.code === country) ??
         PHONE_COUNTRY_OPTIONS[0];
 
-    const filteredOptions = useMemo(() => {
-        const normalizedQuery = countrySearch.trim().toLowerCase();
-
-        if (!normalizedQuery) return PHONE_COUNTRY_OPTIONS;
-
-        return PHONE_COUNTRY_OPTIONS.filter((option) =>
-            [option.code, option.name, option.dialCode, option.dropdownLabel]
-                .join(' ')
-                .toLowerCase()
-                .includes(normalizedQuery)
-        );
-    }, [countrySearch]);
+    const filteredOptions = useSearchFilter(
+        PHONE_COUNTRY_OPTIONS,
+        countrySearch,
+        (option) => [
+            option.code,
+            option.name,
+            option.dialCode,
+            option.dropdownLabel,
+        ]
+    );
 
     useEffect(() => {
         if (!isFocused || inputRef.current === null) return;
@@ -78,19 +80,6 @@ export function PhoneField({
         searchInputRef.current?.focus();
     }, [isCountryMenuOpen]);
 
-    useEffect(() => {
-        function handlePointerDown(event: MouseEvent) {
-            if (!rootRef.current?.contains(event.target as Node))
-                setIsCountryMenuOpen(false);
-        }
-
-        document.addEventListener('mousedown', handlePointerDown);
-
-        return () => {
-            document.removeEventListener('mousedown', handlePointerDown);
-        };
-    }, []);
-
     // Keep the editing experience forgiving while preserving the cleaner
     // read-only presentation when the field is not active.
     const displayValue = isFocused
@@ -99,25 +88,28 @@ export function PhoneField({
 
     return (
         <Field error={error} label={label} required={required}>
-            <div
-                className="grid gap-3 sm:grid-cols-[minmax(0,7.25rem)_1fr] sm:items-start"
-                ref={rootRef}
-            >
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,7.25rem)_1fr] sm:items-start">
                 <div className="relative">
                     <button
                         aria-label="Choose phone country"
                         className={clsx(
-                            inputClassName(),
+                            'h-10 w-full rounded border-0 px-3 ring-1 transition-[background-color,box-shadow,color] outline-none',
+                            error
+                                ? 'ring-red-500 focus:ring-2 focus:ring-red-500'
+                                : 'ring-ui-300 focus:ring-ui-900 focus:ring-2',
                             'flex cursor-pointer items-center justify-between gap-2 pr-3 text-left'
                         )}
                         onClick={() => {
                             setIsCountryMenuOpen((current) => !current);
                         }}
-                        title="Choose phone country"
+                        ref={countryButtonRef}
                         type="button"
                     >
-                        <span className="inline-flex min-w-0 items-center gap-2.5 text-sm text-slate-900">
-                            <span className="shrink-0">
+                        <span className="text-ui-900 inline-flex min-w-0 items-center gap-2.5 text-sm">
+                            <span
+                                aria-hidden="true"
+                                className="inline-flex size-4.5 shrink-0 items-center justify-center text-[18px] leading-none"
+                            >
                                 {selectedOption.flag}
                             </span>
 
@@ -126,55 +118,39 @@ export function PhoneField({
                             </span>
                         </span>
 
-                        <span
-                            className={clsx(
-                                'shrink-0 text-slate-500 transition-transform duration-200',
-                                isCountryMenuOpen && 'rotate-180'
-                            )}
-                        >
-                            <FaChevronDown aria-hidden="true" size={14} />
-                        </span>
+                        <DropdownChevron
+                            className="shrink-0"
+                            isOpen={isCountryMenuOpen}
+                        />
                     </button>
 
-                    {isCountryMenuOpen ? (
-                        <div className="absolute z-20 mt-1 w-72 overflow-hidden rounded border border-slate-200 bg-white shadow-lg">
-                            <div className="sticky top-0 border-b border-slate-200 bg-white p-2">
-                                <div className="relative">
-                                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
-                                        <FaMagnifyingGlass
-                                            aria-hidden="true"
-                                            size={14}
-                                        />
-                                    </span>
-
-                                    <input
-                                        aria-label="Search countries"
-                                        autoComplete="off"
-                                        className={clsx(
-                                            inputClassName(),
-                                            'py-2 pl-9'
-                                        )}
-                                        onChange={(event) => {
-                                            setCountrySearch(
-                                                event.target.value
-                                            );
-                                        }}
-                                        placeholder="Search country"
-                                        ref={searchInputRef}
-                                        title="Search countries"
-                                        type="text"
-                                        value={countrySearch}
-                                    />
-                                </div>
+                    <AnchoredPopover
+                        anchorRef={countryButtonRef}
+                        onClose={() => {
+                            setIsCountryMenuOpen(false);
+                        }}
+                        open={isCountryMenuOpen}
+                    >
+                        <MenuPanel className="w-72">
+                            <div className="bg-ui-0 sticky top-0 z-10">
+                                <DropdownSearchInput
+                                    inputRef={searchInputRef}
+                                    onChange={setCountrySearch}
+                                    placeholder="Search country"
+                                    value={countrySearch}
+                                />
                             </div>
 
-                            <div className="max-h-64 overflow-y-auto py-1">
+                            <div
+                                className="max-h-64 overflow-y-auto"
+                                tabIndex={-1}
+                            >
                                 {filteredOptions.map((option) => (
                                     <button
                                         className={clsx(
-                                            'flex w-full cursor-pointer items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-slate-50',
+                                            'text-ui-700 hover:bg-ui-100 hover:text-ui-900 focus-visible:ring-ui-900 flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition outline-none focus-visible:ring-2 focus-visible:ring-inset',
                                             option.code === country &&
-                                                'bg-slate-50'
+                                                'bg-ui-50'
                                         )}
                                         key={option.code}
                                         onClick={() => {
@@ -190,32 +166,42 @@ export function PhoneField({
                                                 )
                                             );
                                         }}
-                                        title={option.dropdownLabel}
                                         type="button"
                                     >
-                                        <span className="truncate text-slate-900">
-                                            {option.dropdownLabel}
+                                        <span className="text-ui-900 flex min-w-0 items-center gap-2 truncate">
+                                            <span
+                                                aria-hidden="true"
+                                                className="inline-flex size-4.5 shrink-0 items-center justify-center text-[18px] leading-none"
+                                            >
+                                                {option.flag}
+                                            </span>
+                                            <span className="truncate">
+                                                {option.name}
+                                            </span>
+                                            <span className="text-ui-500 shrink-0">
+                                                (+{option.dialCode})
+                                            </span>
                                         </span>
 
-                                        <span className="shrink-0 text-slate-500">
+                                        <span className="text-ui-500 shrink-0">
                                             {option.code}
                                         </span>
                                     </button>
                                 ))}
 
-                                {filteredOptions.length === 0 ? (
-                                    <div className="px-3 py-2 text-sm text-slate-500">
+                                {filteredOptions.length === 0 && (
+                                    <div className="text-ui-500 px-3 py-2 text-sm">
                                         No matches
                                     </div>
-                                ) : null}
+                                )}
                             </div>
-                        </div>
-                    ) : null}
+                        </MenuPanel>
+                    </AnchoredPopover>
                 </div>
 
-                <input
+                <Input
                     aria-label={fieldLabel}
-                    className={inputClassName(Boolean(error))}
+                    hasError={Boolean(error)}
                     inputMode="tel"
                     maxLength={PHONE_NUMBER_MAX_LENGTH}
                     onBlur={() => {
@@ -232,7 +218,6 @@ export function PhoneField({
                     }}
                     placeholder="0412 345 678"
                     ref={inputRef}
-                    title={fieldLabel}
                     type="tel"
                     value={displayValue}
                 />

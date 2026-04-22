@@ -6,41 +6,17 @@ from src.common.sqlite_model import (
     SqliteRowModel,
     new_id_bytes,
 )
-from src.common.validation import MoneyValidator, StringValidator
+from src.common.types import (
+    MoneyAmount,
+    ProductCode,
+    ProductName,
+)
 
 ENTITY_TYPE_PRODUCT = "product"
-PRODUCT_CODE_MAX_LENGTH = 32
-PRODUCT_NAME_MAX_LENGTH = 120
-PRODUCT_MAX_PRICE_CENTS = 100_000_000
 
-PRODUCT_NAME_VALIDATOR = StringValidator(
-    field_name="name",
-    required=True,
-    max_length=PRODUCT_NAME_MAX_LENGTH,
-    ascii_only=True,
-    printable_ascii_only=True,
-    required_code="PRODUCT_NAME_REQUIRED",
-    too_long_code="PRODUCT_NAME_TOO_LONG",
-    invalid_code="PRODUCT_NAME_INVALID",
-)
-PRODUCT_CODE_VALIDATOR = StringValidator(
-    field_name="code",
-    required=True,
-    max_length=PRODUCT_CODE_MAX_LENGTH,
-    ascii_only=True,
-    printable_ascii_only=True,
-    uppercase=True,
-    required_code="PRODUCT_CODE_REQUIRED",
-    too_long_code="PRODUCT_CODE_TOO_LONG",
-    invalid_code="PRODUCT_CODE_INVALID",
-)
-PRODUCT_PRICE_VALIDATOR = MoneyValidator(
-    field_name="price",
-    min_value=0,
-    max_value=PRODUCT_MAX_PRICE_CENTS,
-    too_small_code="PRODUCT_PRICE_INVALID",
-    too_large_code="PRODUCT_PRICE_TOO_LARGE",
-)
+PRODUCT_NAME_VALIDATOR = ProductName.VALIDATOR
+PRODUCT_CODE_VALIDATOR = ProductCode.VALIDATOR
+PRODUCT_PRICE_VALIDATOR = MoneyAmount.VALIDATOR
 
 
 @dataclass(slots=True, frozen=True)
@@ -100,12 +76,12 @@ class Product(SqliteRowModel, BlobUuidModel, ApiModel):
 
 
 def validate_product_name(value: str) -> str:
-    return PRODUCT_NAME_VALIDATOR.validate_domain(value)
+    return ProductName.validate_domain(value)
 
 
 def normalize_product_code(value: str) -> str:
-    return PRODUCT_CODE_VALIDATOR.validate_domain(value)
+    return ProductCode.validate_domain(value)
 
 
 def validate_product_price_cents(value: int) -> int:
-    return PRODUCT_PRICE_VALIDATOR.validate_domain(value)
+    return MoneyAmount.validate_domain_cents(value)
