@@ -26,7 +26,7 @@ export default defineConfig([
         },
         settings: {
             tailwindcss: {
-                config: path.join(__dirname, 'src/styles/tailwind.config.css'),
+                config: path.join(__dirname, 'src/styles/index.css'),
             },
         },
         rules: {
@@ -67,7 +67,7 @@ export default defineConfig([
             'tailwind-canonical-classes/tailwind-canonical-classes': [
                 'warn',
                 {
-                    cssPath: './src/styles/tailwind.config.css',
+                    cssPath: './src/styles/index.css',
                 },
             ],
             'tailwindcss/classnames-order': 'off',
