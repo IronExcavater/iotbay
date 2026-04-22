@@ -55,7 +55,7 @@ export function AccountMenu({
                 open={open}
             >
                 <MenuPanel>
-                    {showStaffPortal ? (
+                    {showStaffPortal && (
                         <MenuLinkItem onClick={onClose} to="/admin">
                             <FaShieldHalved
                                 aria-hidden="true"
@@ -63,7 +63,7 @@ export function AccountMenu({
                             />
                             <span>Staff portal</span>
                         </MenuLinkItem>
-                    ) : null}
+                    )}
                     <MenuLinkItem onClick={onClose} to="/account">
                         <FaIdBadge aria-hidden="true" className="size-3.5" />
                         <span>Manage account</span>

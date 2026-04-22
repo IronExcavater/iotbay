@@ -13,9 +13,9 @@ export function PageHeader({
                 {title}
             </h1>
 
-            {description ? (
+            {description && (
                 <p className="text-ui-600 text-sm">{description}</p>
-            ) : null}
+            )}
         </header>
     );
 }

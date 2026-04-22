@@ -207,7 +207,7 @@ export function AccountActionsSection({
                     : 'flex justify-end'
             )}
         >
-            {hasChanges ? (
+            {hasChanges && (
                 <Field
                     error={error}
                     hint={currentPasswordHint}
@@ -229,7 +229,7 @@ export function AccountActionsSection({
                         value={value}
                     />
                 </Field>
-            ) : null}
+            )}
 
             <div className={clsx(hasChanges && 'sm:pt-6')}>
                 <Button

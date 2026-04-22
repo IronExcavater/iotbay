@@ -268,7 +268,7 @@ export default function AccountPage() {
                         values={values}
                     />
 
-                    {isCustomer ? (
+                    {isCustomer && (
                         <AccountContactSection
                             errors={fieldErrors}
                             onAddressFieldChange={handleAddressFieldChange}
@@ -281,9 +281,9 @@ export default function AccountPage() {
                             }}
                             values={values}
                         />
-                    ) : null}
+                    )}
 
-                    {isStaff ? (
+                    {isStaff && (
                         <AccountStaffSection
                             errors={fieldErrors}
                             onDesignationChange={(value) => {
@@ -299,7 +299,7 @@ export default function AccountPage() {
                             }}
                             values={values}
                         />
-                    ) : null}
+                    )}
 
                     <AccountActionsSection
                         currentPasswordHint={currentPasswordHint}

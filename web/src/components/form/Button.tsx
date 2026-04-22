@@ -30,13 +30,13 @@ export const Button = forwardRef<
         >
             <span
                 className={clsx(
-                    'inline-flex flex-nowrap items-center justify-center gap-1.5 leading-none whitespace-nowrap',
+                    'inline-flex flex-nowrap items-center justify-center gap-1.5 leading-5 whitespace-nowrap',
                     loading ? 'opacity-0' : 'opacity-100'
                 )}
             >
                 {children}
             </span>
-            {loading ? (
+            {loading && (
                 <span
                     aria-hidden="true"
                     className="pointer-events-none absolute inset-0 inline-flex items-center justify-center"
@@ -46,7 +46,7 @@ export const Button = forwardRef<
                         className="block size-3.5 animate-spin"
                     />
                 </span>
-            ) : null}
+            )}
         </button>
     );
 });
@@ -68,11 +68,11 @@ export function ButtonLink({
 }
 
 const variantClassName: Record<ButtonVariant, string> = {
-    danger: 'px-3 py-1.5 text-red-700 ring-1 ring-red-200 hover:bg-red-50',
+    danger: 'h-10 px-3 text-red-700 ring-1 ring-red-200 hover:bg-red-50',
     ghost: 'text-ui-500 hover:bg-ui-100 hover:text-ui-900 disabled:text-ui-300',
     primary:
-        'bg-ui-950 px-4 py-2 text-ui-0 ring-1 ring-ui-0 hover:bg-ui-800 focus-visible:ring-offset-1 focus-visible:ring-offset-ui-0 disabled:bg-ui-400',
-    secondary: 'px-3 py-2 ring-1 ring-ui-300 hover:bg-ui-100',
+        'bg-ui-950 h-10 px-4 text-ui-0 ring-1 ring-ui-0 hover:bg-ui-800 focus-visible:ring-offset-1 focus-visible:ring-offset-ui-0 disabled:bg-ui-400',
+    secondary: 'h-10 px-3 ring-1 ring-ui-300 hover:bg-ui-100',
 };
 
 function buttonClassName(variant: ButtonVariant, className: string) {
