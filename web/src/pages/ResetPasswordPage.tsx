@@ -6,7 +6,6 @@ import { PasswordRuleList } from '../auth/PasswordRuleList';
 import { buildSignInPath, normalizeNextPath } from '../auth/redirects';
 import { Button } from '../components/form/Button';
 import { Field } from '../components/form/Field';
-import { FormNotice } from '../components/form/FormNotice';
 import { Input } from '../components/form/Input';
 import { PasswordInput } from '../components/form/PasswordInput';
 import { TextLink } from '../components/form/TextLink';
@@ -49,7 +48,6 @@ export default function ResetPasswordPage() {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [fieldErrors, setFieldErrors] = useState<ResetFieldErrors>({});
-    const [formError, setFormError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -62,7 +60,6 @@ export default function ResetPasswordPage() {
         setPassword('');
         setConfirmPassword('');
         setFieldErrors({});
-        setFormError(null);
         setIsSubmitting(false);
         setShowPassword(false);
         setShowConfirmPassword(false);
@@ -124,7 +121,6 @@ export default function ResetPasswordPage() {
 
     async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
         event.preventDefault();
-        setFormError(null);
 
         const nextFieldErrors = getResetFieldErrors({
             confirmPassword,
@@ -149,7 +145,7 @@ export default function ResetPasswordPage() {
 
             await submitResetRequest();
         } catch (caughtError) {
-            setFormError(toResetError(caughtError));
+            showToast(toResetError(caughtError));
         } finally {
             setIsSubmitting(false);
         }
@@ -160,14 +156,10 @@ export default function ResetPasswordPage() {
             <PageHeader title={pageTitle} />
 
             <form
-                className="bg-surface-0 grid gap-4 rounded border border-slate-200 p-5"
+                className="bg-ui-0 border-ui-200 grid gap-4 rounded border p-5"
                 noValidate
                 onSubmit={handleSubmit}
             >
-                {formError ? (
-                    <FormNotice tone="error">{formError}</FormNotice>
-                ) : null}
-
                 {isResetMode ? (
                     <>
                         <Field
@@ -265,7 +257,6 @@ export default function ResetPasswordPage() {
                             onChange={(event) => {
                                 setEmail(Email.formatInput(event.target.value));
                                 setFieldError('email');
-                                setFormError(null);
                             }}
                             placeholder="jane.doe@email.com"
                             type="email"

@@ -23,7 +23,6 @@ import {
 } from '../auth/redirects';
 import { Button } from '../components/form/Button';
 import { Field } from '../components/form/Field';
-import { FormNotice } from '../components/form/FormNotice';
 import { Input } from '../components/form/Input';
 import { PasswordInput } from '../components/form/PasswordInput';
 import { TextLink } from '../components/form/TextLink';
@@ -65,7 +64,6 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
         createDefaultValues()
     );
     const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-    const [formError, setFormError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -98,7 +96,6 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
         // Route changes can carry a success message or a prefilled email.
         // Reset the transient form state, but keep any forwarded email.
         setFieldErrors({});
-        setFormError(null);
         setIsSubmitting(false);
         setValues((current) =>
             createDefaultValues({ email: prefilledEmail || current.email })
@@ -131,7 +128,6 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
 
     function resetForm() {
         setFieldErrors({});
-        setFormError(null);
         setValues(createDefaultValues());
         setShowPassword(false);
         setShowConfirmPassword(false);
@@ -210,7 +206,6 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
 
     async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
         event.preventDefault();
-        setFormError(null);
 
         const nextFieldErrors = validateCurrentForm();
         setFieldErrors(nextFieldErrors);
@@ -230,7 +225,7 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
         } catch (error) {
             const nextErrorState = toAuthErrorState(error, isSignUp);
             setFieldErrors(nextErrorState.fieldErrors);
-            setFormError(nextErrorState.formError);
+            if (nextErrorState.formError) showToast(nextErrorState.formError);
         } finally {
             setIsSubmitting(false);
         }
@@ -241,14 +236,10 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
             <PageHeader title={pageCopy.title} />
 
             <form
-                className="bg-surface-0 grid gap-4 rounded border border-slate-200 p-5"
+                className="bg-ui-0 border-ui-200 grid gap-4 rounded border p-5"
                 noValidate
                 onSubmit={handleSubmit}
             >
-                {formError ? (
-                    <FormNotice tone="error">{formError}</FormNotice>
-                ) : null}
-
                 {isSignUp ? (
                     <AuthSignUpFields
                         fieldErrors={fieldErrors}
@@ -256,7 +247,7 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
                         onFirstNameBlur={() => {
                             setFieldError(
                                 'firstName',
-                                FirstName.validateOnBlur(values.firstName)
+                                validateCurrentForm().firstName
                             );
                         }}
                         onFirstNameChange={(value) => {
@@ -267,7 +258,7 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
                         onLastNameBlur={() => {
                             setFieldError(
                                 'lastName',
-                                LastName.validateOnBlur(values.lastName)
+                                validateCurrentForm().lastName
                             );
                         }}
                         onLastNameChange={(value) => {
@@ -313,8 +304,6 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
                         maxLength={Password.MAX_LENGTH}
                         name="password"
                         onBlur={() => {
-                            if (!isSignUp || !values.password) return;
-
                             setFieldError(
                                 'password',
                                 validateCurrentForm().password

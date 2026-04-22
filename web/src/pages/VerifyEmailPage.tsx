@@ -6,7 +6,6 @@ import { authApi } from '../auth/api';
 import { normalizeNextPath, resolvePostAuthPath } from '../auth/redirects';
 import { Button } from '../components/form/Button';
 import { Field } from '../components/form/Field';
-import { FormNotice } from '../components/form/FormNotice';
 import { Input } from '../components/form/Input';
 import { PasswordInput } from '../components/form/PasswordInput';
 import { PageHeader } from '../components/PageHeader';
@@ -63,7 +62,6 @@ export default function VerifyEmailPage() {
     const [fieldErrors, setFieldErrors] = useState<
         FieldErrors<VerificationFieldName>
     >({});
-    const [formError, setFormError] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
 
     const hasToken = Boolean(token);
@@ -95,7 +93,6 @@ export default function VerifyEmailPage() {
         setChangeEmail('');
         setPassword('');
         setFieldErrors({});
-        setFormError(null);
         setPendingAction(null);
         setShowPassword(false);
 
@@ -140,14 +137,12 @@ export default function VerifyEmailPage() {
             ...current,
             email: undefined,
         }));
-        setFormError(null);
     }
 
     async function handleResend() {
         if (!email || isResending) return;
 
         setFieldErrors({});
-        setFormError(null);
         setPendingAction('resend');
 
         try {
@@ -162,7 +157,7 @@ export default function VerifyEmailPage() {
         } catch (error) {
             const nextState = toVerificationErrorState(error);
             setFieldErrors(nextState.fieldErrors);
-            setFormError(nextState.formError);
+            if (nextState.formError) showToast(nextState.formError);
         } finally {
             setPendingAction(null);
         }
@@ -170,10 +165,9 @@ export default function VerifyEmailPage() {
 
     async function handleChangeEmail(event: SubmitEvent<HTMLFormElement>) {
         event.preventDefault();
-        setFormError(null);
 
         if (!email) {
-            setFormError('Verification details are missing');
+            showToast('Verification details are missing');
             return;
         }
 
@@ -216,7 +210,7 @@ export default function VerifyEmailPage() {
         } catch (error) {
             const nextState = toVerificationErrorState(error);
             setFieldErrors(nextState.fieldErrors);
-            setFormError(nextState.formError);
+            if (nextState.formError) showToast(nextState.formError);
         } finally {
             setPendingAction(null);
         }
@@ -226,14 +220,12 @@ export default function VerifyEmailPage() {
         <section className="mx-auto grid max-w-xl gap-6">
             <PageHeader title="Verify email" />
 
-            <section className="bg-surface-0 grid gap-5 rounded border border-slate-200 p-5">
+            <section className="bg-ui-0 border-ui-200 grid gap-5 rounded border p-5">
                 {screen !== 'pending' ? (
                     <p
                         className={clsx(
                             'text-sm',
-                            screen === 'error'
-                                ? 'text-red-700'
-                                : 'text-slate-600'
+                            screen === 'error' ? 'text-red-700' : 'text-ui-600'
                         )}
                     >
                         {message}
@@ -241,12 +233,12 @@ export default function VerifyEmailPage() {
                 ) : null}
 
                 {email ? (
-                    <section className="grid gap-3 border-b border-slate-200 pb-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                    <section className="border-ui-200 grid gap-3 border-b pb-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
                         <div className="grid gap-1">
-                            <span className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
+                            <span className="text-ui-500 text-xs font-semibold tracking-[0.18em] uppercase">
                                 Email
                             </span>
-                            <strong className="text-base font-medium break-all text-slate-900">
+                            <strong className="text-ui-900 text-base font-medium break-all">
                                 {email}
                             </strong>
                         </div>
@@ -269,20 +261,16 @@ export default function VerifyEmailPage() {
                     </section>
                 ) : null}
 
-                {formError ? (
-                    <FormNotice tone="error">{formError}</FormNotice>
-                ) : null}
-
                 {showPendingActions ? (
                     <form
                         className="grid gap-4 pt-1"
                         onSubmit={handleChangeEmail}
                     >
                         <div className="grid gap-1">
-                            <h2 className="text-base font-semibold text-slate-900">
+                            <h2 className="text-ui-900 text-base font-semibold">
                                 Use a different email
                             </h2>
-                            <p className="text-sm text-slate-600">
+                            <p className="text-ui-600 text-sm">
                                 Send the verification link somewhere else.
                             </p>
                         </div>
@@ -360,7 +348,6 @@ export default function VerifyEmailPage() {
                                                 ...current,
                                                 password: undefined,
                                             }));
-                                            setFormError(null);
                                         }}
                                         onToggle={() => {
                                             setShowPassword(
