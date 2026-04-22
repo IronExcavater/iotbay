@@ -1,39 +1,31 @@
-import {
-    Children,
-    isValidElement,
-    type ButtonHTMLAttributes,
-    type ReactNode,
-} from 'react';
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { FaSpinner } from 'react-icons/fa6';
+import { Link, type LinkProps } from 'react-router-dom';
 
-type ButtonVariant = 'danger' | 'primary' | 'secondary' | 'text';
+type ButtonVariant = 'danger' | 'ghost' | 'primary' | 'secondary';
 
-export const textButtonClassName =
-    'inline-flex w-fit items-center gap-1.5 text-sm text-slate-600 underline-offset-4 outline-none transition-colors hover:text-slate-900 hover:underline focus-visible:text-slate-900 focus-visible:underline focus-visible:outline-none';
-
-export function Button({
-    children,
-    className = '',
-    loading = false,
-    title,
-    variant = 'primary',
-    ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & {
-    children: ReactNode;
-    loading?: boolean;
-    variant?: ButtonVariant;
-}) {
-    const resolvedTitle = title ?? getButtonText(children);
-
+export const Button = forwardRef<
+    HTMLButtonElement,
+    ButtonHTMLAttributes<HTMLButtonElement> & {
+        children: ReactNode;
+        loading?: boolean;
+        variant?: ButtonVariant;
+    }
+>(function Button(
+    {
+        children,
+        className = '',
+        loading = false,
+        variant = 'primary',
+        ...props
+    },
+    ref
+) {
     return (
         <button
-            className={clsx(
-                'relative cursor-pointer rounded text-sm font-medium disabled:cursor-not-allowed',
-                variantClassName[variant],
-                className
-            )}
-            title={resolvedTitle}
+            className={buttonClassName(variant, className)}
+            ref={ref}
             {...props}
         >
             <span
@@ -57,30 +49,36 @@ export function Button({
             ) : null}
         </button>
     );
+});
+
+export function ButtonLink({
+    children,
+    className = '',
+    variant = 'primary',
+    ...props
+}: LinkProps & {
+    children: ReactNode;
+    variant?: ButtonVariant;
+}) {
+    return (
+        <Link className={buttonClassName(variant, className)} {...props}>
+            {children}
+        </Link>
+    );
 }
 
 const variantClassName: Record<ButtonVariant, string> = {
-    danger: 'border border-red-200 px-3 py-1.5 text-red-700 hover:bg-red-50',
+    danger: 'px-3 py-1.5 text-red-700 ring-1 ring-red-200 hover:bg-red-50',
+    ghost: 'text-ui-500 hover:bg-ui-100 hover:text-ui-900 disabled:text-ui-300',
     primary:
-        'bg-slate-900 px-4 py-2 text-white hover:bg-slate-700 disabled:bg-slate-400',
-    secondary: 'border border-slate-300 px-3 py-2 hover:bg-slate-100',
-    text: textButtonClassName,
+        'bg-ui-950 px-4 py-2 text-ui-0 ring-1 ring-ui-0 hover:bg-ui-800 focus-visible:ring-offset-1 focus-visible:ring-offset-ui-0 disabled:bg-ui-400',
+    secondary: 'px-3 py-2 ring-1 ring-ui-300 hover:bg-ui-100',
 };
 
-function getButtonText(children: ReactNode): string | undefined {
-    const text = Children.toArray(children)
-        .map((child) => {
-            if (typeof child === 'string' || typeof child === 'number') {
-                return String(child);
-            }
-            if (isValidElement<{ children?: ReactNode }>(child)) {
-                return getButtonText(child.props.children) ?? '';
-            }
-            return '';
-        })
-        .join(' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-
-    return text || undefined;
+function buttonClassName(variant: ButtonVariant, className: string) {
+    return clsx(
+        'relative inline-flex cursor-pointer items-center justify-center rounded text-sm font-medium transition-[background-color,box-shadow,color] outline-none focus-visible:ring-2 focus-visible:ring-ui-900 disabled:cursor-not-allowed',
+        variantClassName[variant],
+        className
+    );
 }

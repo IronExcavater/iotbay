@@ -322,6 +322,7 @@ class UserRepository(Repository):
         permission: str | None = None,
         status: str | None = None,
         updated_at: str,
+        updated_by_user_id: bytes | None = None,
     ) -> User:
         current_user = self.select_user_by_id(user_id=user_id)
         if current_user is None:
@@ -354,7 +355,55 @@ class UserRepository(Repository):
                     entity_type=ENTITY_TYPE_USER,
                     entity_id=user_id,
                     updated_at=updated_at,
-                    updated_by_user_id=user_id,
+                    updated_by_user_id=updated_by_user_id or user_id,
+                )
+        except sqlite3.IntegrityError as error:
+            raise DuplicateEmailError() from error
+
+        return self._require_user(user_id, "updated user was not found")
+
+    def admin_update_user(
+        self,
+        *,
+        user_id: bytes,
+        email: str,
+        first_name: str,
+        last_name: str,
+        staff_id: str | None = None,
+        designation: str | None = None,
+        permission: str | None = None,
+        updated_at: str,
+        updated_by_user_id: bytes,
+    ) -> User:
+        current_user = self.select_user_by_id(user_id=user_id)
+        if current_user is None:
+            raise RuntimeError("user was not found")
+
+        try:
+            with self.connect() as connection:
+                self._update_user_row(
+                    connection,
+                    user_id=user_id,
+                    email=email,
+                    first_name=first_name,
+                    last_name=last_name,
+                )
+
+                if current_user.user_type != USER_TYPE_CUSTOMER:
+                    self._upsert_staff_details(
+                        connection,
+                        user_id=user_id,
+                        staff_id=staff_id,
+                        designation=designation,
+                        permission=permission,
+                    )
+
+                self._audit_logs.update_audit_log(
+                    connection,
+                    entity_type=ENTITY_TYPE_USER,
+                    entity_id=user_id,
+                    updated_at=updated_at,
+                    updated_by_user_id=updated_by_user_id,
                 )
         except sqlite3.IntegrityError as error:
             raise DuplicateEmailError() from error
@@ -416,6 +465,7 @@ class UserRepository(Repository):
         user_id: bytes,
         status: str,
         updated_at: str,
+        updated_by_user_id: bytes | None = None,
     ) -> User:
         with self.connect() as connection:
             # Status changes keep the existing user record in the users table;
@@ -433,7 +483,7 @@ class UserRepository(Repository):
                 entity_type=ENTITY_TYPE_USER,
                 entity_id=user_id,
                 updated_at=updated_at,
-                updated_by_user_id=user_id,
+                updated_by_user_id=updated_by_user_id or user_id,
             )
 
         return self._require_user(user_id, "updated user was not found")

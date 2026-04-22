@@ -1,24 +1,22 @@
 {
     "name": "iotbay-api",
+    "description": "Flask backend for IoTBay",
     "version": "0.0.1",
     "private": true,
     "scripts": {
-        "venv": "uv venv --seed --allow-existing",
-        "deps": "uv pip install -r requirements.txt",
-        "dev": "uv run --no-sync python -m flask --app run:app --debug run --host 0.0.0.0 --port 5001",
-        "db:migrate": "uv run --no-sync python -m src.db migrate",
-        "db:migrate:new": "uv run --no-sync python -m src.db migrate-new",
-        "db:seed:load": "uv run --no-sync python -m src.db seed-load",
-        "db:seed:dump": "uv run --no-sync python -m src.db seed-dump",
-        "typecheck": "pyright -p pyrightconfig.json",
-        "lint": "uv run --no-sync ruff check .",
-        "lint:fix": "uv run --no-sync ruff check . --fix",
-        "format": "uv run --no-sync ruff format . --check",
-        "format:fix": "uv run --no-sync ruff format .",
-        "fix:all": "npm run lint:fix && npm run format:fix",
-        "test": "uv run --no-sync python -m unittest discover -s tests -p test_*.py -v"
-    },
-    "devDependencies": {
-        "pyright": "^1.1.408"
+        "sync": "uv sync && npm run migrate && npm run seed",
+        "dev": "uv run python -m flask --app run:app --debug run --host 0.0.0.0 --port 5001",
+        "db": "uv run python -m src.db",
+        "migrate": "npm run db -- migrate",
+        "migrate:new": "npm run db -- migrate-new",
+        "seed": "npm run db -- seed-load",
+        "seed:dump": "npm run db -- seed-dump",
+        "typecheck": "uv run pyright",
+        "ruff": "uv run ruff check . && uv run ruff format . --check",
+        "ruff:fix": "uv run ruff check . --fix && uv run ruff format .",
+        "check:all": "npm run typecheck && npm run ruff",
+        "fix:all": "npm run typecheck && npm run ruff:fix",
+        "test": "uv run python -m unittest discover -s tests",
+        "build": "uv build"
     }
 }

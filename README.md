@@ -10,66 +10,35 @@ IOTBay is a monorepo with two workspaces:
 ### 1. Install Prerequisites
 
 - Install `Node.js` (includes `npm`): https://nodejs.org/en/download
-- Install `Python`: https://www.python.org/downloads/
 - Install `uv`: https://docs.astral.sh/uv/getting-started/installation/
 
-Confirm the toolchains are available:
+### 2. Environment File
 
-```bash
-node -v
-npm -v
-python3 --version
-uv --version
-```
-
-### 2. Create Your Local Environment File (Optional)
-
-The app can still run locally without the optional email or address integrations.
-
-Copy `.env.example` to `.env`:
-
-```bash
-cp .env.example .env
-```
-
-Then open `.env` and set the values you need:
+Create a copy of `.env.example` to `.env`. Open `.env` and set the values you need:
 
 - `IOTBAY_API_KEY`: required for local API access
 - `IOTBAY_GOOGLE_MAPS_API_KEY`: optional, only needed for address suggestions
-- `IOTBAY_SMTP_*` and `IOTBAY_SENDER`: optional, only needed if you want real emails to send
+- `IOTBAY_SMTP_*`: optional, only needed if you want real emails to send
 
-
-### 3. Run First-Time Setup
+### 3. Sync Local Project
 
 Run these commands once after cloning the repository:
 
 ```bash
-npm install
-npm run -w api venv
-npm run -w api deps
-npm run -w api db:migrate
+npm run sync
 ```
 
-What these commands do:
+What this does:
 
-- `npm install`: installs all JavaScript dependencies for the monorepo
-- `npm run -w api venv`: creates the backend virtual environment at `api/.venv`
-- `npm run -w api deps`: installs Python packages from `api/requirements.txt`
-- `npm run -w api db:migrate`: applies any unapplied database migrations
-
-If you are not sure whether your machine is set up correctly, just run all four commands again.
+- installs all JavaScript dependencies for the monorepo
+- runs workspace sync scripts, including the API virtual environment, SQLite migrations and seed data
 
 ### 4. Start The App
 
-Run the frontend and backend in separate terminals.
+Run the frontend and backend:
 
-Terminal 1:
 ```bash
-npm run -w api dev
-```
-Terminal 2:
-```bash
-npm run -w web dev
+npm run dev
 ```
 
 - Frontend: `http://localhost:5173`
@@ -79,130 +48,80 @@ npm run -w web dev
 Quick API check:
 
 ```bash
-curl http://localhost:5001/api/health
+curl -H "x-api-key: change-me-local-api-key" http://localhost:5001/api/health
 ```
 
-## Daily Use
+Use the `IOTBAY_API_KEY` value from your `.env` file.
 
-### After Pulling
+## Daily Use
 
 After `git pull`, the safest manual reset is:
 
 ```bash
-npm install
-npm run -w api deps
-npm run -w api db:migrate
+npm run sync
 ```
 
-You do not need to run all three every single time. Use this rule:
+You do not need to run the full sync every single time. Use this rule:
 
-- if any `package.json` or `package-lock.json` changed, run `npm install`
-- if `api/requirements.txt` changed, run `npm run -w api deps`
-- if anything in `api/migrations/` changed, run `npm run -w api db:migrate`
+- if any `package.json` changed, run `npm install`
+- if `api/pyproject.toml` changed, run `npm run -w api sync`
+- if anything in `api/migrations/*` changed, run `npm run -w api migrate`
+- if you want to reset shared local data, run `npm run -w api seed`
 
-### Automatic Sync After Pull
+The Git post-merge and post-rewrite hooks run `npm run sync` after pulls,
+merges, and rebases. `npm install` also runs workspace sync scripts through
+`postinstall`, skipping workspaces that do not define `sync`.
 
-Husky now runs these automatically after merge-based pulls and rebases.
-
-It checks what changed and then runs only what is needed:
-
-- `package.json` or `package-lock.json`, it runs `npm install`
-- `api/requirements.txt`, it runs `npm run -w api venv` and `npm run -w api deps`
-- `api/migrations/*.sql`, it runs `npm run -w api venv` and `npm run -w api db:migrate`
-
-This is only a convenience. If something still looks wrong after pulling, run the three manual commands above.
-
-### Usual Workflow
-
-```bash
-git pull
-npm run -w api dev
-npm run -w web dev
-```
-
-If the pull changed dependencies or migrations and the hooks did not already handle it, run:
-
-```bash
-npm install
-npm run -w api deps
-npm run -w api db:migrate
-```
+For workspace-wide optional scripts, use `--if-present`; for example,
+`npm run sync --workspaces --if-present`.
 
 ## Optional Integrations
 
 ### Email Sending
 
-Email sending is optional for local development.
+Email sending is optional for local development and uses SMTP to send emails from your own external email to reduce complexity.
 
-If you want registration emails and password reset emails to work, fill in the SMTP values in `.env`.
+- use your email address for `IOTBAY_SMTP_USERNAME` in `.env`
+- use your email password for `IOTBAY_SMTP_PASSWORD`.
 
-For Gmail:
-
-- use your Gmail address for `IOTBAY_SENDER` and `IOTBAY_SMTP_USERNAME`
-- use an app password for `IOTBAY_SMTP_PASSWORD`, not your normal Gmail password
-- Google typically requires 2-Step Verification before app passwords are available
-
-Google account security:
-- https://myaccount.google.com/security
-
-For other providers such as Outlook, use that provider's SMTP host, port, username, and either its normal SMTP password flow or an app password if the provider requires one.
+> **Note:** For Gmail, you must use an app password not your normal Gmail password. [How to create a Google app password](https://support.google.com/accounts/answer/185833?hl=en). Google requires 2-Step Verification before app passwords are available for your account
 
 ### Address Suggestions
 
-Address suggestions are also optional for local development.
-
-If you want Google-backed address suggestions to work:
+Address suggestions are also optional for local development and use Google-backed address suggestions and validation.
 
 - create a Google Maps Platform API key
 - enable billing on the Google Cloud project
-- enable `Places API (New)` for the project
-- make sure the key is allowed to use the Places API
+- enable `Places API (New)` and `Address Validation API` for your API key
 - put the key into `IOTBAY_GOOGLE_MAPS_API_KEY` in `.env`
-
-Official docs:
-
-- Places API (New): https://developers.google.com/maps/documentation/places/web-service/op-overview
-- Places API usage and billing: https://developers.google.com/maps/documentation/places/web-service/usage-and-billing
-- Google Maps Platform pricing: https://developers.google.com/maps/billing-and-pricing/pricing
-
-Google Maps pricing changes over time, so check the official pricing page instead of assuming an old free tier number still applies.
-
-## If You Get Stuck
-
-If you hit setup or runtime errors, run these steps in order:
-
-1. `npm install`
-2. `npm run -w api venv`
-3. `npm run -w api deps`
-4. `npm run -w api db:migrate`
-
-That fixes most local setup problems:
-
-- missing JavaScript packages
-- missing Python packages
-- stale API virtual environment
-- unapplied database migrations
 
 ## Before Commit
 
 Before committing, run:
 
 ```text
-npm run -w web fix:all   # Frontend quality gate
-  npm run typecheck       # Detects TypeScript type errors
+npm run check:all     # Frontend and backend read-only quality gate
+npm test              # Runs workspace test scripts
+npm run build         # Builds all buildable workspaces
+
+npm run -w web fix:all    # Frontend quality gate
+  npm run typecheck       # Runs TypeScript static typing
   npm run eslint:fix      # Finds and fixes JS issues
   npm run stylelint:fix   # Finds and fixes CSS issues
   npm run prettier:fix    # Applies consistent code formatting
 
-npm run -w api fix:all      # Backend quality gate
+npm run -w api fix:all    # Backend quality gate
   npm run typecheck       # Runs Pyright static typing
-  npm run lint:fix      # Finds and fixes Python issues
-  npm run format:fix    # Applies consistent code formatting
+  npm run ruff:fix        # Finds and fixes Python issues
 
-npm run -w api test            # Runs backend unit tests
+npm run -w api test       # Runs backend unit tests
 ```
 
+Pull requests and pushes to `main` run the same checks in GitHub Actions.
+
 ## Database Changes
+
+### Migrations
 
 A schema change means changing database structure, for example:
 
@@ -216,13 +135,13 @@ It does not mean changing row data.
 Create a migration file with:
 
 ```bash
-npm run -w api db:migrate:new -- <migration_name>
+npm run -w api migrate:new -- <migration_name>
 ```
 
 For example:
 
 ```bash
-npm run -w api db:migrate:new -- add_product_category
+npm run -w api migrate:new -- add_product_category
 ```
 
 This creates a file at `api/migrations/<number>_<migration_name>.sql`.
@@ -230,19 +149,23 @@ This creates a file at `api/migrations/<number>_<migration_name>.sql`.
 After writing the SQL, apply it with:
 
 ```bash
-npm run -w api db:migrate
+npm run -w api migrate
 ```
+
+### Seeding
+
+Database seeding is the automated process of populating a database with initial, reproducible and structured data without needing manual data entry.
 
 Load shared seed data:
 
 ```bash
-npm run -w api db:seed:load
+npm run -w api seed
 ```
 
 Update the shared seed file from your local database:
 
 ```bash
-npm run -w api db:seed:dump
+npm run -w api seed:dump
 ```
 
 ## API Testing

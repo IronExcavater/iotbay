@@ -3,24 +3,16 @@ import { useSearchParams } from 'react-router-dom';
 
 import { authApi, type User } from '../auth/api';
 import { PasswordRuleList } from '../auth/PasswordRuleList';
-import {
-    assessFirstName,
-    assessLastName,
-    assessPassword,
-    sanitizeFirstName,
-    sanitizeLastName,
-    sanitizePasswordInput,
-    EMAIL_MAX_LENGTH,
-    NAME_MAX_LENGTH,
-    PASSWORD_MAX_LENGTH,
-    getPasswordRules,
-} from '../auth/validation';
 import { Button } from '../components/form/Button';
 import { Field } from '../components/form/Field';
 import { FormNotice } from '../components/form/FormNotice';
-import { inputClassName } from '../components/form/Input';
+import { Input } from '../components/form/Input';
 import { PasswordInput } from '../components/form/PasswordInput';
+import { useToast } from '../components/toast/ToastProvider';
 import { normalizeMessage, toErrorMessage } from '../services/http';
+import { Email } from '../types/Email';
+import { FirstName, LastName } from '../types/Name';
+import { Password } from '../types/Password';
 import {
     collectFieldErrors,
     hasFieldErrors,
@@ -45,6 +37,7 @@ const DEFAULT_VALUES: StaffRegistrationValues = {
 
 export default function StaffRegistrationPage() {
     const [searchParams] = useSearchParams();
+    const { showToast } = useToast();
     const [invitation, setInvitation] = useState<User | null>(null);
     const [isLoadingInvitation, setIsLoadingInvitation] = useState(true);
     const [invitationError, setInvitationError] = useState<string | null>(null);
@@ -52,13 +45,12 @@ export default function StaffRegistrationPage() {
     const [fieldErrors, setFieldErrors] = useState<
         FieldErrors<StaffRegistrationFieldName>
     >({});
-    const [formError, setFormError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const token = searchParams.get('token')?.trim() ?? '';
-    const passwordRules = getPasswordRules(values.password, {
+    const passwordRules = Password.rules(values.password, {
         email: invitation?.email ?? '',
         firstName: values.firstName,
         lastName: values.lastName,
@@ -94,22 +86,35 @@ export default function StaffRegistrationPage() {
         return () => abortController.abort();
     }, [token]);
 
+    function setFieldError(
+        name: StaffRegistrationFieldName,
+        value?: string | null
+    ) {
+        setFieldErrors((current) => ({
+            ...current,
+            [name]: value || undefined,
+        }));
+    }
+
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        setFormError(null);
 
         if (!invitation) {
-            setFormError('Staff invitation details are missing');
+            showToast('Staff invitation details are missing');
             return;
         }
+
+        // Assess once, derive both validation errors and the payload values.
+        const firstName = FirstName.assess(values.firstName);
+        const lastName = LastName.assess(values.lastName);
 
         const nextFieldErrors = collectFieldErrors<StaffRegistrationFieldName>({
             confirmPassword: getConfirmPasswordError(
                 values.confirmPassword,
                 values.password
             ),
-            firstName: assessFirstName(values.firstName),
-            lastName: assessLastName(values.lastName),
+            firstName,
+            lastName,
             password: getPasswordError({
                 email: invitation.email,
                 firstName: values.firstName,
@@ -124,9 +129,7 @@ export default function StaffRegistrationPage() {
             return;
         }
 
-        const firstName = assessFirstName(values.firstName);
-        const lastName = assessLastName(values.lastName);
-
+        // Type-narrowing guard: if there are no field errors the values must be present.
         if (!firstName.value || !lastName.value) {
             return;
         }
@@ -141,7 +144,7 @@ export default function StaffRegistrationPage() {
             });
             window.location.assign('/admin');
         } catch (error) {
-            setFormError(
+            showToast(
                 toErrorMessage(error, 'Unable to complete staff registration')
             );
         } finally {
@@ -155,56 +158,52 @@ export default function StaffRegistrationPage() {
                 Create your staff account
             </h1>
 
-            <section className="grid gap-5 rounded border border-slate-200 bg-white p-5">
+            <section className="bg-ui-0 border-ui-200 grid gap-5 rounded border p-5">
                 {isLoadingInvitation ? (
-                    <p className="text-sm text-slate-600">
+                    <p className="text-ui-600 text-sm">
                         Loading your staff invitation
                     </p>
                 ) : invitationError ? (
                     <FormNotice tone="error">{invitationError}</FormNotice>
                 ) : invitation ? (
                     <>
-                        <div className="grid gap-3 border-b border-slate-200 pb-4">
+                        <div className="border-ui-200 grid gap-3 border-b pb-4">
                             <div className="grid gap-1">
-                                <span className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
+                                <span className="text-ui-500 text-xs font-semibold tracking-[0.18em] uppercase">
                                     Staff email
                                 </span>
-                                <strong className="text-base font-medium break-all text-slate-900">
+                                <strong className="text-ui-900 text-base font-medium break-all">
                                     {invitation.email}
                                 </strong>
                             </div>
                             <div className="grid gap-1 sm:grid-cols-3 sm:gap-4">
                                 <div className="grid gap-1">
-                                    <span className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
+                                    <span className="text-ui-500 text-xs font-semibold tracking-[0.18em] uppercase">
                                         Staff ID
                                     </span>
-                                    <span className="text-slate-900">
+                                    <span className="text-ui-900">
                                         {invitation.staffId ?? 'Not assigned'}
                                     </span>
                                 </div>
                                 <div className="grid gap-1">
-                                    <span className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
+                                    <span className="text-ui-500 text-xs font-semibold tracking-[0.18em] uppercase">
                                         Position
                                     </span>
-                                    <span className="text-slate-900">
+                                    <span className="text-ui-900">
                                         {invitation.designation ??
                                             'Not assigned'}
                                     </span>
                                 </div>
                                 <div className="grid gap-1">
-                                    <span className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
+                                    <span className="text-ui-500 text-xs font-semibold tracking-[0.18em] uppercase">
                                         Permission
                                     </span>
-                                    <span className="text-slate-900 capitalize">
+                                    <span className="text-ui-900 capitalize">
                                         {invitation.permission ?? 'Admin'}
                                     </span>
                                 </div>
                             </div>
                         </div>
-
-                        {formError ? (
-                            <FormNotice tone="error">{formError}</FormNotice>
-                        ) : null}
 
                         <form className="grid gap-4" onSubmit={handleSubmit}>
                             <div className="grid gap-4 sm:grid-cols-2">
@@ -213,17 +212,26 @@ export default function StaffRegistrationPage() {
                                     label="First name"
                                     required
                                 >
-                                    <input
-                                        className={inputClassName(
-                                            Boolean(fieldErrors.firstName)
+                                    <Input
+                                        hasError={Boolean(
+                                            fieldErrors.firstName
                                         )}
-                                        maxLength={NAME_MAX_LENGTH}
+                                        maxLength={FirstName.MAX_LENGTH}
+                                        onBlur={() => {
+                                            setFieldError(
+                                                'firstName',
+                                                FirstName.validate(
+                                                    values.firstName
+                                                )
+                                            );
+                                        }}
                                         onChange={(event) => {
                                             setValues((current) => ({
                                                 ...current,
-                                                firstName: sanitizeFirstName(
-                                                    event.target.value
-                                                ),
+                                                firstName:
+                                                    FirstName.formatInput(
+                                                        event.target.value
+                                                    ),
                                             }));
                                         }}
                                         placeholder="Taylor"
@@ -236,15 +244,21 @@ export default function StaffRegistrationPage() {
                                     label="Last name"
                                     required
                                 >
-                                    <input
-                                        className={inputClassName(
-                                            Boolean(fieldErrors.lastName)
-                                        )}
-                                        maxLength={NAME_MAX_LENGTH}
+                                    <Input
+                                        hasError={Boolean(fieldErrors.lastName)}
+                                        maxLength={LastName.MAX_LENGTH}
+                                        onBlur={() => {
+                                            setFieldError(
+                                                'lastName',
+                                                LastName.validate(
+                                                    values.lastName
+                                                )
+                                            );
+                                        }}
                                         onChange={(event) => {
                                             setValues((current) => ({
                                                 ...current,
-                                                lastName: sanitizeLastName(
+                                                lastName: LastName.formatInput(
                                                     event.target.value
                                                 ),
                                             }));
@@ -256,10 +270,9 @@ export default function StaffRegistrationPage() {
                             </div>
 
                             <Field label="Email" required>
-                                <input
-                                    className={inputClassName(false)}
+                                <Input
                                     disabled
-                                    maxLength={EMAIL_MAX_LENGTH}
+                                    maxLength={Email.MAX_LENGTH}
                                     value={invitation.email}
                                 />
                             </Field>
@@ -272,11 +285,26 @@ export default function StaffRegistrationPage() {
                                 <PasswordInput
                                     autoComplete="new-password"
                                     hasError={Boolean(fieldErrors.password)}
-                                    maxLength={PASSWORD_MAX_LENGTH}
+                                    maxLength={Password.MAX_LENGTH}
+                                    onBlur={() => {
+                                        setFieldError(
+                                            'password',
+                                            getPasswordError({
+                                                email: invitation.email,
+                                                firstName: values.firstName,
+                                                lastName: values.lastName,
+                                                password: values.password,
+                                                passwordRulesMet:
+                                                    passwordRules.every(
+                                                        (rule) => rule.met
+                                                    ),
+                                            })
+                                        );
+                                    }}
                                     onChange={(event) => {
                                         setValues((current) => ({
                                             ...current,
-                                            password: sanitizePasswordInput(
+                                            password: Password.formatInput(
                                                 event.target.value
                                             ),
                                         }));
@@ -301,12 +329,21 @@ export default function StaffRegistrationPage() {
                                     hasError={Boolean(
                                         fieldErrors.confirmPassword
                                     )}
-                                    maxLength={PASSWORD_MAX_LENGTH}
+                                    maxLength={Password.MAX_LENGTH}
+                                    onBlur={() => {
+                                        setFieldError(
+                                            'confirmPassword',
+                                            getConfirmPasswordError(
+                                                values.confirmPassword,
+                                                values.password
+                                            )
+                                        );
+                                    }}
                                     onChange={(event) => {
                                         setValues((current) => ({
                                             ...current,
                                             confirmPassword:
-                                                sanitizePasswordInput(
+                                                Password.formatInput(
                                                     event.target.value
                                                 ),
                                         }));
@@ -355,7 +392,7 @@ function getPasswordError({
         return 'Password is required';
     }
 
-    const assessment = assessPassword(password, {
+    const assessment = Password.assess(password, {
         email,
         firstName,
         lastName,

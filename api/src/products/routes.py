@@ -6,9 +6,8 @@ from src.auth.session import (
     current_authenticated_staff_user,
     staff_permission_required,
 )
-from src.common.app import app_extension
+from src.common.app import services
 from src.common.web import ApiError, parse_request
-from src.products.repository import ProductRepository
 from src.products.requests import ProductMutationRequest
 from src.users.models import STAFF_PERMISSION_ADMIN, STAFF_PERMISSION_SUPERADMIN
 
@@ -30,19 +29,16 @@ class InvalidProductIdError(ApiError):
 
 @products_bp.get("/products")
 def list_products():
-    repository = app_extension("product_repository", ProductRepository)
-
-    products = [product.to_dict() for product in repository.list_products()]
+    products = [product.to_dict() for product in services().products.list_products()]
     return {"items": products}, HTTPStatus.OK
 
 
 @products_bp.post("/admin/products")
 @staff_permission_required(*PRODUCT_WRITE_PERMISSIONS)
 def create_product():
-    repository = app_extension("product_repository", ProductRepository)
     data = parse_request(ProductMutationRequest)
 
-    product = repository.insert_product(
+    product = services().products.create_product(
         name=data.name,
         code=data.code,
         price_cents=data.price_cents,
@@ -57,10 +53,9 @@ def create_product():
 @products_bp.patch("/admin/products/<product_id>")
 @staff_permission_required(*PRODUCT_WRITE_PERMISSIONS)
 def update_product(product_id: str):
-    repository = app_extension("product_repository", ProductRepository)
     data = parse_request(ProductMutationRequest)
 
-    product = repository.update_product(
+    product = services().products.update_product(
         product_id=_parse_product_id(product_id),
         name=data.name,
         code=data.code,
@@ -75,8 +70,7 @@ def update_product(product_id: str):
 @products_bp.delete("/admin/products/<product_id>")
 @staff_permission_required(*PRODUCT_WRITE_PERMISSIONS)
 def delete_product(product_id: str):
-    repository = app_extension("product_repository", ProductRepository)
-    repository.delete_product(product_id=_parse_product_id(product_id))
+    services().products.delete_product(product_id=_parse_product_id(product_id))
     return "", HTTPStatus.NO_CONTENT
 
 

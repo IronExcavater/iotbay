@@ -2,7 +2,7 @@ import type { ChangeEventHandler, FocusEventHandler } from 'react';
 import clsx from 'clsx';
 import { FaEye, FaEyeSlash } from 'react-icons/fa6';
 
-import { inputClassName } from './Input';
+import { Input } from './Input';
 
 export function PasswordInput({
     autoComplete,
@@ -31,9 +31,10 @@ export function PasswordInput({
 
     return (
         <div className="relative">
-            <input
+            <Input
                 autoComplete={autoComplete}
-                className={clsx(inputClassName(hasError), 'pr-11')}
+                className="pr-11"
+                hasError={hasError}
                 maxLength={maxLength}
                 name={name}
                 onBlur={onBlur}
@@ -44,9 +45,10 @@ export function PasswordInput({
             />
             <button
                 aria-label={toggleLabel}
-                className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-slate-500 hover:text-slate-800"
+                className={clsx(
+                    'text-ui-500 hover:text-ui-800 focus-visible:ring-ui-900 absolute top-1/2 right-1.5 inline-flex size-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-inset'
+                )}
                 onClick={onToggle}
-                title={toggleLabel}
                 type="button"
             >
                 {showPassword ? (

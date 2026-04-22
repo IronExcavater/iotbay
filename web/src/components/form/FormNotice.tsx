@@ -12,7 +12,7 @@ export function FormNotice({
         <p
             className={clsx(
                 'text-sm',
-                tone === 'error' ? 'text-red-700' : 'text-emerald-700'
+                tone === 'error' ? 'text-red-700' : 'text-green-700'
             )}
         >
             {children}
