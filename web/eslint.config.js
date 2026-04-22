@@ -26,7 +26,7 @@ export default defineConfig([
         },
         settings: {
             tailwindcss: {
-                config: path.join(__dirname, 'src/styles/index.css'),
+                config: path.join(__dirname, 'src/app/styles/index.css'),
             },
         },
         rules: {
@@ -54,6 +54,18 @@ export default defineConfig([
                             pattern: 'components/**',
                             group: 'internal',
                         },
+                        {
+                            pattern: '@app/**',
+                            group: 'internal',
+                        },
+                        {
+                            pattern: '@features/**',
+                            group: 'internal',
+                        },
+                        {
+                            pattern: '@shared/**',
+                            group: 'internal',
+                        },
                     ],
                     pathGroupsExcludedImportTypes: ['internal'],
                     alphabetize: {
@@ -67,7 +79,7 @@ export default defineConfig([
             'tailwind-canonical-classes/tailwind-canonical-classes': [
                 'warn',
                 {
-                    cssPath: './src/styles/index.css',
+                    cssPath: './src/app/styles/index.css',
                 },
             ],
             'tailwindcss/classnames-order': 'off',

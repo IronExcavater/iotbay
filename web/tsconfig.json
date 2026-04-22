@@ -9,7 +9,12 @@
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
         "noEmit": true,
-        "types": ["vite/client"]
+        "types": ["vite/client"],
+        "paths": {
+            "@app/*": ["./src/app/*"],
+            "@features/*": ["./src/features/*"],
+            "@shared/*": ["./src/shared/*"]
+        }
     },
     "include": ["src", "vite.config.ts"]
 }
