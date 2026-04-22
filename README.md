@@ -9,19 +9,11 @@ IOTBay is a monorepo with two workspaces:
 
 ### 1. Toolchain
 
-This repo pins Node.js and `uv` in `.mise.toml`. Install `mise` once, then let
-it install the project tools.
-
-Windows:
-
-```powershell
-winget install jdx.mise
-```
-
-macOS:
+Use `mise` to install the Node.js and `uv` versions used by this project.
 
 ```bash
-brew install mise
+winget install jdx.mise # Windows
+brew install mise       # MacOS
 ```
 
 From the repository root:
