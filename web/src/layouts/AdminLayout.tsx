@@ -38,39 +38,33 @@ export default function AdminLayout() {
 
     return (
         <section className="min-h-[calc(100vh-73px)] md:flex md:items-start">
-            <div className="bg-ui-0 border-ui-200 border-b px-4 py-4 sm:px-6 md:hidden">
-                <div className="grid gap-3">
-                    <h1 className="text-ui-900 text-lg font-semibold tracking-tight">
-                        Admin
-                    </h1>
+            <div className="bg-ui-0 border-ui-200 border-b px-4 sm:px-6 md:hidden">
+                <nav className="-mb-px flex overflow-x-auto">
+                    {navItems.map((item) => {
+                        const Icon = item.icon;
 
-                    <nav className="flex flex-wrap gap-2">
-                        {navItems.map((item) => {
-                            const Icon = item.icon;
-
-                            return (
-                                <NavLink
-                                    className={({ isActive }) =>
-                                        clsx(
-                                            'inline-flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium transition',
-                                            isActive
-                                                ? 'bg-ui-950 text-ui-0'
-                                                : 'bg-ui-100 text-ui-700 hover:bg-ui-200'
-                                        )
-                                    }
-                                    key={item.to}
-                                    to={item.to}
-                                >
-                                    <Icon
-                                        aria-hidden="true"
-                                        className="size-4 shrink-0"
-                                    />
-                                    <span>{item.label}</span>
-                                </NavLink>
-                            );
-                        })}
-                    </nav>
-                </div>
+                        return (
+                            <NavLink
+                                className={({ isActive }) =>
+                                    clsx(
+                                        'inline-flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-sm font-medium transition',
+                                        isActive
+                                            ? 'border-ui-900 text-ui-900'
+                                            : 'text-ui-500 hover:border-ui-300 hover:text-ui-700 border-transparent'
+                                    )
+                                }
+                                key={item.to}
+                                to={item.to}
+                            >
+                                <Icon
+                                    aria-hidden="true"
+                                    className="size-4 shrink-0"
+                                />
+                                <span>{item.label}</span>
+                            </NavLink>
+                        );
+                    })}
+                </nav>
             </div>
 
             <aside
@@ -86,7 +80,7 @@ export default function AdminLayout() {
                     )}
                 >
                     <span
-                        aria-hidden={isCollapsed}
+                        aria-hidden={isCollapsed ? 'true' : 'false'}
                         className={clsx(
                             'text-ui-900 overflow-hidden text-xl font-semibold tracking-tight whitespace-nowrap transition-[width,padding,opacity] duration-200 ease-out',
                             isCollapsed

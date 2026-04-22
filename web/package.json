@@ -18,7 +18,6 @@
         "fix:all": "npm run typecheck && npm run eslint:fix && npm run stylelint:fix && npm run prettier:fix"
     },
     "dependencies": {
-        "@lobehub/fluent-emoji": "^4.1.0",
         "clsx": "^2.1.1",
         "libphonenumber-js": "^1.12.41",
         "luxon": "^3.7.2",

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { getFluentEmojiCDN } from '@lobehub/fluent-emoji';
 import clsx from 'clsx';
 import type { CountryCode } from 'libphonenumber-js';
 
@@ -107,7 +106,12 @@ export function PhoneField({
                         type="button"
                     >
                         <span className="text-ui-900 inline-flex min-w-0 items-center gap-2.5 text-sm">
-                            <FlagEmoji emoji={selectedOption.flag} />
+                            <span
+                                aria-hidden="true"
+                                className="inline-flex size-4.5 shrink-0 items-center justify-center text-[18px] leading-none"
+                            >
+                                {selectedOption.flag}
+                            </span>
 
                             <span className="truncate">
                                 +{selectedOption.dialCode}
@@ -165,7 +169,12 @@ export function PhoneField({
                                         type="button"
                                     >
                                         <span className="text-ui-900 flex min-w-0 items-center gap-2 truncate">
-                                            <FlagEmoji emoji={option.flag} />
+                                            <span
+                                                aria-hidden="true"
+                                                className="inline-flex size-4.5 shrink-0 items-center justify-center text-[18px] leading-none"
+                                            >
+                                                {option.flag}
+                                            </span>
                                             <span className="truncate">
                                                 {option.name}
                                             </span>
@@ -214,41 +223,5 @@ export function PhoneField({
                 />
             </div>
         </Field>
-    );
-}
-
-function FlagEmoji({ emoji }: { emoji: string }) {
-    const [useNativeFallback, setUseNativeFallback] = useState(false);
-
-    if (useNativeFallback) {
-        return (
-            <span
-                aria-hidden="true"
-                className="inline-flex size-4.5 shrink-0 items-center justify-center text-[18px] leading-none"
-                style={{
-                    fontFamily: 'var(--emoji-font-family)',
-                }}
-            >
-                {emoji}
-            </span>
-        );
-    }
-
-    return (
-        <img
-            alt=""
-            aria-hidden="true"
-            className="size-4.5 shrink-0"
-            height={18}
-            loading="lazy"
-            onError={() => {
-                setUseNativeFallback(true);
-            }}
-            src={getFluentEmojiCDN(emoji, {
-                cdn: 'unpkg',
-                type: '3d',
-            })}
-            width={18}
-        />
     );
 }

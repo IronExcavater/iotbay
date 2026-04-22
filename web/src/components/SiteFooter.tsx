@@ -5,6 +5,8 @@ import { getJson } from '../services/http';
 import { TextAnchor, TextLink } from './form/TextLink';
 
 const DEFAULT_CONTACT_EMAIL = 'support@iotbay.com';
+const UTS_ISD_SUBJECT_URL =
+    'https://coursehandbook.uts.edu.au/subject/2026/41025';
 const GITHUB_REPOSITORY_URL =
     'https://github.com/isd-2026/project-assignment-iotbay-marketplace-workshop04-group3';
 
@@ -61,7 +63,18 @@ export default function SiteFooter() {
                 <section className="flex min-w-0 flex-[1_1_12rem] justify-center">
                     <div className="flex w-fit flex-col items-start gap-2 text-left">
                         <h2 className="text-ui-900 font-semibold">Credits</h2>
-                        <p>ISD 2026</p>
+                        <TextAnchor
+                            aria-label="Introduction to Software Development at UTS"
+                            href={UTS_ISD_SUBJECT_URL}
+                            rel="noreferrer"
+                            target="_blank"
+                        >
+                            <span
+                                aria-hidden="true"
+                                className="mask-uts-icon inline-block size-5 shrink-0 bg-current"
+                            />
+                            <span>ISD 2026</span>
+                        </TextAnchor>
                         <TextAnchor
                             aria-label="IoTBay on GitHub"
                             href={GITHUB_REPOSITORY_URL}

@@ -47,8 +47,7 @@
 
 :root {
     --emoji-font-family:
-        'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji',
-        'Twemoji Mozilla', sans-serif;
+        'Fluent Emoji Color', 'Segoe UI Emoji', 'Apple Color Emoji';
 }
 
 html,
@@ -62,5 +61,5 @@ body {
     margin: 0;
     background: var(--ui-0);
     color: var(--ui-900);
-    font-family: var(--font-sans);
+    font-family: var(--font-sans), var(--emoji-font-family);
 }
