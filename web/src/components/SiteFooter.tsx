@@ -3,7 +3,6 @@ import { FaGithub } from 'react-icons/fa6';
 
 import { getJson } from '../services/http';
 import { TextAnchor, TextLink } from './form/TextLink';
-import { Tooltip } from './ui/Tooltip';
 
 const DEFAULT_CONTACT_EMAIL = 'support@iotbay.com';
 const GITHUB_REPOSITORY_URL =
@@ -37,13 +36,11 @@ export default function SiteFooter() {
     }, []);
 
     return (
-        <footer className="bg-surface-0 border-t border-slate-200">
-            <div className="mx-auto flex w-full max-w-6xl flex-wrap justify-center gap-x-8 gap-y-8 px-4 py-8 text-sm text-slate-600 sm:px-6">
+        <footer className="bg-ui-0 border-ui-200 border-t">
+            <div className="text-ui-600 mx-auto flex w-full max-w-6xl flex-wrap justify-center gap-x-8 gap-y-8 px-4 py-8 text-sm sm:px-6">
                 <section className="flex min-w-0 flex-[1_1_12rem] justify-center">
                     <div className="flex w-fit flex-col items-start gap-2 text-left">
-                        <h2 className="font-semibold text-slate-900">
-                            Sitemap
-                        </h2>
+                        <h2 className="text-ui-900 font-semibold">Sitemap</h2>
                         <TextLink to="/">Home</TextLink>
                         <TextLink to="/account">Account</TextLink>
                         <TextLink to="/staff/sign-in?next=/admin">
@@ -54,9 +51,7 @@ export default function SiteFooter() {
 
                 <section className="flex min-w-0 flex-[1_1_12rem] justify-center">
                     <div className="flex w-fit flex-col items-start gap-2 text-left">
-                        <h2 className="font-semibold text-slate-900">
-                            Contact
-                        </h2>
+                        <h2 className="text-ui-900 font-semibold">Contact</h2>
                         <TextAnchor href={`mailto:${contactEmail}`}>
                             {contactEmail}
                         </TextAnchor>
@@ -65,21 +60,17 @@ export default function SiteFooter() {
 
                 <section className="flex min-w-0 flex-[1_1_12rem] justify-center">
                     <div className="flex w-fit flex-col items-start gap-2 text-left">
-                        <h2 className="font-semibold text-slate-900">
-                            Credits
-                        </h2>
+                        <h2 className="text-ui-900 font-semibold">Credits</h2>
                         <p>ISD 2026</p>
-                        <Tooltip label="View IoTBay on GitHub">
-                            <TextAnchor
-                                aria-label="IoTBay on GitHub"
-                                href={GITHUB_REPOSITORY_URL}
-                                rel="noreferrer"
-                                target="_blank"
-                            >
-                                <FaGithub aria-hidden="true" size={20} />
-                                <span>IoTBay</span>
-                            </TextAnchor>
-                        </Tooltip>
+                        <TextAnchor
+                            aria-label="IoTBay on GitHub"
+                            href={GITHUB_REPOSITORY_URL}
+                            rel="noreferrer"
+                            target="_blank"
+                        >
+                            <FaGithub aria-hidden="true" size={20} />
+                            <span>IoTBay</span>
+                        </TextAnchor>
                     </div>
                 </section>
             </div>

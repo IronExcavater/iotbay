@@ -27,7 +27,7 @@ export function MoneyField({
     return (
         <Field error={error} hint={hint} label={label} required={required}>
             <div className="relative">
-                <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-slate-500">
+                <span className="text-ui-500 pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm">
                     A$
                 </span>
 

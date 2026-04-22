@@ -12,7 +12,7 @@ export function DropdownChevron({
         <FaChevronDown
             aria-hidden="true"
             className={clsx(
-                'size-[0.65rem] text-slate-500 transition-transform duration-200 ease-out',
+                'text-ui-500 size-[0.65rem] transition-transform duration-200 ease-out',
                 isOpen && 'rotate-180',
                 className
             )}

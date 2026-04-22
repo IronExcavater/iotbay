@@ -35,7 +35,7 @@ export const PHONE_COUNTRY_OPTIONS: PhoneCountryOption[] = getCountries()
             code,
             dialCode,
             flag,
-            dropdownLabel: `${flag} ${name} (+${dialCode})`,
+            dropdownLabel: `${name} (+${dialCode})`,
             name,
         };
     })

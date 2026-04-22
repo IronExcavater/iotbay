@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { getFluentEmojiCDN } from '@lobehub/fluent-emoji';
 import clsx from 'clsx';
 import type { CountryCode } from 'libphonenumber-js';
 
@@ -11,7 +12,6 @@ import {
 import { useSearchFilter } from '../../hooks/useSearchFilter';
 import { AnchoredPopover } from '../overlay/AnchoredPopover';
 import { MenuPanel } from '../overlay/MenuItems';
-import { Tooltip } from '../ui/Tooltip';
 import { DropdownChevron } from './DropdownChevron';
 import { DropdownSearchInput } from './DropdownSearchInput';
 import { Field } from './Field';
@@ -91,35 +91,34 @@ export function PhoneField({
         <Field error={error} label={label} required={required}>
             <div className="grid gap-3 sm:grid-cols-[minmax(0,7.25rem)_1fr] sm:items-start">
                 <div className="relative">
-                    <Tooltip className="w-full" label="Choose phone country">
-                        <button
-                            aria-label="Choose phone country"
-                            className={clsx(
-                                'w-full rounded border border-slate-300 px-3 py-2',
-                                'flex cursor-pointer items-center justify-between gap-2 pr-3 text-left'
-                            )}
-                            onClick={() => {
-                                setIsCountryMenuOpen((current) => !current);
-                            }}
-                            ref={countryButtonRef}
-                            type="button"
-                        >
-                            <span className="inline-flex min-w-0 items-center gap-2.5 text-sm text-slate-900">
-                                <span className="shrink-0">
-                                    {selectedOption.flag}
-                                </span>
+                    <button
+                        aria-label="Choose phone country"
+                        className={clsx(
+                            'h-10 w-full rounded border-0 px-3 ring-1 transition-[background-color,box-shadow,color] outline-none',
+                            error
+                                ? 'ring-red-500 focus:ring-2 focus:ring-red-500'
+                                : 'ring-ui-300 focus:ring-ui-900 focus:ring-2',
+                            'flex cursor-pointer items-center justify-between gap-2 pr-3 text-left'
+                        )}
+                        onClick={() => {
+                            setIsCountryMenuOpen((current) => !current);
+                        }}
+                        ref={countryButtonRef}
+                        type="button"
+                    >
+                        <span className="text-ui-900 inline-flex min-w-0 items-center gap-2.5 text-sm">
+                            <FlagEmoji emoji={selectedOption.flag} />
 
-                                <span className="truncate">
-                                    +{selectedOption.dialCode}
-                                </span>
+                            <span className="truncate">
+                                +{selectedOption.dialCode}
                             </span>
+                        </span>
 
-                            <DropdownChevron
-                                className="shrink-0"
-                                isOpen={isCountryMenuOpen}
-                            />
-                        </button>
-                    </Tooltip>
+                        <DropdownChevron
+                            className="shrink-0"
+                            isOpen={isCountryMenuOpen}
+                        />
+                    </button>
 
                     <AnchoredPopover
                         anchorRef={countryButtonRef}
@@ -129,7 +128,7 @@ export function PhoneField({
                         open={isCountryMenuOpen}
                     >
                         <MenuPanel className="w-72">
-                            <div className="sticky top-0 border-b border-slate-200 pb-2">
+                            <div className="bg-ui-0 sticky top-0 z-10">
                                 <DropdownSearchInput
                                     inputRef={searchInputRef}
                                     onChange={setCountrySearch}
@@ -138,49 +137,51 @@ export function PhoneField({
                                 />
                             </div>
 
-                            <div className="max-h-64 overflow-y-auto">
+                            <div
+                                className="max-h-64 overflow-y-auto"
+                                tabIndex={-1}
+                            >
                                 {filteredOptions.map((option) => (
-                                    <Tooltip
-                                        className="w-full"
+                                    <button
+                                        className={clsx(
+                                            'text-ui-700 hover:bg-ui-100 hover:text-ui-900 focus-visible:ring-ui-900 flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition outline-none focus-visible:ring-2 focus-visible:ring-inset',
+                                            option.code === country &&
+                                                'bg-ui-50'
+                                        )}
                                         key={option.code}
-                                        label={option.dropdownLabel}
-                                        side="right"
+                                        onClick={() => {
+                                            setIsCountryMenuOpen(false);
+                                            onCountryChange(option.code);
+
+                                            if (!value.trim()) return;
+
+                                            onNumberChange(
+                                                formatPhoneInput(
+                                                    value,
+                                                    option.code
+                                                )
+                                            );
+                                        }}
+                                        type="button"
                                     >
-                                        <button
-                                            className={clsx(
-                                                'inline-flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 hover:text-slate-900',
-                                                'flex cursor-pointer items-center justify-between gap-3',
-                                                option.code === country &&
-                                                    'bg-slate-50'
-                                            )}
-                                            onClick={() => {
-                                                setIsCountryMenuOpen(false);
-                                                onCountryChange(option.code);
-
-                                                if (!value.trim()) return;
-
-                                                onNumberChange(
-                                                    formatPhoneInput(
-                                                        value,
-                                                        option.code
-                                                    )
-                                                );
-                                            }}
-                                            type="button"
-                                        >
-                                            <span className="truncate text-slate-900">
-                                                {option.dropdownLabel}
+                                        <span className="text-ui-900 flex min-w-0 items-center gap-2 truncate">
+                                            <FlagEmoji emoji={option.flag} />
+                                            <span className="truncate">
+                                                {option.name}
                                             </span>
-
-                                            <span className="shrink-0 text-slate-500">
-                                                {option.code}
+                                            <span className="text-ui-500 shrink-0">
+                                                (+{option.dialCode})
                                             </span>
-                                        </button>
-                                    </Tooltip>
+                                        </span>
+
+                                        <span className="text-ui-500 shrink-0">
+                                            {option.code}
+                                        </span>
+                                    </button>
                                 ))}
 
                                 {filteredOptions.length === 0 ? (
-                                    <div className="px-3 py-2 text-sm text-slate-500">
+                                    <div className="text-ui-500 px-3 py-2 text-sm">
                                         No matches
                                     </div>
                                 ) : null}
@@ -213,5 +214,41 @@ export function PhoneField({
                 />
             </div>
         </Field>
+    );
+}
+
+function FlagEmoji({ emoji }: { emoji: string }) {
+    const [useNativeFallback, setUseNativeFallback] = useState(false);
+
+    if (useNativeFallback) {
+        return (
+            <span
+                aria-hidden="true"
+                className="inline-flex size-4.5 shrink-0 items-center justify-center text-[18px] leading-none"
+                style={{
+                    fontFamily: 'var(--emoji-font-family)',
+                }}
+            >
+                {emoji}
+            </span>
+        );
+    }
+
+    return (
+        <img
+            alt=""
+            aria-hidden="true"
+            className="size-4.5 shrink-0"
+            height={18}
+            loading="lazy"
+            onError={() => {
+                setUseNativeFallback(true);
+            }}
+            src={getFluentEmojiCDN(emoji, {
+                cdn: 'unpkg',
+                type: '3d',
+            })}
+            width={18}
+        />
     );
 }

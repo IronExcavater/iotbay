@@ -19,7 +19,7 @@ export function Field({
     const meta = error ? (
         <span className="text-red-700">{error}</span>
     ) : hint ? (
-        <span className="text-slate-500">{hint}</span>
+        <span className="text-ui-500">{hint}</span>
     ) : null;
 
     return (

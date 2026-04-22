@@ -18,7 +18,7 @@ export function Table({
 
 export function TableHead({ children }: { children: ReactNode }) {
     return (
-        <thead className="border-b border-slate-200 bg-slate-100 text-xs font-semibold tracking-[0.12em] text-slate-700 uppercase">
+        <thead className="border-ui-200 bg-ui-100 text-ui-700 border-b text-xs font-semibold tracking-[0.12em] uppercase">
             {children}
         </thead>
     );
@@ -78,12 +78,12 @@ export function TableMessageRow({
     tone: 'error' | 'muted';
 }) {
     return (
-        <tr className="border-t border-slate-200">
+        <tr className="border-ui-200 border-t">
             <td
                 className={clsx(
                     paddingClassName,
                     'py-4',
-                    tone === 'error' ? 'text-red-700' : 'text-slate-500'
+                    tone === 'error' ? 'text-red-700' : 'text-ui-500'
                 )}
                 colSpan={colSpan}
             >
@@ -101,11 +101,11 @@ export function TableLoadingRow({
     paddingClassName?: string;
 }) {
     return (
-        <tr className="border-t border-slate-200">
+        <tr className="border-ui-200 border-t">
             <td className={clsx(paddingClassName, 'py-4')} colSpan={colSpan}>
                 <div className="grid gap-2">
-                    <div className="h-3 w-32 animate-pulse rounded-full bg-slate-200" />
-                    <div className="h-3 w-56 max-w-full animate-pulse rounded-full bg-slate-100" />
+                    <div className="bg-ui-200 h-3 w-32 animate-pulse rounded-full" />
+                    <div className="bg-ui-100 h-3 w-56 max-w-full animate-pulse rounded-full" />
                 </div>
             </td>
         </tr>

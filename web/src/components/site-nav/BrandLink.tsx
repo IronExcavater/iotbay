@@ -10,7 +10,7 @@ const brandMarkStyle = {
 export function BrandLink() {
     return (
         <Link
-            className="group relative -mx-2 inline-flex w-fit min-w-0 items-center gap-3 justify-self-start rounded px-2 py-1 text-base font-semibold tracking-[0.2em] text-slate-950 uppercase transition-transform duration-200 ease-out outline-none hover:scale-[1.02] focus-visible:scale-[1.02] focus-visible:outline-none"
+            className="group text-ui-950 relative -mx-2 inline-flex w-fit min-w-0 items-center gap-3 justify-self-start rounded px-2 py-1 text-base font-semibold tracking-[0.2em] uppercase transition-transform duration-200 ease-out outline-none hover:scale-[1.02] focus-visible:scale-[1.02] focus-visible:outline-none"
             to="/"
         >
             <span

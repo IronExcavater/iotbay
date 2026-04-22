@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react';
 import { FaDisplay, FaMoon, FaSun } from 'react-icons/fa6';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthProvider';
 import { useThemeMode } from '../theme/ThemeProvider';
+import { ButtonLink } from './form/Button';
 import { AnchoredPopover } from './overlay/AnchoredPopover';
 import { MenuPanel } from './overlay/MenuItems';
 import { AccountMenu } from './site-nav/AccountMenu';
@@ -32,7 +33,7 @@ export default function SiteNav() {
     }
 
     return (
-        <header className="bg-surface-0/95 sticky top-0 z-30 border-b border-slate-200/90 backdrop-blur">
+        <header className="bg-ui-0/95 border-ui-200/90 sticky top-0 z-30 border-b backdrop-blur">
             <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-3 px-4 py-4 sm:px-6">
                 <div aria-hidden="true" className="size-10" />
 
@@ -60,19 +61,17 @@ export default function SiteNav() {
                                 />
                             ) : (
                                 <>
-                                    <Link
-                                        className="rounded border border-slate-300 px-3 py-2 text-slate-900 hover:bg-slate-100"
+                                    <ButtonLink
+                                        className="px-3"
                                         to="/sign-in"
+                                        variant="secondary"
                                     >
                                         Sign in
-                                    </Link>
+                                    </ButtonLink>
 
-                                    <Link
-                                        className="bg-primary text-primary-fg hover:bg-primary-hover rounded px-3 py-2"
-                                        to="/sign-up"
-                                    >
+                                    <ButtonLink className="px-3" to="/sign-up">
                                         Sign up
-                                    </Link>
+                                    </ButtonLink>
                                 </>
                             )}
                         </nav>
