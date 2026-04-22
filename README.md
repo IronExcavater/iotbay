@@ -9,7 +9,7 @@ IoTBay is a monorepo with two workspaces:
 
 ### 1. Toolchain
 
-Use `mise` to install the Node.js and `uv` versions used by this project.
+Download [`mise`](https://mise.en.dev) to install the [`Node.js`](https://nodejs.org/en) and [`uv`](https://docs.astral.sh/uv/) versions used by this project.
 
 ```bash
 winget install jdx.mise # Windows
