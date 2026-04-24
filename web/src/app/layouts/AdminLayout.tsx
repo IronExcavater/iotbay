@@ -70,7 +70,7 @@ export default function AdminLayout() {
             <aside
                 className={clsx(
                     'bg-ui-0 border-ui-200 hidden overflow-hidden border-b transition-[width] duration-200 ease-out md:sticky md:top-18.25 md:block md:h-[calc(100dvh-73px)] md:shrink-0 md:self-start md:border-r md:border-b-0',
-                    isCollapsed ? 'md:w-12' : 'md:w-56'
+                    isCollapsed ? 'md:w-14' : 'md:w-56'
                 )}
             >
                 <div
@@ -98,8 +98,7 @@ export default function AdminLayout() {
                                 : 'Collapse admin sidebar'
                         }
                         className={clsx(
-                            'inline-flex shrink-0 items-center justify-center rounded-full p-0 transition-[height,margin,width] duration-200 ease-out',
-                            isCollapsed ? 'mx-auto size-8' : 'ml-auto size-9'
+                            'ml-auto inline-flex size-9 shrink-0 items-center justify-center rounded-full p-0 transition-[background-color,color,box-shadow] duration-200 ease-out'
                         )}
                         onClick={() => {
                             setIsCollapsed(!isCollapsed);
@@ -121,12 +120,7 @@ export default function AdminLayout() {
                     </Button>
                 </div>
 
-                <nav
-                    className={clsx(
-                        'grid gap-1 pt-1',
-                        isCollapsed ? 'p-1' : 'p-2'
-                    )}
-                >
+                <nav className="grid gap-1 p-2 pt-1">
                     {navItems.map((item) => {
                         const Icon = item.icon;
 
@@ -140,10 +134,8 @@ export default function AdminLayout() {
                                 <NavLink
                                     className={({ isActive }) =>
                                         clsx(
-                                            'flex h-11 w-full items-center rounded-lg text-sm font-medium transition-[background-color,color,gap,padding]',
-                                            isCollapsed
-                                                ? 'h-10 px-3'
-                                                : 'gap-3 px-3',
+                                            'flex h-11 w-full items-center rounded-lg px-3 text-sm font-medium transition-[background-color,color,gap] duration-200 ease-out',
+                                            isCollapsed ? '' : 'gap-3',
                                             isActive
                                                 ? 'bg-ui-950 text-ui-0'
                                                 : 'text-ui-700 hover:bg-ui-100'
