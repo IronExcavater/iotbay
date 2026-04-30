@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import {
     FaArrowRightFromBracket,
     FaIdBadge,
+    FaLock,
     FaShieldHalved,
     FaUser,
 } from 'react-icons/fa6';
@@ -71,6 +72,10 @@ export function AccountMenu({
                     <MenuLinkItem onClick={onClose} to="/account">
                         <FaIdBadge aria-hidden="true" className="size-3.5" />
                         <span>Manage account</span>
+                    </MenuLinkItem>
+                    <MenuLinkItem onClick={onClose} to="/account/security">
+                        <FaLock aria-hidden="true" className="size-3.5" />
+                        <span>Security</span>
                     </MenuLinkItem>
 
                     <MenuItem onClick={onSignOut} tone="danger">

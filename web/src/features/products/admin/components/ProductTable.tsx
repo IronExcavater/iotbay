@@ -1,4 +1,5 @@
 import { FaArrowsRotate, FaPenToSquare, FaTrashCan } from 'react-icons/fa6';
+import { Link } from 'react-router-dom';
 
 import type { Product } from '@features/products/api';
 import { Button } from '@shared/ui/form/Button';
@@ -124,18 +125,24 @@ export function ProductTable({
                         ) : (
                             products.map((product) => (
                                 <tr
-                                    className="border-ui-200 border-t align-top"
+                                    className="border-ui-200 hover:bg-ui-50 border-t align-top"
                                     key={product.id}
                                 >
                                     <td className="px-5 py-3">
-                                        <span className="text-ui-500 flex min-h-8 items-center font-mono text-xs">
+                                        <Link
+                                            className="text-ui-500 flex min-h-8 items-center font-mono text-xs"
+                                            to={`/admin/products/${product.id}`}
+                                        >
                                             {product.code}
-                                        </span>
+                                        </Link>
                                     </td>
                                     <td className="px-5 py-3.5">
-                                        <span className="text-ui-900 flex min-h-8 items-center truncate font-medium">
+                                        <Link
+                                            className="text-ui-900 flex min-h-8 items-center truncate font-medium"
+                                            to={`/admin/products/${product.id}`}
+                                        >
                                             {product.name}
-                                        </span>
+                                        </Link>
                                     </td>
                                     <td className="px-5 py-3">
                                         <span className="flex min-h-8 items-center">
