@@ -35,8 +35,10 @@ const BACKEND_ERROR_MESSAGES: Record<string, string> = {
     EMAIL_VERIFICATION_PENDING: 'Verification already pending',
     INVALID_CREDENTIALS: 'Incorrect email or password',
     INVALID_EMAIL_VERIFICATION_TOKEN: 'Invalid verification link',
+    INVALID_LOGIN_MFA_CHALLENGE: 'Invalid or expired code',
     INVALID_STAFF_INVITATION_TOKEN: 'Invalid staff invitation',
     INVALID_PASSWORD_RESET_TOKEN: 'Invalid reset link',
+    LOGIN_MFA_ATTEMPTS_EXCEEDED: 'Too many code attempts',
     PASSWORD_HAS_COMMON_PATTERN: 'Avoid common patterns',
     PASSWORD_HAS_PERSONAL_INFO: 'Avoid personal details',
     PASSWORD_NEEDS_NUMBER_OR_SYMBOL: 'Add number or symbol',
@@ -56,6 +58,7 @@ const BACKEND_ERROR_MESSAGES: Record<string, string> = {
     PRODUCT_PRICE_TOO_LARGE: 'Price is too large',
     STAFF_ACCOUNT_REQUIRED: 'Staff account required',
     STAFF_PERMISSION_REQUIRED: 'Admin access required',
+    SESSION_NOT_FOUND: 'Session not found',
     USER_MANAGEMENT_NOT_ALLOWED: 'You cannot manage that user',
     USER_NOT_FOUND: 'User not found',
     USER_PERMISSION_ESCALATION_NOT_ALLOWED: 'You cannot assign that permission',
@@ -152,6 +155,16 @@ export function patchJson<TResponse, TBody>(
 
 export function deleteJson(path: string, signal?: AbortSignal) {
     return requestJson<void>(path, {
+        method: 'DELETE',
+        signal,
+    });
+}
+
+export function deleteJsonResponse<TResponse>(
+    path: string,
+    signal?: AbortSignal
+) {
+    return requestJson<TResponse>(path, {
         method: 'DELETE',
         signal,
     });

@@ -4,7 +4,8 @@ import ErrorPage from '@app/ErrorPage';
 import AdminLayout from '@app/layouts/AdminLayout';
 import SiteLayout from '@app/layouts/SiteLayout';
 import NotFoundPage from '@app/NotFoundPage';
-import AccountPage from '@features/account/AccountPage';
+import AdminAccessLogsPage from '@features/access-logs/admin/AdminAccessLogsPage';
+import AccountSecurityPage from '@features/account/AccountSecurityPage';
 import AuthPage from '@features/auth/pages/AuthPage';
 import ResetPasswordPage from '@features/auth/pages/ResetPasswordPage';
 import StaffRegistrationPage from '@features/auth/pages/StaffRegistrationPage';
@@ -12,8 +13,10 @@ import VerifyEmailPage from '@features/auth/pages/VerifyEmailPage';
 import { ProtectedRoute } from '@features/auth/ProtectedRoute';
 import AdminProductsPage from '@features/products/admin/AdminProductsPage';
 import ProductCatalogPage from '@features/products/ProductCatalogPage';
+import ProductDetailPage from '@features/products/ProductDetailPage';
 import AdminUsersPage from '@features/users/admin/AdminUsersPage';
 import InviteStaffPage from '@features/users/admin/InviteStaffPage';
+import UserDetailPage from '@features/users/UserDetailPage';
 
 export const router = createBrowserRouter([
     {
@@ -24,6 +27,10 @@ export const router = createBrowserRouter([
             {
                 index: true,
                 element: <ProductCatalogPage />,
+            },
+            {
+                path: 'products/:productId',
+                element: <ProductDetailPage />,
             },
             {
                 element: <ProtectedRoute access="guest" />,
@@ -59,7 +66,11 @@ export const router = createBrowserRouter([
                 children: [
                     {
                         path: 'account',
-                        element: <AccountPage />,
+                        element: <UserDetailPage me />,
+                    },
+                    {
+                        path: 'account/security',
+                        element: <AccountSecurityPage />,
                     },
                 ],
             },
@@ -81,6 +92,10 @@ export const router = createBrowserRouter([
                                 element: <AdminProductsPage />,
                             },
                             {
+                                path: 'products/:productId',
+                                element: <ProductDetailPage admin />,
+                            },
+                            {
                                 element: <ProtectedRoute access="superadmin" />,
                                 children: [
                                     {
@@ -92,6 +107,14 @@ export const router = createBrowserRouter([
                                                 element: <InviteStaffPage />,
                                             },
                                         ],
+                                    },
+                                    {
+                                        path: 'users/:userId',
+                                        element: <UserDetailPage admin />,
+                                    },
+                                    {
+                                        path: 'access-logs',
+                                        element: <AdminAccessLogsPage />,
                                     },
                                 ],
                             },

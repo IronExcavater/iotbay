@@ -3,6 +3,7 @@ import {
     FaBoxArchive,
     FaChevronLeft,
     FaChevronRight,
+    FaClipboardList,
     FaUsers,
 } from 'react-icons/fa6';
 import { NavLink, Outlet } from 'react-router-dom';
@@ -31,6 +32,11 @@ export default function AdminLayout() {
                       icon: FaUsers,
                       label: 'Users',
                       to: '/admin/users',
+                  },
+                  {
+                      icon: FaClipboardList,
+                      label: 'Access logs',
+                      to: '/admin/access-logs',
                   },
               ]
             : []),

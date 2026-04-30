@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { productApi, type Product } from '@features/products/api';
 import { toErrorMessage } from '@shared/services/http';
@@ -90,14 +91,23 @@ export default function ProductCatalogPage() {
                             ) : (
                                 products.map((product) => (
                                     <tr
-                                        className="border-ui-200 border-t align-top"
+                                        className="border-ui-200 hover:bg-ui-50 border-t align-top"
                                         key={product.id}
                                     >
                                         <td className="text-ui-600 px-5 py-3 font-mono text-xs">
-                                            {product.code}
+                                            <Link
+                                                to={`/products/${product.id}`}
+                                            >
+                                                {product.code}
+                                            </Link>
                                         </td>
                                         <td className="px-5 py-3">
-                                            {product.name}
+                                            <Link
+                                                className="text-ui-900 font-medium"
+                                                to={`/products/${product.id}`}
+                                            >
+                                                {product.name}
+                                            </Link>
                                         </td>
                                         <td className="px-5 py-3">
                                             {Money.format(product.priceCents)}
