@@ -26,6 +26,8 @@ class Product(SqliteRowModel, BlobUuidModel, ApiModel):
         "name",
         "code",
         "price_cents",
+        "description",
+        "media_urls",
         "created_at",
         "updated_at",
     )
@@ -35,6 +37,8 @@ class Product(SqliteRowModel, BlobUuidModel, ApiModel):
     price_cents: int
     created_at: str
     updated_at: str
+    description: str = ""
+    media_urls_json: str = "[]"
     product_id: bytes = field(default_factory=new_id_bytes)
 
     @classmethod
@@ -55,6 +59,8 @@ class Product(SqliteRowModel, BlobUuidModel, ApiModel):
             price_cents=validated_price,
             created_at=now_iso,
             updated_at=now_iso,
+            description="",
+            media_urls_json="[]",
         )
 
     def updated(
@@ -72,7 +78,21 @@ class Product(SqliteRowModel, BlobUuidModel, ApiModel):
             price_cents=validate_product_price_cents(price_cents),
             created_at=self.created_at,
             updated_at=updated_at,
+            description=self.description,
+            media_urls_json=self.media_urls_json,
         )
+
+    @property
+    def media_urls(self) -> list[str]:
+        return []
+
+    def snapshot(self) -> dict[str, object]:
+        return {
+            "code": self.code,
+            "description": self.description,
+            "name": self.name,
+            "priceCents": self.price_cents,
+        }
 
 
 def validate_product_name(value: str) -> str:

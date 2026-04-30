@@ -10,6 +10,7 @@ from src.common.web import ApiError
 from src.config import EmailConfig
 from src.emails.templates import (
     RenderedEmail,
+    render_login_mfa_code_email,
     render_password_reset_email,
     render_registration_verification_email,
     render_staff_invitation_email,
@@ -82,6 +83,22 @@ class EmailService:
         rendered_email = render_staff_invitation_email(
             email=email,
             registration_url=registration_url,
+            expires_at=expires_at,
+            locale=locale,
+        )
+        return self._deliver(rendered_email)
+
+    def send_login_mfa_code(
+        self,
+        *,
+        code: str,
+        email: str,
+        expires_at: str,
+        locale: str,
+    ) -> DeliveredEmailArtifact:
+        rendered_email = render_login_mfa_code_email(
+            code=code,
+            email=email,
             expires_at=expires_at,
             locale=locale,
         )
