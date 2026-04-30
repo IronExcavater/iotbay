@@ -1,4 +1,9 @@
-import { getJson, patchJson, postJson } from '@shared/services/http';
+import {
+    deleteJsonResponse,
+    getJson,
+    patchJson,
+    postJson,
+} from '@shared/services/http';
 
 export interface User {
     addressLabel?: string | null;
@@ -25,6 +30,22 @@ export interface LoginInput {
     password: string;
     userType?: string;
 }
+
+export interface LoginMfaChallenge {
+    challengeId: string;
+    expiresAt: string;
+    maskedDestination: string;
+}
+
+export interface LoginMfaVerifyInput {
+    challengeId: string;
+    code: string;
+    trustBrowser?: boolean;
+}
+
+export type LoginResult =
+    | { mfaChallenge: LoginMfaChallenge; download?: EmailDownload }
+    | { user: User };
 
 export interface RegisterInput extends LoginInput {
     addressLineOne?: string;
@@ -124,15 +145,61 @@ interface UserResponse {
     user: User;
 }
 
+interface SessionsResponse {
+    items: SessionInfo[];
+}
+
+export interface SessionInfo {
+    authMethod: string;
+    createdAt: string;
+    deviceLabel: string;
+    endedAt?: string | null;
+    endedReason?: string | null;
+    expiresAt: string;
+    id: string;
+    isCurrent: boolean;
+    isTrusted: boolean;
+    lastSeenAt: string;
+    latestEventType?: string | null;
+    latestIpAddress?: string | null;
+    latestUserAgent?: string | null;
+    mfaVerifiedAt?: string | null;
+    trustedExpiresAt?: string | null;
+}
+
+export interface UserMfaSettings {
+    createdAt: string;
+    emailEnabled: boolean;
+    enabledAt?: string | null;
+    updatedAt: string;
+}
+
 export const authApi = {
-    async login(input: LoginInput, signal?: AbortSignal): Promise<User> {
+    login(input: LoginInput, signal?: AbortSignal): Promise<LoginResult> {
+        return postJson<LoginResult, LoginInput>('/api/login', input, signal);
+    },
+
+    async verifyLoginMfa(
+        input: LoginMfaVerifyInput,
+        signal?: AbortSignal
+    ): Promise<User> {
         return (
-            await postJson<UserResponse, LoginInput>(
-                '/api/login',
+            await postJson<UserResponse, LoginMfaVerifyInput>(
+                '/api/login/mfa/verify',
                 input,
                 signal
             )
         ).user;
+    },
+
+    resendLoginMfa(
+        challengeId: string,
+        signal?: AbortSignal
+    ): Promise<{ download?: EmailDownload; mfaChallenge: LoginMfaChallenge }> {
+        return postJson<
+            { download?: EmailDownload; mfaChallenge: LoginMfaChallenge },
+            { challengeId: string }
+        >('/api/login/mfa/resend', { challengeId }, signal);
     },
 
     register(
@@ -225,6 +292,44 @@ export const authApi = {
 
     logout(signal?: AbortSignal): Promise<void> {
         return postJson<void>('/api/logout', undefined, signal);
+    },
+
+    async listSessions(signal?: AbortSignal): Promise<SessionInfo[]> {
+        return (await getJson<SessionsResponse>('/api/me/sessions', signal))
+            .items;
+    },
+
+    revokeSession(
+        sessionId: string,
+        signal?: AbortSignal
+    ): Promise<{ ok: boolean }> {
+        return deleteJsonResponse<{ ok: boolean }>(
+            `/api/me/sessions/${sessionId}`,
+            signal
+        );
+    },
+
+    logoutOtherSessions(signal?: AbortSignal): Promise<{ endedCount: number }> {
+        return postJson<{ endedCount: number }>(
+            '/api/me/sessions/logout-others',
+            undefined,
+            signal
+        );
+    },
+
+    getMfaSettings(signal?: AbortSignal): Promise<UserMfaSettings> {
+        return getJson<UserMfaSettings>('/api/me/mfa', signal);
+    },
+
+    updateMfaSettings(
+        input: { emailEnabled: boolean },
+        signal?: AbortSignal
+    ): Promise<UserMfaSettings> {
+        return patchJson<UserMfaSettings, { emailEnabled: boolean }>(
+            '/api/me/mfa',
+            input,
+            signal
+        );
     },
 
     inviteStaff(

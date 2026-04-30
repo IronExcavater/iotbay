@@ -9,6 +9,8 @@ import {
 import {
     authApi,
     type LoginInput,
+    type LoginMfaVerifyInput,
+    type LoginResult,
     type RegisterInput,
     type RegisterResult,
     type UpdateProfileInput,
@@ -20,7 +22,8 @@ import { BackendError } from '@shared/services/http';
 interface AuthContextValue {
     isAuthed: boolean;
     isLoading: boolean;
-    login: (input: LoginInput) => Promise<User>;
+    login: (input: LoginInput) => Promise<LoginResult>;
+    verifyLoginMfa: (input: LoginMfaVerifyInput) => Promise<User>;
     register: (input: RegisterInput) => Promise<RegisterResult>;
     logout: () => Promise<void>;
     updateMe: (input: UpdateProfileInput) => Promise<User | VerificationResult>;
@@ -63,7 +66,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         async login(input) {
             // Login returns the authenticated user after the backend validates
             // the submitted credentials and issues a fresh session cookie.
-            const nextUser = await authApi.login(input);
+            const result = await authApi.login(input);
+            if ('user' in result) setUser(result.user);
+            return result;
+        },
+        async verifyLoginMfa(input) {
+            const nextUser = await authApi.verifyLoginMfa(input);
             setUser(nextUser);
             return nextUser;
         },

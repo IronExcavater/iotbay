@@ -5,6 +5,7 @@ import {
     FaPenToSquare,
     FaPowerOff,
 } from 'react-icons/fa6';
+import { Link } from 'react-router-dom';
 
 import type { ManagedUser } from '@features/users/api';
 import { Button } from '@shared/ui/form/Button';
@@ -132,15 +133,18 @@ export function UsersTable({
                         ) : (
                             filteredUsers.map((managedUser) => (
                                 <tr
-                                    className="border-ui-200 border-t align-top"
+                                    className="border-ui-200 hover:bg-ui-50 border-t align-top"
                                     key={managedUser.id}
                                 >
                                     <td className="px-5 py-3">
                                         <TableStackCell>
-                                            <span className="text-ui-900 font-medium">
+                                            <Link
+                                                className="text-ui-900 font-medium"
+                                                to={`/admin/users/${managedUser.id}`}
+                                            >
                                                 {managedUser.firstName}{' '}
                                                 {managedUser.lastName}
-                                            </span>
+                                            </Link>
                                             <span className="text-ui-500 truncate text-xs">
                                                 {managedUser.email}
                                             </span>

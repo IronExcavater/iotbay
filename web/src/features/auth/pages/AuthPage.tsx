@@ -5,6 +5,7 @@ import {
     setAddressField,
     type AddressFieldName,
 } from '@features/addresses/form';
+import { authApi } from '@features/auth/api';
 import { useAuth } from '@features/auth/AuthProvider';
 import { AuthSignUpFields } from '@features/auth/components/AuthSignUpFields';
 import {
@@ -28,6 +29,7 @@ import {
     resolvePostAuthPath,
 } from '@features/auth/redirects';
 import { downloadHtml } from '@shared/services/download';
+import { backendErrorMessage } from '@shared/services/http';
 import { Button } from '@shared/ui/form/Button';
 import { Field } from '@shared/ui/form/Field';
 import { Input } from '@shared/ui/form/Input';
@@ -64,13 +66,22 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
     const location = useLocation();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const { login, register } = useAuth();
+    const { login, register, verifyLoginMfa } = useAuth();
     const { showToast } = useToast();
     const [values, setValues] = useState<FormValues>(() =>
         createDefaultValues()
     );
     const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isResendingCode, setIsResendingCode] = useState(false);
+    const [mfaChallenge, setMfaChallenge] = useState<{
+        challengeId: string;
+        expiresAt: string;
+        maskedDestination: string;
+    } | null>(null);
+    const [mfaCode, setMfaCode] = useState('');
+    const [mfaCodeError, setMfaCodeError] = useState<string | null>(null);
+    const [trustBrowser, setTrustBrowser] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -135,6 +146,10 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
     function resetForm() {
         setFieldErrors({});
         setValues(createDefaultValues());
+        setMfaChallenge(null);
+        setMfaCode('');
+        setMfaCodeError(null);
+        setTrustBrowser(false);
         setShowPassword(false);
         setShowConfirmPassword(false);
     }
@@ -201,13 +216,76 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
     }
 
     async function submitSignIn() {
-        const authenticatedUser = await login({
+        const result = await login({
             email: values.email.trim(),
             password: values.password,
             userType: isStaff ? 'staff' : 'customer',
         });
 
-        navigate(resolvePostAuthPath(authenticatedUser, nextPath));
+        if ('mfaChallenge' in result) {
+            downloadHtml(result.download);
+            setMfaChallenge(result.mfaChallenge);
+            setMfaCode('');
+            setMfaCodeError(null);
+            return;
+        }
+
+        navigate(resolvePostAuthPath(result.user, nextPath));
+    }
+
+    async function handleMfaSubmit(event: SubmitEvent<HTMLFormElement>) {
+        event.preventDefault();
+        if (!mfaChallenge) return;
+
+        const code = mfaCode.trim();
+        if (!/^\d{6}$/.test(code)) {
+            setMfaCodeError('Enter the 6 digit code');
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const authenticatedUser = await verifyLoginMfa({
+                challengeId: mfaChallenge.challengeId,
+                code,
+                trustBrowser,
+            });
+            navigate(resolvePostAuthPath(authenticatedUser, nextPath));
+        } catch (error) {
+            setMfaCodeError(
+                backendErrorMessage(
+                    resolveBackendErrorCode(error),
+                    'Invalid code'
+                )
+            );
+        } finally {
+            setIsSubmitting(false);
+        }
+    }
+
+    async function handleResendMfa() {
+        if (!mfaChallenge) return;
+
+        setIsResendingCode(true);
+        try {
+            const result = await authApi.resendLoginMfa(
+                mfaChallenge.challengeId
+            );
+            downloadHtml(result.download);
+            setMfaChallenge(result.mfaChallenge);
+            setMfaCode('');
+            setMfaCodeError(null);
+            showToast('Code sent');
+        } catch (error) {
+            showToast(
+                backendErrorMessage(
+                    resolveBackendErrorCode(error),
+                    'Unable to resend code'
+                )
+            );
+        } finally {
+            setIsResendingCode(false);
+        }
     }
 
     async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
@@ -241,155 +319,233 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
         <section className="mx-auto grid max-w-xl gap-6">
             <PageHeader title={pageCopy.title} />
 
-            <form
-                className="bg-ui-0 border-ui-200 grid gap-3 rounded border p-5"
-                noValidate
-                onSubmit={handleSubmit}
-            >
-                {isSignUp && (
-                    <AuthSignUpFields
-                        fieldErrors={fieldErrors}
-                        onAddressFieldChange={handleAddressFieldChange}
-                        onFirstNameBlur={() => {
-                            setFieldError(
-                                'firstName',
-                                validateCurrentForm().firstName
-                            );
-                        }}
-                        onFirstNameChange={(value) => {
-                            updateValues({
-                                firstName: FirstName.formatInput(value),
-                            });
-                        }}
-                        onLastNameBlur={() => {
-                            setFieldError(
-                                'lastName',
-                                validateCurrentForm().lastName
-                            );
-                        }}
-                        onLastNameChange={(value) => {
-                            updateValues({
-                                lastName: LastName.formatInput(value),
-                            });
-                        }}
-                        onPhoneBlur={handlePhoneBlur}
-                        onPhoneCountryChange={(phoneCountry) => {
-                            updateValues({ phoneCountry });
-                        }}
-                        onPhoneNumberChange={(phoneNumber) => {
-                            updateValues({ phoneNumber });
-                        }}
-                        values={values}
-                    />
-                )}
+            {mfaChallenge ? (
+                <form
+                    className="bg-ui-0 border-ui-200 grid gap-4 rounded border p-5"
+                    noValidate
+                    onSubmit={handleMfaSubmit}
+                >
+                    <div className="grid gap-1">
+                        <h2 className="text-lg font-semibold">
+                            Enter sign in code
+                        </h2>
+                        <p className="text-ui-500 text-sm">
+                            We sent a code to {mfaChallenge.maskedDestination}.
+                        </p>
+                    </div>
 
-                <Field error={fieldErrors.email} label="Email" required>
-                    <Input
-                        autoComplete="email"
-                        hasError={Boolean(fieldErrors.email)}
-                        maxLength={Email.MAX_LENGTH}
-                        onBlur={() => {
-                            // Validate the normalized email after the user leaves the field
-                            // so sign-up catches formatting issues early.
-                            setFieldError(
-                                'email',
-                                Email.validate(values.email)
-                            );
-                        }}
-                        onChange={handleEmailChange}
-                        placeholder="jane.doe@email.com"
-                        type="email"
-                        value={values.email}
-                    />
-                </Field>
-
-                <div className="grid gap-1">
-                    <Field
-                        error={fieldErrors.password}
-                        label="Password"
-                        required
-                    >
-                        <PasswordInput
-                            autoComplete={passwordAutoComplete}
-                            hasError={Boolean(fieldErrors.password)}
-                            maxLength={Password.MAX_LENGTH}
-                            name="password"
-                            onBlur={() => {
-                                setFieldError(
-                                    'password',
-                                    validateCurrentForm().password
+                    <Field error={mfaCodeError} label="Code" required>
+                        <Input
+                            autoComplete="one-time-code"
+                            hasError={Boolean(mfaCodeError)}
+                            inputMode="numeric"
+                            maxLength={6}
+                            onChange={(event) => {
+                                setMfaCode(
+                                    event.target.value.replace(/\D/g, '')
                                 );
+                                setMfaCodeError(null);
                             }}
-                            onChange={handlePasswordChange}
-                            onToggle={() => {
-                                setShowPassword((current) => !current);
-                            }}
-                            placeholder={passwordPlaceholder}
-                            showPassword={showPassword}
-                            value={values.password}
+                            placeholder="000000"
+                            value={mfaCode}
                         />
-
-                        {isSignUp && <PasswordRuleList rules={passwordRules} />}
                     </Field>
 
-                    {!isSignUp && (
-                        <TextLink to={forgotPasswordPath}>
-                            Forgot password
-                        </TextLink>
+                    <label className="text-ui-700 flex items-center gap-2 text-sm">
+                        <input
+                            checked={trustBrowser}
+                            className="accent-ui-900"
+                            onChange={(event) => {
+                                setTrustBrowser(event.target.checked);
+                            }}
+                            type="checkbox"
+                        />
+                        <span>Trust this browser</span>
+                    </label>
+
+                    <div className="flex flex-wrap gap-2">
+                        <Button
+                            disabled={isSubmitting}
+                            loading={isSubmitting}
+                            type="submit"
+                            variant="primary"
+                        >
+                            Verify code
+                        </Button>
+                        <Button
+                            disabled={isResendingCode}
+                            loading={isResendingCode}
+                            onClick={() => {
+                                void handleResendMfa();
+                            }}
+                            type="button"
+                            variant="secondary"
+                        >
+                            Resend
+                        </Button>
+                    </div>
+                </form>
+            ) : (
+                <form
+                    className="bg-ui-0 border-ui-200 grid gap-3 rounded border p-5"
+                    noValidate
+                    onSubmit={handleSubmit}
+                >
+                    {isSignUp && (
+                        <AuthSignUpFields
+                            fieldErrors={fieldErrors}
+                            onAddressFieldChange={handleAddressFieldChange}
+                            onFirstNameBlur={() => {
+                                setFieldError(
+                                    'firstName',
+                                    validateCurrentForm().firstName
+                                );
+                            }}
+                            onFirstNameChange={(value) => {
+                                updateValues({
+                                    firstName: FirstName.formatInput(value),
+                                });
+                            }}
+                            onLastNameBlur={() => {
+                                setFieldError(
+                                    'lastName',
+                                    validateCurrentForm().lastName
+                                );
+                            }}
+                            onLastNameChange={(value) => {
+                                updateValues({
+                                    lastName: LastName.formatInput(value),
+                                });
+                            }}
+                            onPhoneBlur={handlePhoneBlur}
+                            onPhoneCountryChange={(phoneCountry) => {
+                                updateValues({ phoneCountry });
+                            }}
+                            onPhoneNumberChange={(phoneNumber) => {
+                                updateValues({ phoneNumber });
+                            }}
+                            values={values}
+                        />
                     )}
-                </div>
 
-                {isSignUp && (
-                    <Field
-                        error={fieldErrors.confirmPassword}
-                        label="Confirm password"
-                        required
-                    >
-                        <PasswordInput
-                            autoComplete="new-password"
-                            hasError={Boolean(fieldErrors.confirmPassword)}
-                            maxLength={Password.MAX_LENGTH}
-                            name="confirmPassword"
+                    <Field error={fieldErrors.email} label="Email" required>
+                        <Input
+                            autoComplete="email"
+                            hasError={Boolean(fieldErrors.email)}
+                            maxLength={Email.MAX_LENGTH}
                             onBlur={() => {
+                                // Validate the normalized email after the user leaves the field
+                                // so sign-up catches formatting issues early.
                                 setFieldError(
-                                    'confirmPassword',
-                                    getConfirmPasswordError(
-                                        values.confirmPassword,
-                                        values.password
-                                    )
+                                    'email',
+                                    Email.validate(values.email)
                                 );
                             }}
-                            onChange={handleConfirmPasswordChange}
-                            onToggle={() => {
-                                setShowConfirmPassword((current) => !current);
-                            }}
-                            placeholder="Re-enter your password"
-                            showPassword={showConfirmPassword}
-                            value={values.confirmPassword}
+                            onChange={handleEmailChange}
+                            placeholder="jane.doe@email.com"
+                            type="email"
+                            value={values.email}
                         />
                     </Field>
-                )}
 
-                <div className="grid gap-1.5 pt-1">
-                    <Button
-                        disabled={isSubmitting}
-                        loading={isSubmitting}
-                        type="submit"
-                        variant="primary"
-                    >
-                        {pageCopy.submitLabel}
-                    </Button>
+                    <div className="grid gap-1">
+                        <Field
+                            error={fieldErrors.password}
+                            label="Password"
+                            required
+                        >
+                            <PasswordInput
+                                autoComplete={passwordAutoComplete}
+                                hasError={Boolean(fieldErrors.password)}
+                                maxLength={Password.MAX_LENGTH}
+                                name="password"
+                                onBlur={() => {
+                                    setFieldError(
+                                        'password',
+                                        validateCurrentForm().password
+                                    );
+                                }}
+                                onChange={handlePasswordChange}
+                                onToggle={() => {
+                                    setShowPassword((current) => !current);
+                                }}
+                                placeholder={passwordPlaceholder}
+                                showPassword={showPassword}
+                                value={values.password}
+                            />
 
-                    <TextLink
-                        className="justify-self-center"
-                        to={pageCopy.switchLink.to}
-                    >
-                        {pageCopy.switchLink.label}
-                    </TextLink>
-                </div>
-            </form>
+                            {isSignUp && (
+                                <PasswordRuleList rules={passwordRules} />
+                            )}
+                        </Field>
+
+                        {!isSignUp && (
+                            <TextLink to={forgotPasswordPath}>
+                                Forgot password
+                            </TextLink>
+                        )}
+                    </div>
+
+                    {isSignUp && (
+                        <Field
+                            error={fieldErrors.confirmPassword}
+                            label="Confirm password"
+                            required
+                        >
+                            <PasswordInput
+                                autoComplete="new-password"
+                                hasError={Boolean(fieldErrors.confirmPassword)}
+                                maxLength={Password.MAX_LENGTH}
+                                name="confirmPassword"
+                                onBlur={() => {
+                                    setFieldError(
+                                        'confirmPassword',
+                                        getConfirmPasswordError(
+                                            values.confirmPassword,
+                                            values.password
+                                        )
+                                    );
+                                }}
+                                onChange={handleConfirmPasswordChange}
+                                onToggle={() => {
+                                    setShowConfirmPassword(
+                                        (current) => !current
+                                    );
+                                }}
+                                placeholder="Re-enter your password"
+                                showPassword={showConfirmPassword}
+                                value={values.confirmPassword}
+                            />
+                        </Field>
+                    )}
+
+                    <div className="grid gap-1.5 pt-1">
+                        <Button
+                            disabled={isSubmitting}
+                            loading={isSubmitting}
+                            type="submit"
+                            variant="primary"
+                        >
+                            {pageCopy.submitLabel}
+                        </Button>
+
+                        <TextLink
+                            className="justify-self-center"
+                            to={pageCopy.switchLink.to}
+                        >
+                            {pageCopy.switchLink.label}
+                        </TextLink>
+                    </div>
+                </form>
+            )}
         </section>
     );
+}
+
+function resolveBackendErrorCode(error: unknown) {
+    return error instanceof Error && 'code' in error
+        ? String((error as { code?: string }).code ?? '')
+        : undefined;
 }
 
 function getAuthPageCopy(mode: AuthPageMode, nextPath: string) {
