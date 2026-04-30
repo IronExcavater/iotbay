@@ -46,8 +46,11 @@ class AppConfig(BaseModel):
 
     cookie_secure: bool
     database_path: str
+    login_mfa_lifetime_seconds: int = 300
     session_cookie_name: str
     session_lifetime_seconds: int
+    trusted_session_cookie_name: str = "iotbay_trusted_session"
+    trusted_session_lifetime_seconds: int = 2592000
     verification_code_lifetime_seconds: int
     web_url: str
 

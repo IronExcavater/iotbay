@@ -1,8 +1,11 @@
 {
   "databasePath": "../data/test.sqlite3",
   "cookieSecure": false,
+  "loginMfaLifetimeSeconds": 300,
   "sessionCookieName": "iotbay_test_session",
-  "sessionLifetimeSeconds": 604800,
+  "sessionLifetimeSeconds": 86400,
+  "trustedSessionCookieName": "iotbay_test_trusted_session",
+  "trustedSessionLifetimeSeconds": 604800,
   "verificationCodeLifetimeSeconds": 900,
   "webUrl": "http://localhost:4173"
 }

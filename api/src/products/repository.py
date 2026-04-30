@@ -66,6 +66,8 @@ class ProductRepository(Repository):
                         "product_id": product.product_id,
                         "name": product.name,
                         "code": product.code,
+                        "description": product.description,
+                        "media_urls_json": product.media_urls_json,
                         "price_cents": product.price_cents,
                     },
                 )
@@ -111,6 +113,8 @@ class ProductRepository(Repository):
                     {
                         "name": updated_product.name,
                         "code": updated_product.code,
+                        "description": updated_product.description,
+                        "media_urls_json": updated_product.media_urls_json,
                         "price_cents": updated_product.price_cents,
                     },
                     where="product_id = ?",
@@ -127,6 +131,31 @@ class ProductRepository(Repository):
             raise DuplicateCodeError() from error
 
         return updated_product
+
+    def apply_product_snapshot(
+        self,
+        *,
+        actor_user_id: bytes,
+        product_id: bytes,
+        snapshot: dict[str, object],
+    ) -> Product:
+        existing_product = self.select_product_by_id(product_id=product_id)
+        if existing_product is None:
+            raise ProductNotFoundError()
+
+        price_value = snapshot.get("priceCents")
+        price_cents = (
+            price_value
+            if isinstance(price_value, int)
+            else existing_product.price_cents
+        )
+        return self.update_product(
+            actor_user_id=actor_user_id,
+            code=str(snapshot.get("code") or existing_product.code),
+            name=str(snapshot.get("name") or existing_product.name),
+            price_cents=price_cents,
+            product_id=product_id,
+        )
 
     def delete_product(self, *, product_id: bytes) -> None:
         with self.connect() as connection:
