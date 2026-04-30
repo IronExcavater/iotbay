@@ -5,6 +5,7 @@ from src.common.sqlite_model import (
     ApiModel,
     BlobUuidModel,
     SqliteRowModel,
+    id_bytes_to_string,
     new_id_bytes,
 )
 from src.common.types import (
@@ -40,6 +41,15 @@ USER_TOKEN_PURPOSE_EMAIL_VERIFICATION = "email_verification"
 USER_TOKEN_PURPOSE_PASSWORD_RESET = "password_reset"
 USER_TOKEN_PURPOSE_STAFF_INVITATION = "staff_invitation"
 ENTITY_TYPE_USER = "user"
+AUTH_METHOD_PASSWORD = "password"
+AUTH_METHOD_PASSWORD_EMAIL_MFA = "password_email_mfa"
+AUTH_METHOD_TRUSTED_BROWSER = "trusted_browser"
+SESSION_ENDED_REASON_EMAIL_CHANGED = "email_changed"
+SESSION_ENDED_REASON_LOGOUT = "logout"
+SESSION_ENDED_REASON_LOGOUT_OTHERS = "logout_others"
+SESSION_ENDED_REASON_PASSWORD_RESET = "password_reset"
+SESSION_ENDED_REASON_REVOKED = "revoked"
+AUTH_CHALLENGE_PURPOSE_LOGIN_EMAIL_MFA = "login_email_mfa"
 EMAIL_VALIDATOR = EmailAddress.VALIDATOR
 FIRST_NAME_VALIDATOR = FirstName.VALIDATOR
 LAST_NAME_VALIDATOR = LastName.VALIDATOR
@@ -148,6 +158,18 @@ class User(SqliteRowModel, BlobUuidModel, ApiModel):
             STAFF_PERMISSION_SUPERADMIN,
         )
 
+    def snapshot(self) -> dict[str, object]:
+        return {
+            "designation": self.designation,
+            "email": self.email,
+            "firstName": self.first_name,
+            "lastName": self.last_name,
+            "permission": self.permission,
+            "staffId": self.staff_id,
+            "status": self.status,
+            "userType": self.user_type,
+        }
+
 
 @dataclass(slots=True, frozen=True)
 class UserSession(SqliteRowModel, BlobUuidModel):
@@ -155,7 +177,63 @@ class UserSession(SqliteRowModel, BlobUuidModel):
     session_token_hash: str
     created_at: str
     expires_at: str
+    ended_at: str | None = None
+    ended_reason: str | None = None
+    last_seen_at: str | None = None
+    mfa_verified_at: str | None = None
+    trusted_token_id: bytes | None = None
+    auth_method: str = AUTH_METHOD_PASSWORD
     session_id: bytes = field(default_factory=new_id_bytes)
+
+    @classmethod
+    def uuid_field_name(cls) -> str:
+        return "session_id"
+
+
+@dataclass(slots=True, frozen=True)
+class UserSessionInfo(SqliteRowModel, BlobUuidModel):
+    user_id: bytes
+    session_token_hash: str
+    created_at: str
+    expires_at: str
+    ended_at: str | None = None
+    ended_reason: str | None = None
+    last_seen_at: str | None = None
+    mfa_verified_at: str | None = None
+    trusted_token_id: bytes | None = None
+    trusted_expires_at: str | None = None
+    auth_method: str = AUTH_METHOD_PASSWORD
+    latest_access_at: str | None = None
+    latest_event_type: str | None = None
+    latest_ip_address: str | None = None
+    latest_user_agent: str | None = None
+    is_current: bool = False
+    session_id: bytes = field(default_factory=new_id_bytes)
+
+    @classmethod
+    def uuid_field_name(cls) -> str:
+        return "session_id"
+
+    def to_dict(self) -> dict[str, object]:
+        from src.access_logs.models import device_label_for_user_agent
+
+        return {
+            "authMethod": self.auth_method,
+            "createdAt": self.created_at,
+            "deviceLabel": device_label_for_user_agent(self.latest_user_agent),
+            "endedAt": self.ended_at,
+            "endedReason": self.ended_reason,
+            "expiresAt": self.expires_at,
+            "id": id_bytes_to_string(self.session_id),
+            "isCurrent": bool(self.is_current),
+            "isTrusted": self.trusted_token_id is not None,
+            "lastSeenAt": self.last_seen_at or self.created_at,
+            "latestEventType": self.latest_event_type,
+            "latestIpAddress": self.latest_ip_address,
+            "latestUserAgent": self.latest_user_agent,
+            "mfaVerifiedAt": self.mfa_verified_at,
+            "trustedExpiresAt": self.trusted_expires_at,
+        }
 
 
 @dataclass(slots=True, frozen=True)
@@ -166,6 +244,58 @@ class UserToken(SqliteRowModel, BlobUuidModel):
     created_at: str
     expires_at: str
     user_token_id: bytes = field(default_factory=new_id_bytes)
+
+
+@dataclass(slots=True, frozen=True)
+class TrustedSessionToken(SqliteRowModel, BlobUuidModel):
+    user_id: bytes
+    token_hash: str
+    created_at: str
+    last_used_at: str
+    expires_at: str
+    revoked_at: str | None = None
+    revoked_reason: str | None = None
+    trusted_session_token_id: bytes = field(default_factory=new_id_bytes)
+
+    @classmethod
+    def uuid_field_name(cls) -> str:
+        return "trusted_session_token_id"
+
+
+@dataclass(slots=True, frozen=True)
+class UserMfaSettings(SqliteRowModel, ApiModel):
+    public_fields = (
+        "email_enabled",
+        "created_at",
+        "enabled_at",
+        "updated_at",
+    )
+
+    user_id: bytes
+    email_enabled: bool
+    created_at: str
+    updated_at: str
+    enabled_at: str | None = None
+
+
+@dataclass(slots=True, frozen=True)
+class AuthChallenge(SqliteRowModel, BlobUuidModel):
+    user_id: bytes
+    purpose: str
+    delivery_email: str
+    code_hash: str
+    requested_trust: bool
+    created_at: str
+    last_sent_at: str
+    expires_at: str
+    completed_at: str | None = None
+    invalidated_at: str | None = None
+    attempt_count: int = 0
+    auth_challenge_id: bytes = field(default_factory=new_id_bytes)
+
+    @classmethod
+    def uuid_field_name(cls) -> str:
+        return "auth_challenge_id"
 
 
 @dataclass(slots=True, frozen=True)

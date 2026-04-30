@@ -45,8 +45,16 @@ def request_session_token() -> str | None:
     return stripped_or_none(request.cookies.get(session_cookie_name()))
 
 
+def request_trusted_session_token() -> str | None:
+    return stripped_or_none(request.cookies.get(trusted_session_cookie_name()))
+
+
 def session_cookie_name() -> str:
     return app_str("AUTH_SESSION_COOKIE_NAME")
+
+
+def trusted_session_cookie_name() -> str:
+    return app_str("AUTH_TRUSTED_SESSION_COOKIE_NAME")
 
 
 def _load_authenticated_user() -> User:
@@ -56,13 +64,19 @@ def _load_authenticated_user() -> User:
 
     # Sessions are looked up by hash so the database never stores or compares
     # the raw cookie value sent by the browser.
+    now_iso = UtcTime.now().iso
+    session_token_hash = hash_session_token(session_token)
     user = services().user_repository.select_user_by_session_token_hash(
-        session_token_hash=hash_session_token(session_token),
-        now_iso=UtcTime.now().iso,
+        session_token_hash=session_token_hash,
+        now_iso=now_iso,
     )
     if user is None:
         raise _authentication_required()
 
+    services().user_repository.update_session_last_seen(
+        session_token_hash=session_token_hash,
+        last_seen_at=now_iso,
+    )
     return user
 
 

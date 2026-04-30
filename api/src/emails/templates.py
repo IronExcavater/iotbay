@@ -26,6 +26,9 @@ REGISTRATION_VERIFICATION_HTML_TEMPLATE = Template(
 STAFF_INVITATION_HTML_TEMPLATE = Template(
     Path(__file__).with_name("staff_invitation.html").read_text(encoding="utf-8")
 )
+LOGIN_MFA_CODE_HTML_TEMPLATE = Template(
+    Path(__file__).with_name("login_mfa_code.html").read_text(encoding="utf-8")
+)
 
 
 def render_password_reset_email(
@@ -109,6 +112,34 @@ def render_staff_invitation_email(
             "Create your staff account: {registration_url}\n"
             "Expires: {formatted_expires_at}\n\n"
             "If you were not expecting this invitation, you can ignore this email."
+        ),
+        to_email=email,
+        template_data=template_data,
+    )
+
+
+def render_login_mfa_code_email(
+    *,
+    code: str,
+    email: str,
+    expires_at: str,
+    locale: str,
+) -> RenderedEmail:
+    subject = "Your IOTBay sign in code"
+    formatted_expires_at = _format_expiry(expires_at, locale=locale)
+    template_data = {
+        "code": code,
+        "email": email,
+        "formatted_expires_at": formatted_expires_at,
+        "inline_styles": EMAIL_STYLESHEET,
+    }
+    return _render_email(
+        html_template=LOGIN_MFA_CODE_HTML_TEMPLATE,
+        subject=subject,
+        text_body=(
+            "Use this code to finish signing in to your IOTBay account: {code}\n"
+            "Expires: {formatted_expires_at}\n\n"
+            "If you did not try to sign in, you can ignore this email."
         ),
         to_email=email,
         template_data=template_data,
