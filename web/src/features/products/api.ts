@@ -10,6 +10,8 @@ export interface Product {
     name: string;
     code: string;
     priceCents: number;
+    description: string;
+    mediaUrls: string[];
     createdAt: string;
     updatedAt: string;
 }
@@ -27,6 +29,14 @@ interface ProductsResponse {
 export const productApi = {
     async list(signal?: AbortSignal): Promise<Product[]> {
         return (await getJson<ProductsResponse>('/api/products', signal)).items;
+    },
+
+    get(productId: string, signal?: AbortSignal): Promise<Product> {
+        return getJson<Product>(`/api/products/${productId}`, signal);
+    },
+
+    getAdmin(productId: string, signal?: AbortSignal): Promise<Product> {
+        return getJson<Product>(`/api/admin/products/${productId}`, signal);
     },
 
     create(input: CreateProductInput, signal?: AbortSignal): Promise<Product> {

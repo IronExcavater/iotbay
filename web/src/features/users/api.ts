@@ -41,6 +41,12 @@ export const usersApi = {
         return (await getJson<UsersResponse>('/api/admin/users', signal)).items;
     },
 
+    async get(userId: string, signal?: AbortSignal): Promise<ManagedUser> {
+        return (
+            await getJson<UserResponse>(`/api/admin/users/${userId}`, signal)
+        ).user;
+    },
+
     async update(
         userId: string,
         input: UpdateManagedUserInput,
