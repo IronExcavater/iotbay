@@ -33,6 +33,27 @@ def list_products():
     return {"items": products}, HTTPStatus.OK
 
 
+@products_bp.get("/products/<product_id>")
+def get_product(product_id: str):
+    product = services().product_repository.select_product_by_id(
+        product_id=_parse_product_id(product_id),
+    )
+    if product is None:
+        raise ApiError("product was not found", HTTPStatus.NOT_FOUND)
+    return product.to_dict(), HTTPStatus.OK
+
+
+@products_bp.get("/admin/products/<product_id>")
+@staff_permission_required(*PRODUCT_WRITE_PERMISSIONS)
+def get_admin_product(product_id: str):
+    product = services().product_repository.select_product_by_id(
+        product_id=_parse_product_id(product_id),
+    )
+    if product is None:
+        raise ApiError("product was not found", HTTPStatus.NOT_FOUND)
+    return product.to_dict(), HTTPStatus.OK
+
+
 @products_bp.post("/admin/products")
 @staff_permission_required(*PRODUCT_WRITE_PERMISSIONS)
 def create_product():

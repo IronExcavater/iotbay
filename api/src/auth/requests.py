@@ -1,4 +1,5 @@
 from typing import Annotated
+from uuid import UUID
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, model_validator
 from pydantic.alias_generators import to_camel
@@ -36,6 +37,20 @@ TOKEN_VALIDATOR = TokenValidator(
     ascii_only=True,
     printable_ascii_only=True,
 )
+AUTH_CHALLENGE_ID_VALIDATOR = StringValidator(
+    field_name="challengeId",
+    required=True,
+    max_length=36,
+    ascii_only=True,
+    printable_ascii_only=True,
+)
+MFA_CODE_VALIDATOR = StringValidator(
+    field_name="code",
+    required=True,
+    max_length=6,
+    ascii_only=True,
+    printable_ascii_only=True,
+)
 
 
 def _optional_request_validator(validator: StringValidator):
@@ -43,6 +58,25 @@ def _optional_request_validator(validator: StringValidator):
         return value if not value else validator.validate_request(value)
 
     return validate
+
+
+def _uuid_value(field_name: str):
+    def validate(value: str) -> str:
+        normalized = value.strip()
+        try:
+            UUID(normalized)
+        except ValueError as error:
+            raise ValueError(f"{field_name} is invalid") from error
+        return normalized
+
+    return validate
+
+
+def _mfa_code_value(value: str) -> str:
+    normalized = MFA_CODE_VALIDATOR.validate_request(value)
+    if not normalized.isdigit():
+        raise ValueError("code must contain digits only")
+    return normalized
 
 
 EmailValue = Annotated[str, AfterValidator(EmailAddress.validate_request)]
@@ -57,6 +91,12 @@ CurrentPasswordValue = Annotated[
     AfterValidator(_optional_request_validator(CURRENT_PASSWORD_VALIDATOR)),
 ]
 TokenValue = Annotated[str, AfterValidator(TOKEN_VALIDATOR.validate_request)]
+AuthChallengeIdValue = Annotated[
+    str,
+    AfterValidator(AUTH_CHALLENGE_ID_VALIDATOR.validate_request),
+    AfterValidator(_uuid_value("challengeId")),
+]
+MfaCodeValue = Annotated[str, AfterValidator(_mfa_code_value)]
 UserTypeValue = Annotated[
     str,
     AfterValidator(_optional_request_validator(USER_TYPE_VALIDATOR)),
@@ -206,3 +246,17 @@ class CompleteStaffInvitationRequest(AuthRequest):
     last_name: LastNameValue
     password: PasswordValue
     token: TokenValue
+
+
+class LoginMfaVerifyRequest(AuthRequest):
+    challenge_id: AuthChallengeIdValue
+    code: MfaCodeValue
+    trust_browser: bool = False
+
+
+class LoginMfaResendRequest(AuthRequest):
+    challenge_id: AuthChallengeIdValue
+
+
+class UpdateMfaSettingsRequest(AuthRequest):
+    email_enabled: bool

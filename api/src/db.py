@@ -54,7 +54,7 @@ def migrate(database_path: str) -> None:
                 continue
 
             sql = migration_file.read_text(encoding="utf-8")
-            db.executescript(sql)
+            _execute_migration_script(db, sql)
             db.execute(
                 (
                     "INSERT INTO schema_migrations (name, applied_at) "
@@ -137,6 +137,27 @@ def _migration_files() -> list[Path]:
             files.append(path)
 
     return sorted(files)
+
+
+def _execute_migration_script(db: sqlite3.Connection, sql: str) -> None:
+    try:
+        db.executescript(sql)
+    except sqlite3.OperationalError as error:
+        if "duplicate column name" not in str(error).lower():
+            raise
+
+        for statement in sql.split(";"):
+            normalized_statement = statement.strip()
+            if not normalized_statement:
+                continue
+            try:
+                db.execute(normalized_statement)
+            except sqlite3.OperationalError as statement_error:
+                message = str(statement_error).lower()
+                is_duplicate_column = "duplicate column name" in message
+                is_alter_table = normalized_statement.upper().startswith("ALTER TABLE ")
+                if not (is_duplicate_column and is_alter_table):
+                    raise
 
 
 def _is_migration_file(file_name: str) -> bool:

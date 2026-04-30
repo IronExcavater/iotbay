@@ -8,11 +8,16 @@ from src.common.repository import Repository
 from src.common.text import stripped_or_none
 from src.common.web import ApiError
 from src.users.models import (
+    AUTH_METHOD_PASSWORD,
     ENTITY_TYPE_USER,
     STAFF_PERMISSION_ADMIN,
     USER_TYPE_CUSTOMER,
+    AuthChallenge,
+    TrustedSessionToken,
     User,
+    UserMfaSettings,
     UserSession,
+    UserSessionInfo,
     UserToken,
 )
 from src.users.queries import LIST_USERS, SELECT_USER
@@ -21,6 +26,13 @@ from src.users.queries import LIST_USERS, SELECT_USER
 class DuplicateEmailError(ApiError):
     def __init__(self) -> None:
         super().__init__("email already exists", 409, code="EMAIL_EXISTS")
+
+
+def _optional_string(value: object) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    return normalized or None
 
 
 class UserRepository(Repository):
@@ -193,6 +205,9 @@ class UserRepository(Repository):
         session_token_hash: str,
         created_at: str,
         expires_at: str,
+        auth_method: str = AUTH_METHOD_PASSWORD,
+        mfa_verified_at: str | None = None,
+        trusted_token_id: bytes | None = None,
     ) -> UserSession:
         # Only the hashed token is persisted so leaking the database still
         # doesn't reveal the raw browser session cookie value.
@@ -201,6 +216,10 @@ class UserRepository(Repository):
             session_token_hash=session_token_hash,
             created_at=created_at,
             expires_at=expires_at,
+            auth_method=auth_method,
+            last_seen_at=created_at,
+            mfa_verified_at=mfa_verified_at,
+            trusted_token_id=trusted_token_id,
         )
 
         with self.connect() as connection:
@@ -213,10 +232,148 @@ class UserRepository(Repository):
                     "session_token_hash": session.session_token_hash,
                     "created_at": session.created_at,
                     "expires_at": session.expires_at,
+                    "ended_at": session.ended_at,
+                    "ended_reason": session.ended_reason,
+                    "last_seen_at": session.last_seen_at,
+                    "mfa_verified_at": session.mfa_verified_at,
+                    "trusted_token_id": session.trusted_token_id,
+                    "auth_method": session.auth_method,
                 },
             )
 
         return session
+
+    def select_session_by_token_hash(
+        self,
+        *,
+        session_token_hash: str,
+    ) -> UserSession | None:
+        with self.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT *
+                FROM user_sessions
+                WHERE session_token_hash = ?
+                """,
+                (session_token_hash,),
+            ).fetchone()
+        return UserSession.from_row(row) if row is not None else None
+
+    def list_user_sessions(
+        self,
+        *,
+        user_id: bytes,
+        current_session_token_hash: str | None,
+        now_iso: str,
+    ) -> list[UserSessionInfo]:
+        with self.connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT
+                    user_sessions.*,
+                    trusted_session_tokens.expires_at AS trusted_expires_at,
+                    latest_logs.occurred_at AS latest_access_at,
+                    latest_logs.event_type AS latest_event_type,
+                    latest_logs.ip_address AS latest_ip_address,
+                    latest_logs.user_agent AS latest_user_agent,
+                    user_sessions.session_token_hash = ? AS is_current
+                FROM user_sessions
+                LEFT JOIN trusted_session_tokens
+                    ON trusted_session_tokens.trusted_session_token_id =
+                        user_sessions.trusted_token_id
+                LEFT JOIN access_logs AS latest_logs
+                    ON latest_logs.access_log_id = (
+                        SELECT access_logs.access_log_id
+                        FROM access_logs
+                        WHERE access_logs.session_id = user_sessions.session_id
+                        ORDER BY access_logs.occurred_at DESC,
+                            access_logs.access_log_id DESC
+                        LIMIT 1
+                    )
+                WHERE user_sessions.user_id = ?
+                  AND user_sessions.ended_at IS NULL
+                  AND user_sessions.expires_at > ?
+                ORDER BY user_sessions.last_seen_at DESC, user_sessions.created_at DESC
+                """,
+                (current_session_token_hash or "", user_id, now_iso),
+            ).fetchall()
+        return [UserSessionInfo.from_row(row) for row in rows]
+
+    def end_user_session(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        session_id: bytes,
+        ended_at: str,
+        ended_reason: str,
+    ) -> int:
+        return self.update_where(
+            connection,
+            "user_sessions",
+            {
+                "ended_at": ended_at,
+                "ended_reason": ended_reason,
+                "last_seen_at": ended_at,
+            },
+            where="session_id = ? AND ended_at IS NULL",
+            where_parameters=(session_id,),
+        )
+
+    def end_user_sessions_by_user_id(
+        self,
+        *,
+        user_id: bytes,
+        ended_at: str,
+        ended_reason: str,
+    ) -> int:
+        with self.connect() as connection:
+            return self.update_where(
+                connection,
+                "user_sessions",
+                {
+                    "ended_at": ended_at,
+                    "ended_reason": ended_reason,
+                    "last_seen_at": ended_at,
+                },
+                where="user_id = ? AND ended_at IS NULL",
+                where_parameters=(user_id,),
+            )
+
+    def select_active_session_for_user(
+        self,
+        *,
+        session_id: bytes,
+        user_id: bytes,
+        now_iso: str,
+    ) -> UserSession | None:
+        with self.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT *
+                FROM user_sessions
+                WHERE session_id = ?
+                  AND user_id = ?
+                  AND ended_at IS NULL
+                  AND expires_at > ?
+                """,
+                (session_id, user_id, now_iso),
+            ).fetchone()
+        return UserSession.from_row(row) if row is not None else None
+
+    def update_session_last_seen(
+        self,
+        *,
+        session_token_hash: str,
+        last_seen_at: str,
+    ) -> None:
+        with self.connect() as connection:
+            self.update_where(
+                connection,
+                "user_sessions",
+                {"last_seen_at": last_seen_at},
+                where="session_token_hash = ? AND ended_at IS NULL",
+                where_parameters=(session_token_hash,),
+            )
 
     def upsert_user_token(
         self,
@@ -256,6 +413,243 @@ class UserRepository(Repository):
             )
         return user_token
 
+    def select_mfa_settings(self, *, user_id: bytes) -> UserMfaSettings | None:
+        with self.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT
+                    user_id,
+                    email_enabled > 0 AS email_enabled,
+                    created_at,
+                    enabled_at,
+                    updated_at
+                FROM user_mfa_settings
+                WHERE user_id = ?
+                """,
+                (user_id,),
+            ).fetchone()
+        return UserMfaSettings.from_row(row) if row is not None else None
+
+    def upsert_mfa_settings(
+        self,
+        *,
+        user_id: bytes,
+        email_enabled: bool,
+        updated_at: str,
+    ) -> UserMfaSettings:
+        existing = self.select_mfa_settings(user_id=user_id)
+        created_at = existing.created_at if existing is not None else updated_at
+        enabled_at = (
+            updated_at
+            if email_enabled and (existing is None or not existing.email_enabled)
+            else (existing.enabled_at if existing is not None else None)
+        )
+        with self.connect() as connection:
+            self.upsert_on_conflict(
+                connection,
+                "user_mfa_settings",
+                {
+                    "user_id": user_id,
+                    "email_enabled": 1 if email_enabled else 0,
+                    "created_at": created_at,
+                    "enabled_at": enabled_at,
+                    "updated_at": updated_at,
+                },
+                conflict_columns=("user_id",),
+            )
+        settings = self.select_mfa_settings(user_id=user_id)
+        if settings is None:
+            raise RuntimeError("MFA settings were not saved")
+        return settings
+
+    def insert_auth_challenge(
+        self,
+        *,
+        user_id: bytes,
+        purpose: str,
+        delivery_email: str,
+        code_hash: str,
+        requested_trust: bool,
+        created_at: str,
+        expires_at: str,
+    ) -> AuthChallenge:
+        challenge = AuthChallenge(
+            user_id=user_id,
+            purpose=purpose,
+            delivery_email=delivery_email,
+            code_hash=code_hash,
+            requested_trust=requested_trust,
+            created_at=created_at,
+            last_sent_at=created_at,
+            expires_at=expires_at,
+        )
+        with self.connect() as connection:
+            self.update_where(
+                connection,
+                "auth_challenges",
+                {"invalidated_at": created_at},
+                where=(
+                    "user_id = ? AND purpose = ? AND completed_at IS NULL "
+                    "AND invalidated_at IS NULL"
+                ),
+                where_parameters=(user_id, purpose),
+            )
+            self.insert_into(
+                connection,
+                "auth_challenges",
+                {
+                    "auth_challenge_id": challenge.auth_challenge_id,
+                    "user_id": challenge.user_id,
+                    "purpose": challenge.purpose,
+                    "delivery_email": challenge.delivery_email,
+                    "code_hash": challenge.code_hash,
+                    "requested_trust": 1 if challenge.requested_trust else 0,
+                    "created_at": challenge.created_at,
+                    "last_sent_at": challenge.last_sent_at,
+                    "expires_at": challenge.expires_at,
+                    "completed_at": challenge.completed_at,
+                    "invalidated_at": challenge.invalidated_at,
+                    "attempt_count": challenge.attempt_count,
+                },
+            )
+        return challenge
+
+    def select_auth_challenge(
+        self,
+        *,
+        auth_challenge_id: bytes,
+        purpose: str,
+        now_iso: str,
+    ) -> AuthChallenge | None:
+        with self.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT
+                    auth_challenge_id,
+                    user_id,
+                    purpose,
+                    delivery_email,
+                    code_hash,
+                    requested_trust > 0 AS requested_trust,
+                    created_at,
+                    last_sent_at,
+                    expires_at,
+                    completed_at,
+                    invalidated_at,
+                    attempt_count
+                FROM auth_challenges
+                WHERE auth_challenge_id = ?
+                  AND purpose = ?
+                  AND expires_at > ?
+                  AND completed_at IS NULL
+                  AND invalidated_at IS NULL
+                """,
+                (auth_challenge_id, purpose, now_iso),
+            ).fetchone()
+        return AuthChallenge.from_row(row) if row is not None else None
+
+    def complete_auth_challenge(
+        self,
+        *,
+        auth_challenge_id: bytes,
+        completed_at: str,
+    ) -> None:
+        with self.connect() as connection:
+            self.update_where(
+                connection,
+                "auth_challenges",
+                {"completed_at": completed_at},
+                where="auth_challenge_id = ?",
+                where_parameters=(auth_challenge_id,),
+            )
+
+    def increment_auth_challenge_attempts(
+        self,
+        *,
+        auth_challenge_id: bytes,
+    ) -> int:
+        with self.connect() as connection:
+            connection.execute(
+                """
+                UPDATE auth_challenges
+                SET attempt_count = attempt_count + 1
+                WHERE auth_challenge_id = ?
+                """,
+                (auth_challenge_id,),
+            )
+            row = connection.execute(
+                """
+                SELECT attempt_count
+                FROM auth_challenges
+                WHERE auth_challenge_id = ?
+                """,
+                (auth_challenge_id,),
+            ).fetchone()
+        return int(row["attempt_count"]) if row is not None else 0
+
+    def insert_trusted_session_token(
+        self,
+        *,
+        user_id: bytes,
+        token_hash: str,
+        created_at: str,
+        expires_at: str,
+    ) -> TrustedSessionToken:
+        trusted_token = TrustedSessionToken(
+            user_id=user_id,
+            token_hash=token_hash,
+            created_at=created_at,
+            last_used_at=created_at,
+            expires_at=expires_at,
+        )
+        with self.connect() as connection:
+            self.insert_into(
+                connection,
+                "trusted_session_tokens",
+                {
+                    "trusted_session_token_id": (
+                        trusted_token.trusted_session_token_id
+                    ),
+                    "user_id": trusted_token.user_id,
+                    "token_hash": trusted_token.token_hash,
+                    "created_at": trusted_token.created_at,
+                    "last_used_at": trusted_token.last_used_at,
+                    "expires_at": trusted_token.expires_at,
+                    "revoked_at": trusted_token.revoked_at,
+                    "revoked_reason": trusted_token.revoked_reason,
+                },
+            )
+        return trusted_token
+
+    def select_valid_trusted_session_token(
+        self,
+        *,
+        user_id: bytes,
+        token_hash: str,
+        now_iso: str,
+    ) -> TrustedSessionToken | None:
+        with self.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT *
+                FROM trusted_session_tokens
+                WHERE user_id = ?
+                  AND token_hash = ?
+                  AND expires_at > ?
+                  AND revoked_at IS NULL
+                """,
+                (user_id, token_hash, now_iso),
+            ).fetchone()
+            if row is not None:
+                self.update_where(
+                    connection,
+                    "trusted_session_tokens",
+                    {"last_used_at": now_iso},
+                    where="trusted_session_token_id = ?",
+                    where_parameters=(row["trusted_session_token_id"],),
+                )
+        return TrustedSessionToken.from_row(row) if row is not None else None
+
     def select_user_by_email(self, *, email: str) -> User | None:
         return self._select_user(
             "WHERE users.email = ?",
@@ -285,6 +679,7 @@ class UserRepository(Repository):
                 ON user_sessions.user_id = users.user_id
             WHERE user_sessions.session_token_hash = ?
               AND user_sessions.expires_at > ?
+              AND user_sessions.ended_at IS NULL
             """,
             (session_token_hash, now_iso),
         )
@@ -488,15 +883,55 @@ class UserRepository(Repository):
 
         return self._require_user(user_id, "updated user was not found")
 
+    def apply_user_snapshot(
+        self,
+        *,
+        user_id: bytes,
+        snapshot: dict[str, object],
+        updated_at: str,
+        updated_by_user_id: bytes,
+    ) -> User:
+        current_user = self.select_user_by_id(user_id=user_id)
+        if current_user is None:
+            raise RuntimeError("user was not found")
+
+        with self.connect() as connection:
+            self._update_user_row(
+                connection,
+                user_id=user_id,
+                email=str(snapshot.get("email") or current_user.email),
+                first_name=str(snapshot.get("firstName") or current_user.first_name),
+                last_name=str(snapshot.get("lastName") or current_user.last_name),
+                status=str(snapshot.get("status") or current_user.status),
+            )
+            if current_user.user_type != USER_TYPE_CUSTOMER:
+                self._upsert_staff_details(
+                    connection,
+                    user_id=user_id,
+                    staff_id=_optional_string(snapshot.get("staffId")),
+                    designation=_optional_string(snapshot.get("designation")),
+                    permission=_optional_string(snapshot.get("permission")),
+                )
+            self._audit_logs.update_audit_log(
+                connection,
+                entity_type=ENTITY_TYPE_USER,
+                entity_id=user_id,
+                updated_at=updated_at,
+                updated_by_user_id=updated_by_user_id,
+            )
+
+        return self._require_user(user_id, "updated user was not found")
+
     def delete_user_session_by_token_hash(
         self,
         *,
         session_token_hash: str,
     ) -> None:
         with self.connect() as connection:
-            self.delete_from(
+            self.update_where(
                 connection,
                 "user_sessions",
+                {"ended_at": UtcTime.now().iso, "ended_reason": "logout"},
                 where="session_token_hash = ?",
                 where_parameters=(session_token_hash,),
             )
@@ -525,13 +960,12 @@ class UserRepository(Repository):
             )
 
     def delete_user_sessions_by_user_id(self, *, user_id: bytes) -> None:
-        with self.connect() as connection:
-            self.delete_from(
-                connection,
-                "user_sessions",
-                where="user_id = ?",
-                where_parameters=(user_id,),
-            )
+        now_iso = UtcTime.now().iso
+        self.end_user_sessions_by_user_id(
+            user_id=user_id,
+            ended_at=now_iso,
+            ended_reason="ended",
+        )
 
     def _select_user(
         self,
