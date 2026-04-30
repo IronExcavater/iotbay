@@ -58,6 +58,7 @@ export function AccountMenu({
                 className="min-w-48"
                 onClose={onClose}
                 open={open}
+                zIndex={40}
             >
                 <MenuPanel>
                     {showStaffPortal && (

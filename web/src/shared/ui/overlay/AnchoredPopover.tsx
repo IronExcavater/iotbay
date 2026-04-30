@@ -23,6 +23,7 @@ interface AnchoredPopoverProps {
     onClose: () => void;
     open: boolean;
     side?: OverlaySide;
+    zIndex?: number;
 }
 
 export function AnchoredPopover({
@@ -34,9 +35,9 @@ export function AnchoredPopover({
     onClose,
     open,
     side = 'bottom',
+    zIndex = 20,
 }: AnchoredPopoverProps) {
     const panelRef = useRef<HTMLDivElement | null>(null);
-    const frameRef = useRef<number | null>(null);
 
     useLayoutEffect(() => {
         if (!open || !anchorRef.current || !panelRef.current) {
@@ -69,28 +70,39 @@ export function AnchoredPopover({
             panel.style.opacity = '1';
         }
 
-        function queueUpdatePosition() {
-            if (frameRef.current !== null) {
-                cancelAnimationFrame(frameRef.current);
-            }
+        const anchor = anchorRef.current;
+        const panel = panelRef.current;
+        const resizeObserver = new ResizeObserver(() => updatePosition());
+        const visualViewport = window.visualViewport;
 
-            frameRef.current = requestAnimationFrame(() => {
-                frameRef.current = null;
+        let scrollFrameId: number | null = null;
+        function queueUpdatePosition() {
+            if (scrollFrameId !== null) return;
+            scrollFrameId = requestAnimationFrame(() => {
+                scrollFrameId = null;
                 updatePosition();
             });
         }
 
         updatePosition();
-        window.addEventListener('resize', queueUpdatePosition);
+        resizeObserver.observe(anchor);
+        resizeObserver.observe(panel);
+
+        const initFrameId = requestAnimationFrame(() => updatePosition());
+
+        window.addEventListener('resize', updatePosition);
         window.addEventListener('scroll', queueUpdatePosition, true);
+        visualViewport?.addEventListener('resize', updatePosition);
+        visualViewport?.addEventListener('scroll', queueUpdatePosition);
 
         return () => {
-            if (frameRef.current !== null) {
-                cancelAnimationFrame(frameRef.current);
-                frameRef.current = null;
-            }
-            window.removeEventListener('resize', queueUpdatePosition);
+            cancelAnimationFrame(initFrameId);
+            if (scrollFrameId !== null) cancelAnimationFrame(scrollFrameId);
+            resizeObserver.disconnect();
+            window.removeEventListener('resize', updatePosition);
             window.removeEventListener('scroll', queueUpdatePosition, true);
+            visualViewport?.removeEventListener('resize', updatePosition);
+            visualViewport?.removeEventListener('scroll', queueUpdatePosition);
         };
     }, [align, anchorRef, matchAnchorWidth, open, side]);
 
@@ -133,7 +145,7 @@ export function AnchoredPopover({
     return createPortal(
         <div
             className={clsx(
-                'bg-ui-0 border-ui-200 z-70 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded border shadow-lg',
+                'bg-ui-0 border-ui-200 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded border shadow-lg',
                 className
             )}
             ref={panelRef}
@@ -142,6 +154,7 @@ export function AnchoredPopover({
                 opacity: 0,
                 position: 'fixed',
                 top: 0,
+                zIndex,
             }}
         >
             {children}
