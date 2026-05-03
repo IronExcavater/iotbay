@@ -571,15 +571,10 @@ function UserDetailsSummary({ user }: { user: DetailUser }) {
     const address = 'addressLabel' in user ? user.addressLabel : null;
 
     return (
-        <section
-            className={`grid gap-5 ${user.userType === 'staff' ? 'sm:grid-cols-2' : ''}`}
-        >
-            <DetailPanel prominent title="Contact" value={user.email}>
-                {phone && <span>{phone}</span>}
-                {address && <span>{address}</span>}
-                {!phone && !address && <span>No other contact details</span>}
-            </DetailPanel>
-
+        <section className="grid gap-5 sm:grid-cols-2">
+            <DetailPanel title="Email" value={user.email} />
+            <DetailPanel title="Phone number" value={phone || 'Not provided'} />
+            <DetailPanel title="Address" value={address || 'Not provided'} />
             {user.userType === 'staff' && (
                 <DetailPanel
                     title="Staff"
@@ -806,7 +801,7 @@ function DetailPanel({
     title,
     value,
 }: {
-    children: ReactNode;
+    children?: ReactNode;
     prominent?: boolean;
     title: string;
     value: string;
