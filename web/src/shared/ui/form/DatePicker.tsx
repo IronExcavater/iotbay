@@ -140,7 +140,7 @@ export function DatePicker({
 
                     <div className="flex justify-between gap-2">
                         <Button
-                            className="h-8 px-2"
+                            className="h-7 px-2 text-xs"
                             onClick={() => {
                                 onChange('');
                                 setOpen(false);
@@ -152,7 +152,7 @@ export function DatePicker({
                             Clear
                         </Button>
                         <Button
-                            className="h-8 px-2"
+                            className="h-7 px-2 text-xs"
                             onClick={() => selectDate(new Date())}
                             type="button"
                             variant="secondary"

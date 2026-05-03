@@ -4,9 +4,9 @@ import {
     FaArrowRightFromBracket,
     FaIdBadge,
     FaShieldHalved,
-    FaUser,
 } from 'react-icons/fa6';
 
+import { Avatar } from '@shared/ui/Avatar';
 import { DropdownChevron } from '@shared/ui/form/DropdownChevron';
 import { AnchoredPopover } from '@shared/ui/overlay/AnchoredPopover';
 import {
@@ -22,6 +22,7 @@ interface AccountMenuProps {
     onSignOut: () => void;
     onToggle: () => void;
     open: boolean;
+    profileImageUrl?: string | null;
     profileLabel: string;
     showStaffPortal: boolean;
 }
@@ -33,6 +34,7 @@ export function AccountMenu({
     onSignOut,
     onToggle,
     open,
+    profileImageUrl,
     profileLabel,
     showStaffPortal,
 }: AccountMenuProps) {
@@ -41,12 +43,16 @@ export function AccountMenu({
             <button
                 aria-label={menuLabel}
                 className={clsx(
-                    'text-ui-700 hover:bg-ui-100 ring-ui-400 focus-visible:ring-ui-900 flex items-center gap-2 rounded px-3 py-2 ring-1 transition-[background-color,box-shadow,color] outline-none focus-visible:ring-2'
+                    'text-ui-700 hover:bg-ui-100 ring-ui-400 focus-visible:ring-ui-900 flex items-center gap-2 rounded py-1.5 pr-3 pl-1.5 ring-1 transition-[background-color,box-shadow,color] outline-none focus-visible:ring-2'
                 )}
                 onClick={onToggle}
                 type="button"
             >
-                <FaUser aria-hidden="true" className="size-4" />
+                <Avatar
+                    imageUrl={profileImageUrl}
+                    name={profileLabel}
+                    size="sm"
+                />
                 <span className="hidden sm:inline">{profileLabel}</span>
                 <DropdownChevron isOpen={open} />
             </button>

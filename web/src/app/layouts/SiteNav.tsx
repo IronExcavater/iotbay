@@ -75,6 +75,7 @@ export default function SiteNav() {
                                         void handleSignOut();
                                     }}
                                     open={isMenuOpen}
+                                    profileImageUrl={user.profileImageUrl}
                                     profileLabel={profileLabel}
                                     showStaffPortal={showStaffPortal}
                                     onToggle={() => {

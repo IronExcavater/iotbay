@@ -147,7 +147,7 @@ export default function UserDetailPage({
     const detailName = detailUser
         ? `${detailUser.firstName} ${detailUser.lastName}`
         : '';
-    useDocumentTitle(me ? 'Account' : detailName || 'User');
+    useDocumentTitle(detailName || (me ? 'Account' : 'User'));
     const hasChanges = hasProfileChanges(values, initialValues);
     const emailChanged = Boolean(
         currentUser &&
@@ -370,16 +370,14 @@ export default function UserDetailPage({
                     <div className="min-w-0 flex-1">
                         <div className="flex min-w-0 items-center gap-2">
                             <h1 className="text-ui-900 truncate text-3xl font-semibold tracking-tight">
-                                {me
-                                    ? 'Account'
-                                    : `${detailUser.firstName} ${detailUser.lastName}`}
+                                {`${detailUser.firstName} ${detailUser.lastName}`}
                             </h1>
                             {!me && detailUser.status !== 'active' && (
                                 <span className="shrink-0 rounded bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 ring-1 ring-red-200">
                                     Deactivated
                                 </span>
                             )}
-                            {canEditDetails && userTab === 'details' && (
+                            {canEditDetails && (
                                 <Button
                                     aria-label="Edit details"
                                     className="inline-flex size-8 shrink-0 rounded-full p-0"
@@ -399,8 +397,8 @@ export default function UserDetailPage({
                             )}
                         </div>
                         <p className="text-ui-500 mt-1 truncate text-sm">
-                            {me
-                                ? `${detailUser.firstName} ${detailUser.lastName} - ${detailUser.email}`
+                            {isStaff && detailUser.staffId
+                                ? `${detailUser.staffId} · ${detailUser.email}`
                                 : detailUser.email}
                         </p>
                     </div>
@@ -569,40 +567,30 @@ export default function UserDetailPage({
 }
 
 function UserDetailsSummary({ user }: { user: DetailUser }) {
-    const contactItems = [
-        user.email,
-        user.phoneNumber,
-        'addressLabel' in user ? user.addressLabel : null,
-    ].filter((item): item is string => Boolean(item));
+    const phone = user.phoneNumber;
+    const address = 'addressLabel' in user ? user.addressLabel : null;
 
     return (
-        <section className="grid gap-5 sm:grid-cols-2">
-            <DetailPanel
-                prominent
-                title="Contact"
-                value={contactItems[0] ?? 'No email'}
-            >
-                {contactItems.slice(1).map((item) => (
-                    <span key={item}>{item}</span>
-                ))}
-                {contactItems.length === 1 && (
-                    <span>No other contact details</span>
-                )}
+        <section
+            className={`grid gap-5 ${user.userType === 'staff' ? 'sm:grid-cols-2' : ''}`}
+        >
+            <DetailPanel prominent title="Contact" value={user.email}>
+                {phone && <span>{phone}</span>}
+                {address && <span>{address}</span>}
+                {!phone && !address && <span>No other contact details</span>}
             </DetailPanel>
 
-            <DetailPanel
-                title={user.userType === 'staff' ? 'Staff access' : 'Customer'}
-                value={
-                    user.userType === 'staff'
-                        ? user.designation || 'Staff member'
-                        : 'Shopping account'
-                }
-            >
-                {user.staffId && <span>Staff ID {user.staffId}</span>}
-                {user.userType === 'customer' && (
-                    <span>Catalogue and orders access</span>
-                )}
-            </DetailPanel>
+            {user.userType === 'staff' && (
+                <DetailPanel
+                    title="Staff"
+                    value={user.designation || 'No designation'}
+                >
+                    {user.permission && (
+                        <span className="capitalize">{user.permission}</span>
+                    )}
+                    {user.staffId && <span>ID: {user.staffId}</span>}
+                </DetailPanel>
+            )}
         </section>
     );
 }
