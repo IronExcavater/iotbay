@@ -59,6 +59,8 @@ body,
 
 body {
     margin: 0;
+    overflow-y: scroll;
+    scrollbar-gutter: stable;
     background: var(--ui-0);
     color: var(--ui-900);
     font-feature-settings:

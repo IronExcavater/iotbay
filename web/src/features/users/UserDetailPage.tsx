@@ -234,7 +234,7 @@ export default function UserDetailPage({
         if (!hasChanges) return;
 
         const nextFieldErrors = validateProfileForm(values, {
-            hasChanges,
+            emailChanged,
             isCustomer,
             isStaff,
         });
@@ -245,7 +245,7 @@ export default function UserDetailPage({
         try {
             const result = await updateMe({
                 ...toProfileUpdateInput(values, {
-                    hasChanges,
+                    emailChanged,
                     isCustomer,
                     isStaff,
                 }),
@@ -267,8 +267,13 @@ export default function UserDetailPage({
                 return;
             }
 
-            const nextValues = toProfileValues(result);
-            setDetailUser(result);
+            const savedUser = {
+                ...result,
+                profileImageUrl:
+                    result.profileImageUrl || values.profileImageUrl || null,
+            };
+            setDetailUser(savedUser);
+            const nextValues = toProfileValues(savedUser);
             setValues(nextValues);
             setInitialValues(nextValues);
             setIsEditDialogOpen(false);
@@ -287,7 +292,16 @@ export default function UserDetailPage({
         if (!editingManagedUser || !managedFormValues) return;
 
         const isStaff = editingManagedUser.userType === 'staff';
-        const assessment = assessManagedUserForm(managedFormValues, isStaff);
+        const emailChanged =
+            managedFormValues.email !== editingManagedUser.email;
+        const permissionChanged =
+            isStaff &&
+            managedFormValues.permission !==
+                (editingManagedUser.permission ?? 'admin');
+        const assessment = assessManagedUserForm(managedFormValues, isStaff, {
+            emailChanged,
+            permissionChanged,
+        });
         setManagedFieldErrors(assessment.fieldErrors);
 
         if (!assessment.payload) return;
@@ -337,10 +351,10 @@ export default function UserDetailPage({
             <section className="grid gap-4">
                 <div>
                     <Button
-                        className="text-ui-600 hover:text-ui-900 h-auto gap-2 px-0 hover:bg-transparent"
+                        className="gap-2"
                         onClick={() => navigate(admin ? '/admin/users' : '/')}
                         type="button"
-                        variant="ghost"
+                        variant="link"
                     >
                         <FaArrowLeft aria-hidden="true" className="size-3" />
                         Back to {admin ? 'users' : 'home'}
@@ -360,6 +374,11 @@ export default function UserDetailPage({
                                     ? 'Account'
                                     : `${detailUser.firstName} ${detailUser.lastName}`}
                             </h1>
+                            {!me && detailUser.status !== 'active' && (
+                                <span className="shrink-0 rounded bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 ring-1 ring-red-200">
+                                    Deactivated
+                                </span>
+                            )}
                             {canEditDetails && userTab === 'details' && (
                                 <Button
                                     aria-label="Edit details"
@@ -513,6 +532,7 @@ export default function UserDetailPage({
                             error={fieldErrors.currentPassword}
                             hasChanges={hasChanges}
                             isSubmitting={isSavingMe}
+                            requiresPassword={emailChanged}
                             onBlur={() => {
                                 setFieldError(
                                     'currentPassword',
@@ -549,14 +569,6 @@ export default function UserDetailPage({
 }
 
 function UserDetailsSummary({ user }: { user: DetailUser }) {
-    const accountState =
-        user.status === 'active' ? 'Active account' : 'Disabled account';
-    const role =
-        user.userType === 'staff'
-            ? user.permission
-                ? `${capitalize(user.permission)} staff`
-                : 'Staff account'
-            : 'Customer account';
     const contactItems = [
         user.email,
         user.phoneNumber,
@@ -564,12 +576,12 @@ function UserDetailsSummary({ user }: { user: DetailUser }) {
     ].filter((item): item is string => Boolean(item));
 
     return (
-        <section className="grid gap-5 sm:grid-cols-3">
-            <DetailPanel title="Account" value={accountState}>
-                <span>{role}</span>
-            </DetailPanel>
-
-            <DetailPanel title="Contact" value={contactItems[0] ?? 'No email'}>
+        <section className="grid gap-5 sm:grid-cols-2">
+            <DetailPanel
+                prominent
+                title="Contact"
+                value={contactItems[0] ?? 'No email'}
+            >
                 {contactItems.slice(1).map((item) => (
                     <span key={item}>{item}</span>
                 ))}
@@ -802,10 +814,12 @@ function DetailTab({
 
 function DetailPanel({
     children,
+    prominent = false,
     title,
     value,
 }: {
     children: ReactNode;
+    prominent?: boolean;
     title: string;
     value: string;
 }) {
@@ -815,11 +829,11 @@ function DetailPanel({
                 {title}
             </span>
             <span className="text-ui-900 text-base font-semibold">{value}</span>
-            <div className="text-ui-500 grid gap-1 text-sm">{children}</div>
+            <div
+                className={`grid gap-1 text-sm ${prominent ? 'text-ui-700' : 'text-ui-500'}`}
+            >
+                {children}
+            </div>
         </section>
     );
-}
-
-function capitalize(value: string) {
-    return value.charAt(0).toUpperCase() + value.slice(1);
 }

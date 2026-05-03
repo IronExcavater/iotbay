@@ -9,6 +9,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import { AuditTimeline } from '@features/audit/components/AuditTimeline';
 import { useEntityAudit } from '@features/audit/useEntityAudit';
+import { useCart } from '@features/cart/CartProvider';
 import { ProductFormDialog } from '@features/products/admin/components/ProductFormDialog';
 import { productApi, type Product } from '@features/products/api';
 import {
@@ -34,6 +35,7 @@ export default function ProductDetailPage({
     const navigate = useNavigate();
     const { productId = '' } = useParams();
     const { showToast } = useToast();
+    const { addToCart, isInCart } = useCart();
     const [product, setProduct] = useState<Product | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isEditOpen, setIsEditOpen] = useState(false);
@@ -80,7 +82,7 @@ export default function ProductDetailPage({
                 admin
                     ? productApi.getAdmin(productId, signal)
                     : productApi.get(productId, signal),
-                audit.loadEvents(signal).then(() => null),
+                admin ? audit.loadEvents(signal).then(() => null) : null,
             ]);
             if (!signal?.aborted) {
                 setProduct(nextProduct);
@@ -165,12 +167,12 @@ export default function ProductDetailPage({
 
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <Button
-                    className="text-ui-600 hover:text-ui-900 h-auto gap-2 px-0 hover:bg-transparent"
+                    className="gap-2"
                     onClick={() =>
                         navigate(admin ? '/admin/products' : '/products')
                     }
                     type="button"
-                    variant="ghost"
+                    variant="link"
                 >
                     <FaArrowLeft aria-hidden="true" className="size-3" />
                     Back to {admin ? 'products' : 'catalogue'}
@@ -286,23 +288,41 @@ export default function ProductDetailPage({
                             Catalogue code {product.code}
                         </p>
                     </div>
-                    <p className="text-ui-900 text-2xl font-semibold">
-                        {Money.format(product.priceCents)}
-                    </p>
+                    <div className="flex items-center gap-4">
+                        <p className="text-ui-900 text-2xl font-semibold">
+                            {Money.format(product.priceCents)}
+                        </p>
+                        {!admin && (
+                            <Button
+                                disabled={isInCart(product.id)}
+                                onClick={() =>
+                                    addToCart({
+                                        name: product.name,
+                                        priceCents: product.priceCents,
+                                        productId: product.id,
+                                    })
+                                }
+                                type="button"
+                            >
+                                {isInCart(product.id)
+                                    ? 'In cart'
+                                    : 'Add to cart'}
+                            </Button>
+                        )}
+                    </div>
+                    <div className="grid gap-2">
+                        <h2 className="text-ui-900 text-xl font-semibold">
+                            Description
+                        </h2>
+                        <p className="text-ui-600 text-base leading-7">
+                            {product.description ||
+                                'Technical details are being prepared.'}
+                        </p>
+                    </div>
                 </div>
             </section>
 
-            <section className="grid gap-2">
-                <h2 className="text-ui-900 text-xl font-semibold">
-                    Description
-                </h2>
-                <p className="text-ui-600 max-w-3xl leading-7">
-                    {product.description ||
-                        'Technical details are being prepared.'}
-                </p>
-            </section>
-
-            <AuditTimeline events={audit.events} />
+            {admin && <AuditTimeline events={audit.events} />}
 
             <ProductFormDialog
                 codeInput={codeInput}

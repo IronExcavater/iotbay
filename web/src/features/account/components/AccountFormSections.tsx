@@ -209,10 +209,6 @@ export function AccountStaffSection({
                         value={values.designation}
                     />
                 </Field>
-
-                <Field error={errors.permission} label="Permission">
-                    <Input disabled value={values.permission || 'Admin'} />
-                </Field>
             </div>
         </section>
     );
@@ -226,6 +222,7 @@ export function AccountActionsSection({
     onBlur,
     onChange,
     onSubmitToggle,
+    requiresPassword,
     showPassword,
     value,
 }: {
@@ -236,22 +233,23 @@ export function AccountActionsSection({
     onBlur: () => void;
     onChange: (value: string) => void;
     onSubmitToggle: () => void;
+    requiresPassword: boolean;
     showPassword: boolean;
     value: string;
 }) {
     return (
         <section
             className={clsx(
-                hasChanges
+                requiresPassword
                     ? 'grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start'
                     : 'flex justify-end'
             )}
         >
-            {hasChanges && (
+            {requiresPassword && (
                 <Field
                     error={error}
                     hint={currentPasswordHint}
-                    label="Password"
+                    label="Your password"
                     metaPlacement="inline"
                     required
                 >
@@ -271,7 +269,7 @@ export function AccountActionsSection({
                 </Field>
             )}
 
-            <div className={clsx(hasChanges && 'sm:pt-6')}>
+            <div className={clsx(requiresPassword && 'sm:pt-6')}>
                 <Button
                     disabled={isSubmitting || !hasChanges}
                     loading={isSubmitting}
