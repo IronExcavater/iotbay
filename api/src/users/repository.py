@@ -35,6 +35,9 @@ def _optional_string(value: object) -> str | None:
     return normalized or None
 
 
+_UNSET = object()
+
+
 class UserRepository(Repository):
     # A user is split across the base users row plus exactly one detail table:
     # customers or staff. The helpers below keep those side tables in sync.
@@ -174,6 +177,7 @@ class UserRepository(Repository):
         status: str | None = None,
         password_hash: str | None = None,
         user_type: str | None = None,
+        profile_image_url: object = _UNSET,
     ) -> None:
         values = {
             "password_hash": password_hash,
@@ -186,6 +190,10 @@ class UserRepository(Repository):
         update_values: dict[str, object] = {
             column: value for column, value in values.items() if value is not None
         }
+        if profile_image_url is not _UNSET:
+            update_values["profile_image_url"] = stripped_or_none(
+                str(profile_image_url or "")
+            )
 
         if not update_values:
             return
@@ -313,6 +321,7 @@ class UserRepository(Repository):
                     users.email AS user_email,
                     users.first_name AS user_first_name,
                     users.last_name AS user_last_name,
+                    users.profile_image_url AS user_profile_image_url,
                     trusted_session_tokens.expires_at AS trusted_expires_at,
                     latest_logs.occurred_at AS latest_access_at,
                     latest_logs.event_type AS latest_event_type,
@@ -776,6 +785,7 @@ class UserRepository(Repository):
         staff_id: str | None = None,
         designation: str | None = None,
         permission: str | None = None,
+        profile_image_url: str | None = None,
         status: str | None = None,
         updated_at: str,
         updated_by_user_id: bytes | None = None,
@@ -792,6 +802,7 @@ class UserRepository(Repository):
                     email=email,
                     first_name=first_name,
                     last_name=last_name,
+                    profile_image_url=profile_image_url,
                     status=status,
                 )
 
@@ -828,6 +839,7 @@ class UserRepository(Repository):
         staff_id: str | None = None,
         designation: str | None = None,
         permission: str | None = None,
+        profile_image_url: str | None = None,
         updated_at: str,
         updated_by_user_id: bytes,
     ) -> User:
@@ -843,6 +855,7 @@ class UserRepository(Repository):
                     email=email,
                     first_name=first_name,
                     last_name=last_name,
+                    profile_image_url=profile_image_url,
                 )
 
                 if current_user.user_type != USER_TYPE_CUSTOMER:
@@ -963,6 +976,7 @@ class UserRepository(Repository):
                 email=str(snapshot.get("email") or current_user.email),
                 first_name=str(snapshot.get("firstName") or current_user.first_name),
                 last_name=str(snapshot.get("lastName") or current_user.last_name),
+                profile_image_url=_optional_string(snapshot.get("profileImageUrl")),
                 status=str(snapshot.get("status") or current_user.status),
             )
             if current_user.user_type != USER_TYPE_CUSTOMER:

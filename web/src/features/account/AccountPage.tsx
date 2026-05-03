@@ -197,6 +197,9 @@ export default function AccountPage() {
                                 lastName: LastName.formatInput(value),
                             });
                         }}
+                        onProfileImageChange={(value) => {
+                            updateValues({ profileImageUrl: value });
+                        }}
                         values={values}
                     />
 

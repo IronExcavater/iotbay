@@ -14,6 +14,7 @@ export interface ManagedUserFormValues {
     firstName: string;
     lastName: string;
     permission: string;
+    profileImageUrl: string;
     staffId: string;
 }
 
@@ -31,6 +32,7 @@ export function toManagedUserFormValues(
         firstName: user.firstName,
         lastName: user.lastName,
         permission: user.permission ?? 'admin',
+        profileImageUrl: user.profileImageUrl ?? '',
         staffId: user.staffId ?? '',
     };
 }
@@ -49,6 +51,8 @@ export function formatManagedUserField(
         case 'lastName':
             return LastName.formatInput(value);
         case 'permission':
+            return value;
+        case 'profileImageUrl':
             return value;
         case 'staffId':
             return StaffId.formatInput(value);
@@ -86,6 +90,7 @@ export function assessManagedUserForm(
             firstName: firstName.value ?? '',
             lastName: lastName.value ?? '',
             permission: isStaff ? (permission.value ?? '') : '',
+            profileImageUrl: values.profileImageUrl,
             staffId: isStaff ? (staffId.value ?? '') : '',
         } satisfies UpdateManagedUserInput,
     };

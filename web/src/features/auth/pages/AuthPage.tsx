@@ -28,6 +28,7 @@ import {
     normalizeNextPath,
     resolvePostAuthPath,
 } from '@features/auth/redirects';
+import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { downloadHtml } from '@shared/services/download';
 import { backendErrorMessage } from '@shared/services/http';
 import { Button } from '@shared/ui/form/Button';
@@ -103,6 +104,7 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
         ? 'Choose a password'
         : 'Enter your password';
     const pageCopy = getAuthPageCopy(mode, nextPath);
+    useDocumentTitle(pageCopy.title);
     const forgotPasswordPath = buildForgotPasswordPath({
         email: values.email,
         nextPath,

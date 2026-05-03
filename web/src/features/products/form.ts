@@ -9,7 +9,7 @@ import { ProductCode, ProductName } from '@shared/value-objects/ProductText';
 
 export interface ProductFormValues {
     code: string;
-    mediaUrls: string;
+    mediaUrls: string[];
     name: string;
     price: string;
 }
@@ -20,7 +20,7 @@ export type ProductFieldErrors = Partial<Record<ProductFieldName, string>>;
 export function createProductFormValues(): ProductFormValues {
     return {
         code: '',
-        mediaUrls: '',
+        mediaUrls: [],
         name: '',
         price: '',
     };
@@ -29,7 +29,7 @@ export function createProductFormValues(): ProductFormValues {
 export function toProductFormValues(product: Product): ProductFormValues {
     return {
         code: product.code,
-        mediaUrls: product.mediaUrls.join('\n'),
+        mediaUrls: product.mediaUrls,
         name: product.name,
         price: Money.toInput(product.priceCents),
     };
@@ -40,7 +40,6 @@ export function assessProductForm(values: ProductFormValues) {
     const code = ProductCode.assess(values.code);
     const price = Money.assess(values.price);
     const mediaUrls = values.mediaUrls
-        .split(/\r?\n/)
         .map((value) => value.trim())
         .filter(Boolean)
         .slice(0, 6);

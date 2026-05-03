@@ -3,6 +3,7 @@ import { FaGrip, FaList, FaMagnifyingGlass } from 'react-icons/fa6';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { productApi, type Product } from '@features/products/api';
+import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { toErrorMessage } from '@shared/services/http';
 import { SearchInput } from '@shared/ui/form/SearchInput';
 import { PageHeader } from '@shared/ui/PageHeader';
@@ -20,6 +21,7 @@ type CatalogueView = 'cards' | 'list';
 
 export default function ProductCatalogPage() {
     const navigate = useNavigate();
+    useDocumentTitle('Catalogue');
     const [products, setProducts] = useState<Product[]>([]);
     const [isLoadingProducts, setIsLoadingProducts] = useState(true);
     const [productsError, setProductsError] = useState<string | null>(null);
