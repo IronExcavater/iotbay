@@ -7,6 +7,7 @@ import { toErrorMessage } from '@shared/services/http';
 import { Button } from '@shared/ui/form/Button';
 import { DatePicker } from '@shared/ui/form/DatePicker';
 import { MenuSelect } from '@shared/ui/form/MenuSelect';
+import { SearchInput } from '@shared/ui/form/SearchInput';
 import {
     Table,
     TableHead,
@@ -28,6 +29,7 @@ export function AccessLogsTable({ admin = false }: { admin?: boolean }) {
     const [logs, setLogs] = useState<AccessLogEntry[]>([]);
     const [eventType, setEventType] = useState('');
     const [fromDate, setFromDate] = useState('');
+    const [search, setSearch] = useState('');
     const [toDate, setToDate] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -67,10 +69,24 @@ export function AccessLogsTable({ admin = false }: { admin?: boolean }) {
     }, [admin, eventType, fromDate, toDate, refreshKey]);
 
     const colCount = admin ? 5 : 4;
+    const filteredLogs = logs.filter((log) => {
+        const query = search.trim().toLowerCase();
+        if (!query) return true;
+        return [
+            log.userName ?? '',
+            log.userEmail ?? '',
+            log.eventType,
+            log.deviceLabel,
+            log.ipAddress ?? '',
+        ]
+            .join(' ')
+            .toLowerCase()
+            .includes(query);
+    });
 
     return (
         <section className="bg-ui-0 border-ui-200 overflow-hidden rounded border">
-            <div className="border-ui-200 flex flex-wrap items-end justify-between gap-3 border-b px-5 py-4">
+            <div className="border-ui-200 flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
                 <div className="flex items-center gap-2">
                     <h2 className="text-ui-900 text-xl font-semibold">
                         Access logs
@@ -89,26 +105,31 @@ export function AccessLogsTable({ admin = false }: { admin?: boolean }) {
                     </Button>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-end gap-3">
+                <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-3">
+                    <SearchInput
+                        className="w-full sm:w-64"
+                        onChange={setSearch}
+                        placeholder="Search logs"
+                        value={search}
+                    />
                     <DatePicker
                         ariaLabel="Filter logs after date"
+                        className="sm:w-36"
                         onChange={setFromDate}
                         placeholder="After date"
                         value={fromDate}
                     />
                     <DatePicker
                         ariaLabel="Filter logs before date"
+                        className="sm:w-36"
                         onChange={setToDate}
                         placeholder="Before date"
                         value={toDate}
                     />
-                    <div className="w-44">
+                    <div className="w-40">
                         <MenuSelect
-                            label={
-                                <span className="sr-only">
-                                    Filter logs by event
-                                </span>
-                            }
+                            label="Filter logs by event"
+                            labelHidden
                             onChange={setEventType}
                             options={EVENT_TYPE_OPTIONS}
                             placeholder="Event"
@@ -149,14 +170,14 @@ export function AccessLogsTable({ admin = false }: { admin?: boolean }) {
                                 message={error}
                                 tone="error"
                             />
-                        ) : logs.length === 0 ? (
+                        ) : filteredLogs.length === 0 ? (
                             <TableMessageRow
                                 colSpan={colCount}
                                 message="No access logs found."
                                 tone="muted"
                             />
                         ) : (
-                            logs.map((log) => (
+                            filteredLogs.map((log) => (
                                 <tr
                                     className="border-ui-200 border-t"
                                     key={log.id}

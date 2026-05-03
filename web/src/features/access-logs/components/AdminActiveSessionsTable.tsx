@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { FaArrowsRotate } from 'react-icons/fa6';
+import { FaArrowsRotate, FaArrowRightFromBracket } from 'react-icons/fa6';
 import { Link } from 'react-router-dom';
 
 import { authApi, type SessionInfo } from '@features/auth/api';
 import { toErrorMessage } from '@shared/services/http';
 import { Button } from '@shared/ui/form/Button';
+import { ActionMenu } from '@shared/ui/overlay/ActionMenu';
 import {
     Table,
     TableActionCell,
@@ -192,23 +193,24 @@ export function AdminActiveSessionsTable() {
                                         </TableSingleLineCell>
                                     </td>
                                     <TableActionCell>
-                                        <Button
-                                            className="h-8 px-2"
-                                            disabled={
-                                                session.isCurrent ||
-                                                revokingSessionId === session.id
-                                            }
-                                            loading={
-                                                revokingSessionId === session.id
-                                            }
-                                            onClick={() => {
-                                                void revokeSession(session);
-                                            }}
-                                            type="button"
-                                            variant="secondary"
-                                        >
-                                            Revoke
-                                        </Button>
+                                        <ActionMenu
+                                            items={[
+                                                {
+                                                    disabled:
+                                                        session.isCurrent ||
+                                                        revokingSessionId ===
+                                                            session.id,
+                                                    icon: FaArrowRightFromBracket,
+                                                    label: 'Revoke',
+                                                    onSelect: () => {
+                                                        void revokeSession(
+                                                            session
+                                                        );
+                                                    },
+                                                },
+                                            ]}
+                                            label={`Open session actions for ${session.deviceLabel}`}
+                                        />
                                     </TableActionCell>
                                 </tr>
                             ))

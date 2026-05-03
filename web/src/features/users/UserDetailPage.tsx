@@ -1,5 +1,9 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { FaArrowLeft, FaPenToSquare } from 'react-icons/fa6';
+import {
+    FaArrowLeft,
+    FaArrowRightFromBracket,
+    FaPenToSquare,
+} from 'react-icons/fa6';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import {
@@ -25,7 +29,7 @@ import {
 } from '@features/addresses/form';
 import { AuditTimeline } from '@features/audit/components/AuditTimeline';
 import { useEntityAudit } from '@features/audit/useEntityAudit';
-import type { User } from '@features/auth/api';
+import { authApi, type SessionInfo, type User } from '@features/auth/api';
 import { useAuth } from '@features/auth/AuthProvider';
 import { validatePhoneNumber } from '@features/auth/phone';
 import { buildVerifyEmailPath } from '@features/auth/redirects';
@@ -46,8 +50,18 @@ import {
 import { downloadHtml } from '@shared/services/download';
 import { toErrorMessage } from '@shared/services/http';
 import { Button } from '@shared/ui/form/Button';
+import { ActionMenu } from '@shared/ui/overlay/ActionMenu';
 import { OverlayDialog } from '@shared/ui/overlay/OverlayDialog';
+import {
+    Table,
+    TableActionCell,
+    TableHead,
+    TableLoadingRow,
+    TableMessageRow,
+    TableSingleLineCell,
+} from '@shared/ui/table/Table';
 import { useToast } from '@shared/ui/toast/ToastProvider';
+import { DateTimeValue } from '@shared/value-objects/DateTimeValue';
 import { Email } from '@shared/value-objects/Email';
 import { FirstName, LastName } from '@shared/value-objects/Name';
 import { Designation, StaffId } from '@shared/value-objects/Staff';
@@ -83,7 +97,7 @@ export default function UserDetailPage({
     );
     const [fieldErrors, setFieldErrors] = useState<ProfileFieldErrors>({});
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-    const [accountTab, setAccountTab] = useState<'details' | 'security'>(
+    const [userTab, setUserTab] = useState<'activity' | 'details' | 'security'>(
         'details'
     );
 
@@ -335,25 +349,24 @@ export default function UserDetailPage({
                                     ? 'Account'
                                     : `${detailUser.firstName} ${detailUser.lastName}`}
                             </h1>
-                            {canEditDetails &&
-                                (!me || accountTab === 'details') && (
-                                    <Button
-                                        aria-label="Edit details"
-                                        className="inline-flex size-8 shrink-0 rounded-full p-0"
-                                        onClick={
-                                            me || isOwnUser
-                                                ? openEditDialog
-                                                : openManagedUserDialog
-                                        }
-                                        type="button"
-                                        variant="ghost"
-                                    >
-                                        <FaPenToSquare
-                                            aria-hidden="true"
-                                            className="size-3.5"
-                                        />
-                                    </Button>
-                                )}
+                            {canEditDetails && userTab === 'details' && (
+                                <Button
+                                    aria-label="Edit details"
+                                    className="inline-flex size-8 shrink-0 rounded-full p-0"
+                                    onClick={
+                                        me || isOwnUser
+                                            ? openEditDialog
+                                            : openManagedUserDialog
+                                    }
+                                    type="button"
+                                    variant="ghost"
+                                >
+                                    <FaPenToSquare
+                                        aria-hidden="true"
+                                        className="size-3.5"
+                                    />
+                                </Button>
+                            )}
                         </div>
                         <p className="text-ui-500 mt-1 truncate text-sm">
                             {me
@@ -363,51 +376,42 @@ export default function UserDetailPage({
                     </div>
                 </div>
 
-                {me && (
-                    <div
-                        aria-label="Account sections"
-                        className="border-ui-200 flex gap-5 border-b"
-                        role="tablist"
-                    >
-                        <button
-                            aria-selected={accountTab === 'details'}
-                            className={`border-b-2 px-0 pb-2 text-sm font-medium ${
-                                accountTab === 'details'
-                                    ? 'border-ui-900 text-ui-900'
-                                    : 'text-ui-500 hover:text-ui-900 border-transparent'
-                            }`}
-                            onClick={() => setAccountTab('details')}
-                            role="tab"
-                            type="button"
-                        >
-                            Details
-                        </button>
-                        <button
-                            aria-selected={accountTab === 'security'}
-                            className={`border-b-2 px-0 pb-2 text-sm font-medium ${
-                                accountTab === 'security'
-                                    ? 'border-ui-900 text-ui-900'
-                                    : 'text-ui-500 hover:text-ui-900 border-transparent'
-                            }`}
-                            onClick={() => setAccountTab('security')}
-                            role="tab"
-                            type="button"
-                        >
-                            Security
-                        </button>
-                    </div>
-                )}
+                <div
+                    aria-label="User sections"
+                    className="border-ui-200 flex gap-5 border-b"
+                    role="tablist"
+                >
+                    <DetailTab
+                        active={userTab === 'details'}
+                        label="Details"
+                        onClick={() => setUserTab('details')}
+                    />
+                    <DetailTab
+                        active={userTab === 'security'}
+                        label="Security"
+                        onClick={() => setUserTab('security')}
+                    />
+                    <DetailTab
+                        active={userTab === 'activity'}
+                        label="Activity"
+                        onClick={() => setUserTab('activity')}
+                    />
+                </div>
             </section>
 
-            {(!me || accountTab === 'details') && (
-                <>
-                    <UserDetailsSummary user={detailUser} />
+            {userTab === 'details' && <UserDetailsSummary user={detailUser} />}
 
-                    <AuditTimeline events={audit.events} />
-                </>
-            )}
+            {userTab === 'security' &&
+                (me || isOwnUser ? (
+                    <AccountSecuritySection readOnly={false} />
+                ) : (
+                    <UserSecuritySummary
+                        canManage={canEditDetails}
+                        userId={detailUser.id}
+                    />
+                ))}
 
-            {me && accountTab === 'security' && <AccountSecuritySection />}
+            {userTab === 'activity' && <AuditTimeline events={audit.events} />}
 
             {isEditDialogOpen && (
                 <OverlayDialog
@@ -574,6 +578,211 @@ function UserDetailsSummary({ user }: { user: DetailUser }) {
                 )}
             </DetailPanel>
         </section>
+    );
+}
+
+function UserSecuritySummary({
+    canManage,
+    userId,
+}: {
+    canManage: boolean;
+    userId: string;
+}) {
+    const { showToast } = useToast();
+    const [sessions, setSessions] = useState<SessionInfo[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [revokingSessionId, setRevokingSessionId] = useState<string | null>(
+        null
+    );
+
+    useEffect(() => {
+        const abortController = new AbortController();
+
+        async function loadSessions() {
+            setIsLoading(true);
+            try {
+                const nextSessions = await authApi.listAdminSessions(
+                    abortController.signal
+                );
+                if (!abortController.signal.aborted) {
+                    setSessions(
+                        nextSessions.filter(
+                            (session) => session.userId === userId
+                        )
+                    );
+                    setError(null);
+                }
+            } catch (caughtError) {
+                if (!abortController.signal.aborted) {
+                    setError(
+                        toErrorMessage(
+                            caughtError,
+                            'Unable to load active sessions'
+                        )
+                    );
+                }
+            } finally {
+                if (!abortController.signal.aborted) setIsLoading(false);
+            }
+        }
+
+        void loadSessions();
+        return () => abortController.abort();
+    }, [userId]);
+
+    async function revokeSession(session: SessionInfo) {
+        if (!canManage) return;
+        setRevokingSessionId(session.id);
+        try {
+            await authApi.revokeAdminSession(session.id);
+            setSessions((current) =>
+                current.filter((item) => item.id !== session.id)
+            );
+            showToast('Session revoked');
+        } catch (caughtError) {
+            showToast(toErrorMessage(caughtError, 'Unable to revoke session'));
+        } finally {
+            setRevokingSessionId(null);
+        }
+    }
+
+    const colCount = canManage ? 5 : 4;
+
+    return (
+        <section className="grid gap-4">
+            <p className="text-ui-500 text-sm">
+                Email MFA is managed by the account owner. Active sessions can
+                be reviewed here.
+            </p>
+
+            <div className="bg-ui-0 border-ui-200 overflow-hidden rounded border">
+                <div className="overflow-x-auto">
+                    <Table>
+                        <colgroup>
+                            <col className="w-[34%]" />
+                            <col className="w-[24%]" />
+                            <col className="w-[24%]" />
+                            <col className="w-[12%]" />
+                            {canManage && <col className="w-[6%]" />}
+                        </colgroup>
+                        <TableHead>
+                            <tr>
+                                <th className="px-5 py-3">Device</th>
+                                <th className="px-5 py-3">Last seen</th>
+                                <th className="px-5 py-3">IP</th>
+                                <th className="px-5 py-3">Trust</th>
+                                {canManage && (
+                                    <th className="px-2 py-3 text-right">
+                                        <span className="sr-only">Actions</span>
+                                    </th>
+                                )}
+                            </tr>
+                        </TableHead>
+                        <tbody>
+                            {isLoading ? (
+                                <>
+                                    <TableLoadingRow colSpan={colCount} />
+                                    <TableLoadingRow colSpan={colCount} />
+                                </>
+                            ) : error ? (
+                                <TableMessageRow
+                                    colSpan={colCount}
+                                    message={error}
+                                    tone="error"
+                                />
+                            ) : sessions.length === 0 ? (
+                                <TableMessageRow
+                                    colSpan={colCount}
+                                    message="No active sessions."
+                                    tone="muted"
+                                />
+                            ) : (
+                                sessions.map((session) => (
+                                    <tr
+                                        className="border-ui-200 border-t align-top"
+                                        key={session.id}
+                                    >
+                                        <td className="px-5 py-3">
+                                            <TableSingleLineCell className="text-ui-900 font-medium">
+                                                {session.deviceLabel}
+                                            </TableSingleLineCell>
+                                        </td>
+                                        <td className="px-5 py-3">
+                                            <TableSingleLineCell className="text-ui-500">
+                                                {DateTimeValue.format(
+                                                    session.lastSeenAt,
+                                                    'relative'
+                                                )}
+                                            </TableSingleLineCell>
+                                        </td>
+                                        <td className="px-5 py-3">
+                                            <TableSingleLineCell className="text-ui-500 font-mono text-xs">
+                                                {session.latestIpAddress ?? '-'}
+                                            </TableSingleLineCell>
+                                        </td>
+                                        <td className="px-5 py-3">
+                                            <TableSingleLineCell className="text-ui-500">
+                                                {session.isTrusted
+                                                    ? 'Trusted'
+                                                    : 'Session'}
+                                            </TableSingleLineCell>
+                                        </td>
+                                        {canManage && (
+                                            <TableActionCell>
+                                                <ActionMenu
+                                                    items={[
+                                                        {
+                                                            disabled:
+                                                                revokingSessionId ===
+                                                                session.id,
+                                                            icon: FaArrowRightFromBracket,
+                                                            label: 'Revoke',
+                                                            onSelect: () => {
+                                                                void revokeSession(
+                                                                    session
+                                                                );
+                                                            },
+                                                        },
+                                                    ]}
+                                                    label={`Open session actions for ${session.deviceLabel}`}
+                                                />
+                                            </TableActionCell>
+                                        )}
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </Table>
+                </div>
+            </div>
+        </section>
+    );
+}
+
+function DetailTab({
+    active,
+    label,
+    onClick,
+}: {
+    active: boolean;
+    label: string;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            aria-selected={active}
+            className={`border-b-2 px-0 pb-2 text-sm font-medium ${
+                active
+                    ? 'border-ui-900 text-ui-900'
+                    : 'text-ui-500 hover:text-ui-900 border-transparent'
+            }`}
+            onClick={onClick}
+            role="tab"
+            type="button"
+        >
+            {label}
+        </button>
     );
 }
 

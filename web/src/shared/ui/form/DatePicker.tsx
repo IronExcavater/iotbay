@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import clsx from 'clsx';
 import {
     FaCalendarDays,
     FaChevronLeft,
@@ -11,6 +12,7 @@ import { AnchoredPopover } from '@shared/ui/overlay/AnchoredPopover';
 
 interface DatePickerProps {
     ariaLabel: string;
+    className?: string;
     onChange: (value: string) => void;
     placeholder: string;
     value: string;
@@ -18,6 +20,7 @@ interface DatePickerProps {
 
 export function DatePicker({
     ariaLabel,
+    className,
     onChange,
     placeholder,
     value,
@@ -35,10 +38,13 @@ export function DatePicker({
     }
 
     return (
-        <div ref={rootRef}>
+        <div
+            className={clsx('relative w-full sm:w-36', className)}
+            ref={rootRef}
+        >
             <button
                 aria-label={ariaLabel}
-                className="bg-ui-0 text-ui-700 ring-ui-300 hover:bg-ui-50 focus-visible:ring-ui-900 flex h-10 min-w-36 items-center justify-between gap-3 rounded px-3 text-sm ring-1 transition-[background-color,box-shadow,color] outline-none focus-visible:ring-2"
+                className="bg-ui-0 text-ui-700 ring-ui-300 hover:bg-ui-50 focus-visible:ring-ui-900 flex h-10 w-full items-center justify-between gap-3 rounded px-3 text-sm ring-1 transition-[background-color,box-shadow,color] outline-none focus-visible:ring-2"
                 onClick={() => setOpen((current) => !current)}
                 type="button"
             >
