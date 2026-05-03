@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import clsx from 'clsx';
 
 interface SwitchProps {
@@ -14,10 +14,7 @@ export function Switch({
     label,
     onChange,
 }: SwitchProps) {
-    const [mounted, setMounted] = useState(false);
-    useEffect(() => {
-        setMounted(true);
-    }, []);
+    const [hasInteracted, setHasInteracted] = useState(false);
 
     return (
         <button
@@ -31,14 +28,17 @@ export function Switch({
                     : 'focus-visible:ring-ui-900 cursor-pointer focus-visible:ring-2 focus-visible:ring-offset-2'
             )}
             disabled={disabled}
-            onClick={() => onChange(!checked)}
+            onClick={() => {
+                setHasInteracted(true);
+                onChange(!checked);
+            }}
             role="switch"
             type="button"
         >
             <span
                 className={clsx(
                     'pointer-events-none block size-5 rounded-full bg-white shadow-sm',
-                    mounted && 'transition-transform',
+                    hasInteracted && 'transition-transform',
                     checked ? 'translate-x-4' : 'translate-x-0'
                 )}
             />

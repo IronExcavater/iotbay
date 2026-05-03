@@ -1,12 +1,15 @@
+import type { ReactNode } from 'react';
 import clsx from 'clsx';
 
 export function Avatar({
+    badge,
     className,
     imageUrl,
     interactive = false,
     name,
     size = 'md',
 }: {
+    badge?: ReactNode;
     className?: string;
     imageUrl?: string | null;
     interactive?: boolean;
@@ -20,7 +23,7 @@ export function Avatar({
         .map((part) => part.charAt(0).toUpperCase())
         .join('');
 
-    return (
+    const inner = (
         <span
             className={clsx(
                 'bg-ui-100 text-ui-700 ring-ui-200 inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full ring-1',
@@ -29,7 +32,7 @@ export function Avatar({
                 size === 'lg' && 'size-14 text-lg',
                 interactive &&
                     'cursor-pointer transition-opacity hover:opacity-75',
-                className
+                !badge && className
             )}
         >
             {imageUrl ? (
@@ -41,6 +44,15 @@ export function Avatar({
             ) : (
                 <span className="font-semibold">{initials || '?'}</span>
             )}
+        </span>
+    );
+
+    if (!badge) return inner;
+
+    return (
+        <span className={clsx('relative inline-flex shrink-0', className)}>
+            {inner}
+            {badge}
         </span>
     );
 }
