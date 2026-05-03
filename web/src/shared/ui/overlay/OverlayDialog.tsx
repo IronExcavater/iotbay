@@ -57,7 +57,7 @@ export function OverlayDialog({
                     className
                 )}
             >
-                <header className="border-ui-200 flex shrink-0 items-start justify-between gap-4 border-b px-6 py-5">
+                <header className="border-ui-200 flex shrink-0 items-start justify-between gap-4 border-b px-6 py-4">
                     <h2 className="text-ui-900 text-xl font-semibold tracking-tight">
                         {title}
                     </h2>

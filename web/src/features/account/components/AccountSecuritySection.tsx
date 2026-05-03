@@ -138,11 +138,11 @@ export function AccountSecuritySection({
             </section>
 
             <section className="bg-ui-0 border-ui-200 overflow-hidden rounded border">
-                <div className="border-ui-200 flex items-center gap-4 border-b px-5 py-4">
+                <div className="border-ui-200 flex items-center justify-between gap-4 border-b px-5 py-4">
                     <h2 className="text-ui-900 text-xl font-semibold">
                         Sessions
                     </h2>
-                    <p className="text-ui-500 min-w-0 flex-1 truncate text-sm">
+                    <p className="text-ui-500 shrink-0 text-sm">
                         Devices currently signed in to this account
                     </p>
                 </div>

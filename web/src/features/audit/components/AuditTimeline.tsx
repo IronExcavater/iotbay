@@ -50,7 +50,7 @@ export function AuditTimeline({
                                     {index < grouped.length - 1 && (
                                         <span
                                             aria-hidden="true"
-                                            className="bg-ui-200 absolute top-5 bottom-0 left-1/2 w-px -translate-x-1/2"
+                                            className="bg-ui-200 absolute top-4 -bottom-1.5 left-1/2 w-0.5 -translate-x-1/2"
                                         />
                                     )}
                                 </div>
@@ -100,8 +100,7 @@ function formatEventSummary(event: AuditEvent): EventSummary {
 
     if (isCreatedAction(event.action)) {
         return {
-            detail:
-                event.entityType === 'product' ? 'Catalogue item' : undefined,
+            detail: formatCreatedDetail(event),
             title: `Created ${entityNameFromDiff(event)}`,
         };
     }
@@ -155,6 +154,26 @@ function formatEventSummary(event: AuditEvent): EventSummary {
                 : formatGroupedTitle(event.action, labels),
         detail: formatGroupedDetail(entries),
     };
+}
+
+function formatCreatedDetail(event: AuditEvent): string | undefined {
+    const diff = event.diff ?? {};
+
+    if (event.entityType === 'product') {
+        const price =
+            diff.priceCents?.after != null
+                ? `$${(Number(diff.priceCents.after) / 100).toFixed(2)}`
+                : undefined;
+        const parts = [diff.name?.after, price]
+            .filter(valuePresent)
+            .map(String);
+        return parts.length > 0 ? parts.join(' · ') : 'Catalogue item';
+    }
+
+    const parts = [diff.email?.after, diff.phoneNumber?.after]
+        .filter(valuePresent)
+        .map(String);
+    return parts.length > 0 ? parts.join(' · ') : undefined;
 }
 
 function entityNameFromDiff(event: AuditEvent): string {
@@ -314,7 +333,13 @@ function groupNearbyEvents(events: AuditEvent[]): AuditEvent[] {
         const nextTime = new Date(next.occurredAt).getTime();
         const closeInTime = Math.abs(currentTime - nextTime) < WINDOW_MS;
 
-        if (sameActor && sameEntity && bothGroupable && closeInTime) {
+        const bothMfaToggle =
+            current.action === 'mfa_settings_updated' &&
+            next.action === 'mfa_settings_updated';
+
+        if (sameActor && sameEntity && bothMfaToggle && closeInTime) {
+            current = { ...next };
+        } else if (sameActor && sameEntity && bothGroupable && closeInTime) {
             current = {
                 ...current,
                 action: 'updated',

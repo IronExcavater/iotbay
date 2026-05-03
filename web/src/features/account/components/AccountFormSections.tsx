@@ -1,10 +1,13 @@
 import clsx from 'clsx';
-import { FaCamera } from 'react-icons/fa6';
+import { FaPen, FaXmark } from 'react-icons/fa6';
 
 import type { ProfileValues } from '@features/account/types';
 import { AddressFields } from '@features/addresses/AddressFields';
 import type { AddressFieldName } from '@features/addresses/form';
-import { fileToDataUrl, isSupportedImage } from '@shared/services/media';
+import {
+    compressImageToDataUrl,
+    isSupportedImage,
+} from '@shared/services/media';
 import { Avatar } from '@shared/ui/Avatar';
 import { Button } from '@shared/ui/form/Button';
 import { Field } from '@shared/ui/form/Field';
@@ -46,43 +49,62 @@ export function AccountPersonalSection({
             <h3 className="text-ui-700 text-sm font-semibold tracking-[0.08em] uppercase">
                 Personal
             </h3>
-            <div className="flex flex-wrap items-center gap-4">
-                <label className="group relative inline-flex cursor-pointer rounded-full">
-                    <Avatar
-                        imageUrl={values.profileImageUrl}
-                        name={fullName}
-                        size="lg"
-                    />
-                    <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                        <FaCamera
-                            aria-hidden="true"
-                            className="size-5 text-white"
+            <div className="grid grid-cols-[auto_1fr] items-start gap-4">
+                <div className="relative inline-flex">
+                    <label className="group relative inline-flex cursor-pointer rounded-full">
+                        <Avatar
+                            imageUrl={values.profileImageUrl}
+                            name={fullName}
+                            size="lg"
                         />
-                    </span>
-                    <input
-                        accept="image/*"
-                        aria-label="Change profile photo"
-                        className="sr-only"
+                        <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                            <FaPen
+                                aria-hidden="true"
+                                className="size-4 text-white"
+                            />
+                        </span>
+                        <input
+                            accept="image/*"
+                            aria-label="Change profile photo"
+                            className="sr-only"
+                            onChange={(event) => {
+                                const file = event.target.files?.[0];
+                                event.target.value = '';
+                                if (!file || !isSupportedImage(file)) return;
+                                void compressImageToDataUrl(file).then(
+                                    onProfileImageChange
+                                );
+                            }}
+                            type="file"
+                        />
+                    </label>
+                    {values.profileImageUrl && (
+                        <button
+                            aria-label="Remove profile photo"
+                            className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-red-500 text-white ring-2 ring-white hover:bg-red-600"
+                            onClick={() => onProfileImageChange('')}
+                            type="button"
+                        >
+                            <FaXmark aria-hidden="true" className="size-2.5" />
+                        </button>
+                    )}
+                </div>
+
+                <Field error={fieldErrors.email} label="Email" required>
+                    <Input
+                        hasError={Boolean(fieldErrors.email)}
+                        maxLength={Email.MAX_LENGTH}
+                        onBlur={onEmailBlur}
                         onChange={(event) => {
-                            const file = event.target.files?.[0];
-                            event.target.value = '';
-                            if (!file || !isSupportedImage(file)) return;
-                            void fileToDataUrl(file).then(onProfileImageChange);
+                            onEmailChange(event.target.value);
                         }}
-                        type="file"
+                        placeholder="jane.doe@email.com"
+                        type="email"
+                        value={values.email}
                     />
-                </label>
-                {values.profileImageUrl && (
-                    <Button
-                        className="text-ui-600 hover:text-ui-900 h-9 px-0 hover:bg-transparent"
-                        onClick={() => onProfileImageChange('')}
-                        type="button"
-                        variant="ghost"
-                    >
-                        Remove
-                    </Button>
-                )}
+                </Field>
             </div>
+
             <div className="grid gap-4 sm:grid-cols-2">
                 <Field
                     error={fieldErrors.firstName}
@@ -114,20 +136,6 @@ export function AccountPersonalSection({
                     />
                 </Field>
             </div>
-
-            <Field error={fieldErrors.email} label="Email" required>
-                <Input
-                    hasError={Boolean(fieldErrors.email)}
-                    maxLength={Email.MAX_LENGTH}
-                    onBlur={onEmailBlur}
-                    onChange={(event) => {
-                        onEmailChange(event.target.value);
-                    }}
-                    placeholder="jane.doe@email.com"
-                    type="email"
-                    value={values.email}
-                />
-            </Field>
         </section>
     );
 }
