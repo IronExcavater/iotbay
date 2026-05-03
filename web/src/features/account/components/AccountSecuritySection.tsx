@@ -9,6 +9,14 @@ import {
 import { useAuth } from '@features/auth/AuthProvider';
 import { toErrorMessage } from '@shared/services/http';
 import { Button } from '@shared/ui/form/Button';
+import {
+    Table,
+    TableActionCell,
+    TableHead,
+    TableLoadingRow,
+    TableMessageRow,
+    TableSingleLineCell,
+} from '@shared/ui/table/Table';
 import { useToast } from '@shared/ui/toast/ToastProvider';
 import { DateTimeValue } from '@shared/value-objects/DateTimeValue';
 
@@ -157,44 +165,100 @@ export function AccountSecuritySection() {
                         Sign out others
                     </Button>
                 </div>
-                <div className="divide-ui-200 divide-y">
-                    {isLoadingSettings && (
-                        <p className="text-ui-500 py-3 text-sm">Loading...</p>
-                    )}
-                    {!isLoadingSettings &&
-                        sessions.map((session) => (
-                            <div
-                                className="flex flex-wrap items-center justify-between gap-3 py-3"
-                                key={session.id}
-                            >
-                                <div className="grid gap-1">
-                                    <strong className="text-ui-900 text-sm">
-                                        {session.deviceLabel}
-                                    </strong>
-                                    <span className="text-ui-500 text-sm">
-                                        Last seen{' '}
-                                        {DateTimeValue.format(
-                                            session.lastSeenAt,
-                                            'relative'
-                                        )}
-                                        {session.isCurrent ? ' - current' : ''}
-                                    </span>
-                                </div>
-                                <Button
-                                    onClick={() => {
-                                        void revokeSession(session);
-                                    }}
-                                    type="button"
-                                    variant={
-                                        session.isCurrent
-                                            ? 'danger'
-                                            : 'secondary'
-                                    }
-                                >
-                                    {session.isCurrent ? 'Sign out' : 'Revoke'}
-                                </Button>
-                            </div>
-                        ))}
+                <div className="bg-ui-0 border-ui-200 overflow-hidden rounded border">
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <colgroup>
+                                <col className="w-[34%]" />
+                                <col className="w-[24%]" />
+                                <col className="w-[22%]" />
+                                <col className="w-[12%]" />
+                                <col className="w-[8%]" />
+                            </colgroup>
+                            <TableHead>
+                                <tr>
+                                    <th className="px-5 py-3">Device</th>
+                                    <th className="px-5 py-3">Last seen</th>
+                                    <th className="px-5 py-3">IP</th>
+                                    <th className="px-5 py-3">Trust</th>
+                                    <th className="px-2 py-3 text-right">
+                                        <span className="sr-only">Actions</span>
+                                    </th>
+                                </tr>
+                            </TableHead>
+                            <tbody>
+                                {isLoadingSettings ? (
+                                    <>
+                                        <TableLoadingRow colSpan={5} />
+                                        <TableLoadingRow colSpan={5} />
+                                    </>
+                                ) : sessions.length === 0 ? (
+                                    <TableMessageRow
+                                        colSpan={5}
+                                        message="No active sessions."
+                                        tone="muted"
+                                    />
+                                ) : (
+                                    sessions.map((session) => (
+                                        <tr
+                                            className="border-ui-200 border-t align-top"
+                                            key={session.id}
+                                        >
+                                            <td className="px-5 py-3">
+                                                <TableSingleLineCell className="text-ui-900 font-medium">
+                                                    {session.deviceLabel}
+                                                    {session.isCurrent
+                                                        ? ' (current)'
+                                                        : ''}
+                                                </TableSingleLineCell>
+                                            </td>
+                                            <td className="px-5 py-3">
+                                                <TableSingleLineCell className="text-ui-500">
+                                                    {DateTimeValue.format(
+                                                        session.lastSeenAt,
+                                                        'relative'
+                                                    )}
+                                                </TableSingleLineCell>
+                                            </td>
+                                            <td className="px-5 py-3">
+                                                <TableSingleLineCell className="text-ui-500 font-mono text-xs">
+                                                    {session.latestIpAddress ??
+                                                        '-'}
+                                                </TableSingleLineCell>
+                                            </td>
+                                            <td className="px-5 py-3">
+                                                <TableSingleLineCell className="text-ui-500">
+                                                    {session.isTrusted
+                                                        ? 'Trusted'
+                                                        : 'Session'}
+                                                </TableSingleLineCell>
+                                            </td>
+                                            <TableActionCell>
+                                                <Button
+                                                    className="h-8 px-2"
+                                                    onClick={() => {
+                                                        void revokeSession(
+                                                            session
+                                                        );
+                                                    }}
+                                                    type="button"
+                                                    variant={
+                                                        session.isCurrent
+                                                            ? 'danger'
+                                                            : 'secondary'
+                                                    }
+                                                >
+                                                    {session.isCurrent
+                                                        ? 'Sign out'
+                                                        : 'Revoke'}
+                                                </Button>
+                                            </TableActionCell>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </Table>
+                    </div>
                 </div>
             </section>
 

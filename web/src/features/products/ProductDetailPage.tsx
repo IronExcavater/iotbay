@@ -1,5 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { FaChevronLeft, FaChevronRight, FaPenToSquare } from 'react-icons/fa6';
+import {
+    FaArrowLeft,
+    FaChevronLeft,
+    FaChevronRight,
+    FaPenToSquare,
+} from 'react-icons/fa6';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { AuditTimeline } from '@features/audit/components/AuditTimeline';
@@ -158,30 +163,16 @@ export default function ProductDetailPage({
 
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <Button
-                    className="h-auto px-0"
+                    className="text-ui-600 hover:text-ui-900 h-auto gap-2 px-0 hover:bg-transparent"
                     onClick={() =>
                         navigate(admin ? '/admin/products' : '/products')
                     }
                     type="button"
                     variant="ghost"
                 >
+                    <FaArrowLeft aria-hidden="true" className="size-3" />
                     Back to {admin ? 'products' : 'catalogue'}
                 </Button>
-
-                {admin && (
-                    <Button
-                        aria-label="Edit product"
-                        className="inline-flex size-9 rounded-full p-0"
-                        onClick={openEditDialog}
-                        type="button"
-                        variant="secondary"
-                    >
-                        <FaPenToSquare
-                            aria-hidden="true"
-                            className="size-3.5"
-                        />
-                    </Button>
-                )}
             </div>
 
             <section className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
@@ -270,14 +261,30 @@ export default function ProductDetailPage({
                         <p className="text-ui-500 font-mono text-sm">
                             {product.code}
                         </p>
-                        <h1 className="text-ui-900 text-4xl font-semibold tracking-tight">
-                            {product.name}
-                        </h1>
+                        <div className="flex min-w-0 items-center gap-2">
+                            <h1 className="text-ui-900 truncate text-3xl font-semibold tracking-tight">
+                                {product.name}
+                            </h1>
+                            {admin && (
+                                <Button
+                                    aria-label="Edit product"
+                                    className="inline-flex size-8 shrink-0 rounded-full p-0"
+                                    onClick={openEditDialog}
+                                    type="button"
+                                    variant="ghost"
+                                >
+                                    <FaPenToSquare
+                                        aria-hidden="true"
+                                        className="size-3.5"
+                                    />
+                                </Button>
+                            )}
+                        </div>
                         <p className="text-ui-500 text-sm">
                             Catalogue code {product.code}
                         </p>
                     </div>
-                    <p className="text-ui-900 text-3xl font-semibold">
+                    <p className="text-ui-900 text-2xl font-semibold">
                         {Money.format(product.priceCents)}
                     </p>
                 </div>
