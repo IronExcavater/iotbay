@@ -3,11 +3,13 @@ import clsx from 'clsx';
 export function Avatar({
     className,
     imageUrl,
+    interactive = false,
     name,
     size = 'md',
 }: {
     className?: string;
     imageUrl?: string | null;
+    interactive?: boolean;
     name: string;
     size?: 'lg' | 'md' | 'sm';
 }) {
@@ -25,6 +27,8 @@ export function Avatar({
                 size === 'sm' && 'size-8 text-xs',
                 size === 'md' && 'size-10 text-sm',
                 size === 'lg' && 'size-14 text-lg',
+                interactive &&
+                    'cursor-pointer transition-opacity hover:opacity-75',
                 className
             )}
         >

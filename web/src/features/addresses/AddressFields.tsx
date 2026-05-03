@@ -22,7 +22,6 @@ import { Field } from '@shared/ui/form/Field';
 import { InlineInput } from '@shared/ui/form/InlineInput';
 import { Input } from '@shared/ui/form/Input';
 import { TextButton } from '@shared/ui/form/TextLink';
-import { Tooltip } from '@shared/ui/Tooltip';
 import { AddressText } from '@shared/value-objects/AddressText';
 
 interface AddressFieldsProps {
@@ -742,37 +741,19 @@ function AddressSuggestionPanel({
     return (
         <div className="bg-ui-0 border-ui-200 absolute z-10 mt-1 grid w-full gap-1 rounded border p-1 shadow-lg">
             {suggestions.map((suggestion) => (
-                <Tooltip
-                    className="w-full"
+                <button
+                    className="hover:bg-ui-50 focus-visible:ring-ui-900 w-full rounded px-3 py-2 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-inset"
                     key={suggestion.id}
-                    label={
-                        suggestion.subtitle
-                            ? `${suggestion.label}, ${suggestion.subtitle}`
-                            : suggestion.label
-                    }
-                    side="right"
+                    onMouseDown={(event) => {
+                        event.preventDefault();
+                        void onSelect(suggestion);
+                    }}
+                    type="button"
                 >
-                    <button
-                        className={clsx(
-                            'hover:bg-ui-50 focus-visible:ring-ui-900 grid w-full gap-0.5 rounded px-3 py-2 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-inset'
-                        )}
-                        onMouseDown={(event) => {
-                            event.preventDefault();
-                            void onSelect(suggestion);
-                        }}
-                        type="button"
-                    >
-                        <span className="text-ui-900 font-medium">
-                            {suggestion.label}
-                        </span>
-
-                        {suggestion.subtitle && (
-                            <span className="text-ui-500">
-                                {suggestion.subtitle}
-                            </span>
-                        )}
-                    </button>
-                </Tooltip>
+                    <span className="text-ui-900 font-medium">
+                        {suggestion.label}
+                    </span>
+                </button>
             ))}
         </div>
     );
