@@ -1,4 +1,5 @@
 import clsx from 'clsx';
+import { FaCamera } from 'react-icons/fa6';
 
 import type { ProfileValues } from '@features/account/types';
 import { AddressFields } from '@features/addresses/AddressFields';
@@ -46,39 +47,41 @@ export function AccountPersonalSection({
                 Personal
             </h3>
             <div className="flex flex-wrap items-center gap-4">
-                <Avatar
-                    imageUrl={values.profileImageUrl}
-                    name={fullName}
-                    size="lg"
-                />
-                <div className="flex flex-wrap gap-2">
-                    <label className="text-ui-700 ring-ui-300 hover:bg-ui-100 relative inline-flex h-9 cursor-pointer items-center rounded px-3 text-sm font-medium ring-1">
-                        Change photo
-                        <input
-                            accept="image/*"
-                            className="sr-only"
-                            onChange={(event) => {
-                                const file = event.target.files?.[0];
-                                event.target.value = '';
-                                if (!file || !isSupportedImage(file)) return;
-                                void fileToDataUrl(file).then(
-                                    onProfileImageChange
-                                );
-                            }}
-                            type="file"
+                <label className="group relative inline-flex cursor-pointer rounded-full">
+                    <Avatar
+                        imageUrl={values.profileImageUrl}
+                        name={fullName}
+                        size="lg"
+                    />
+                    <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                        <FaCamera
+                            aria-hidden="true"
+                            className="size-5 text-white"
                         />
-                    </label>
-                    {values.profileImageUrl && (
-                        <Button
-                            className="text-ui-600 hover:text-ui-900 h-9 px-0 hover:bg-transparent"
-                            onClick={() => onProfileImageChange('')}
-                            type="button"
-                            variant="ghost"
-                        >
-                            Remove
-                        </Button>
-                    )}
-                </div>
+                    </span>
+                    <input
+                        accept="image/*"
+                        aria-label="Change profile photo"
+                        className="sr-only"
+                        onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            event.target.value = '';
+                            if (!file || !isSupportedImage(file)) return;
+                            void fileToDataUrl(file).then(onProfileImageChange);
+                        }}
+                        type="file"
+                    />
+                </label>
+                {values.profileImageUrl && (
+                    <Button
+                        className="text-ui-600 hover:text-ui-900 h-9 px-0 hover:bg-transparent"
+                        onClick={() => onProfileImageChange('')}
+                        type="button"
+                        variant="ghost"
+                    >
+                        Remove
+                    </Button>
+                )}
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
                 <Field

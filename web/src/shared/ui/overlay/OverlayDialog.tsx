@@ -52,12 +52,12 @@ export function OverlayDialog({
 
             <section
                 className={clsx(
-                    'bg-ui-0 border-ui-200 relative z-10 grid w-full max-w-xl gap-5 overflow-y-auto rounded-xl border p-6 shadow-2xl',
+                    'bg-ui-0 border-ui-200 relative z-10 flex w-full max-w-xl flex-col overflow-hidden rounded-xl border shadow-2xl',
                     'max-h-[calc(100dvh-3rem)]',
                     className
                 )}
             >
-                <header className="flex items-start justify-between gap-4">
+                <header className="border-ui-200 flex shrink-0 items-start justify-between gap-4 border-b px-6 py-5">
                     <h2 className="text-ui-900 text-xl font-semibold tracking-tight">
                         {title}
                     </h2>
@@ -73,7 +73,7 @@ export function OverlayDialog({
                     </Button>
                 </header>
 
-                {children}
+                <div className="overflow-y-auto p-6">{children}</div>
             </section>
         </div>,
         document.body

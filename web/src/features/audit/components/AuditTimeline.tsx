@@ -15,24 +15,26 @@ export function AuditTimeline({
     events,
     isLoading = false,
 }: AuditTimelineProps) {
+    const grouped = isLoading ? events : groupNearbyEvents(events);
+
     return (
         <section className="grid gap-4">
             <div className="flex items-center justify-between gap-3">
-                <h2 className="text-ui-900 text-lg font-semibold">Activity</h2>
-                {!isLoading && events.length > 0 && (
+                <h2 className="text-ui-900 text-xl font-semibold">Activity</h2>
+                {!isLoading && grouped.length > 0 && (
                     <span className="text-ui-500 text-xs">
-                        {events.length} event{events.length === 1 ? '' : 's'}
+                        {grouped.length} event{grouped.length === 1 ? '' : 's'}
                     </span>
                 )}
             </div>
 
             {isLoading ? (
                 <p className="text-ui-500 text-sm">Loading activity...</p>
-            ) : events.length === 0 ? (
-                <p className="text-ui-500 text-sm">No activity recorded yet.</p>
+            ) : grouped.length === 0 ? (
+                <p className="text-ui-500 text-sm">No activity yet.</p>
             ) : (
                 <ol className="grid gap-0">
-                    {events.map((event, index) => {
+                    {grouped.map((event, index) => {
                         const summary = formatEventSummary(event);
 
                         return (
@@ -45,7 +47,7 @@ export function AuditTimeline({
                                         aria-hidden="true"
                                         className="bg-ui-0 ring-ui-300 relative z-10 mt-1.5 size-3 shrink-0 rounded-full ring-2"
                                     />
-                                    {index < events.length - 1 && (
+                                    {index < grouped.length - 1 && (
                                         <span
                                             aria-hidden="true"
                                             className="bg-ui-200 absolute top-5 bottom-0 left-1/2 w-px -translate-x-1/2"
@@ -282,4 +284,47 @@ function humanize(value: string) {
         .replace(/([a-z])([A-Z])/g, '$1 $2')
         .replace(/_/g, ' ')
         .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function isGroupableAction(action: string) {
+    return (
+        action === 'updated' ||
+        action === 'profile_updated' ||
+        action === 'managed_user_updated' ||
+        action.endsWith('_updated')
+    );
+}
+
+function groupNearbyEvents(events: AuditEvent[]): AuditEvent[] {
+    if (events.length === 0) return events;
+
+    const WINDOW_MS = 3 * 60 * 1000;
+    const result: AuditEvent[] = [];
+    let current = { ...events[0] };
+
+    for (let i = 1; i < events.length; i++) {
+        const next = events[i];
+        const sameActor =
+            current.actorUserId != null &&
+            current.actorUserId === next.actorUserId;
+        const sameEntity = current.entityId === next.entityId;
+        const bothGroupable =
+            isGroupableAction(current.action) && isGroupableAction(next.action);
+        const currentTime = new Date(current.occurredAt).getTime();
+        const nextTime = new Date(next.occurredAt).getTime();
+        const closeInTime = Math.abs(currentTime - nextTime) < WINDOW_MS;
+
+        if (sameActor && sameEntity && bothGroupable && closeInTime) {
+            current = {
+                ...current,
+                action: 'updated',
+                diff: { ...(next.diff ?? {}), ...(current.diff ?? {}) },
+            };
+        } else {
+            result.push(current);
+            current = { ...next };
+        }
+    }
+    result.push(current);
+    return result;
 }

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import clsx from 'clsx';
 
 interface SwitchProps {
@@ -13,6 +14,11 @@ export function Switch({
     label,
     onChange,
 }: SwitchProps) {
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     return (
         <button
             aria-checked={checked}
@@ -31,7 +37,8 @@ export function Switch({
         >
             <span
                 className={clsx(
-                    'pointer-events-none block size-5 rounded-full bg-white shadow-sm transition-transform',
+                    'pointer-events-none block size-5 rounded-full bg-white shadow-sm',
+                    mounted && 'transition-transform',
                     checked ? 'translate-x-4' : 'translate-x-0'
                 )}
             />

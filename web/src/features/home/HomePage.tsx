@@ -4,6 +4,9 @@ import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 export default function HomePage() {
     const { user } = useAuth();
     const heading = user ? `Welcome, ${user.firstName}` : 'Welcome to IoTBay';
+    const subtitle = user
+        ? `Explore the catalogue, manage your orders, and keep your account up to date.`
+        : `Smart devices for a connected home. Sign in to start shopping.`;
     useDocumentTitle('Home');
 
     return (
@@ -12,9 +15,7 @@ export default function HomePage() {
                 <h1 className="text-ui-900 text-4xl font-semibold tracking-tight sm:text-5xl">
                     {heading}
                 </h1>
-                <p className="text-ui-600 leading-7">
-                    Connected home products, account access, and order activity.
-                </p>
+                <p className="text-ui-600 leading-7">{subtitle}</p>
             </section>
         </section>
     );
