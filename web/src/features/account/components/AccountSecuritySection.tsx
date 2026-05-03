@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { FaArrowRightFromBracket } from 'react-icons/fa6';
 
 import { AccessLogsTable } from '@features/access-logs/components/AccessLogsTable';
 import {
@@ -9,6 +10,8 @@ import {
 import { useAuth } from '@features/auth/AuthProvider';
 import { toErrorMessage } from '@shared/services/http';
 import { Button } from '@shared/ui/form/Button';
+import { Switch } from '@shared/ui/form/Switch';
+import { ActionMenu } from '@shared/ui/overlay/ActionMenu';
 import {
     Table,
     TableActionCell,
@@ -20,7 +23,11 @@ import {
 import { useToast } from '@shared/ui/toast/ToastProvider';
 import { DateTimeValue } from '@shared/value-objects/DateTimeValue';
 
-export function AccountSecuritySection() {
+export function AccountSecuritySection({
+    readOnly = false,
+}: {
+    readOnly?: boolean;
+}) {
     const { logout } = useAuth();
     const { showToast } = useToast();
 
@@ -62,7 +69,7 @@ export function AccountSecuritySection() {
     }, []);
 
     async function toggleMfa() {
-        if (!mfaSettings) return;
+        if (!mfaSettings || readOnly) return;
         setIsUpdating(true);
         try {
             const settings = await authApi.updateMfaSettings({
@@ -82,6 +89,7 @@ export function AccountSecuritySection() {
     }
 
     async function revokeSession(session: SessionInfo) {
+        if (readOnly) return;
         try {
             if (session.isCurrent) {
                 await logout();
@@ -97,6 +105,7 @@ export function AccountSecuritySection() {
     }
 
     async function logoutOthers() {
+        if (readOnly) return;
         setIsUpdating(true);
         try {
             const result = await authApi.logoutOtherSessions();
@@ -130,17 +139,19 @@ export function AccountSecuritySection() {
                             Require a one-time email code during sign in.
                         </p>
                     </div>
-                    <Button
-                        disabled={isUpdating || !mfaSettings}
-                        loading={isUpdating}
-                        onClick={() => {
-                            void toggleMfa();
-                        }}
-                        type="button"
-                        variant="secondary"
-                    >
-                        {mfaSettings?.emailEnabled ? 'Turn off' : 'Turn on'}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <span className="text-ui-500 text-sm">
+                            {mfaSettings?.emailEnabled ? 'On' : 'Off'}
+                        </span>
+                        <Switch
+                            checked={Boolean(mfaSettings?.emailEnabled)}
+                            disabled={readOnly || isUpdating || !mfaSettings}
+                            label="Email MFA"
+                            onChange={() => {
+                                void toggleMfa();
+                            }}
+                        />
+                    </div>
                 </div>
             </section>
 
@@ -154,16 +165,19 @@ export function AccountSecuritySection() {
                             Devices currently signed in to this account.
                         </p>
                     </div>
-                    <Button
-                        disabled={isUpdating}
-                        onClick={() => {
-                            void logoutOthers();
-                        }}
-                        type="button"
-                        variant="secondary"
-                    >
-                        Sign out others
-                    </Button>
+                    {!readOnly && (
+                        <Button
+                            className="text-ui-600 hover:text-ui-900 h-auto px-0 hover:bg-transparent"
+                            disabled={isUpdating}
+                            onClick={() => {
+                                void logoutOthers();
+                            }}
+                            type="button"
+                            variant="ghost"
+                        >
+                            Sign out others
+                        </Button>
+                    )}
                 </div>
                 <div className="bg-ui-0 border-ui-200 overflow-hidden rounded border">
                     <div className="overflow-x-auto">
@@ -234,24 +248,28 @@ export function AccountSecuritySection() {
                                                 </TableSingleLineCell>
                                             </td>
                                             <TableActionCell>
-                                                <Button
-                                                    className="h-8 px-2"
-                                                    onClick={() => {
-                                                        void revokeSession(
-                                                            session
-                                                        );
-                                                    }}
-                                                    type="button"
-                                                    variant={
-                                                        session.isCurrent
-                                                            ? 'danger'
-                                                            : 'secondary'
-                                                    }
-                                                >
-                                                    {session.isCurrent
-                                                        ? 'Sign out'
-                                                        : 'Revoke'}
-                                                </Button>
+                                                {!readOnly && (
+                                                    <ActionMenu
+                                                        items={[
+                                                            {
+                                                                icon: FaArrowRightFromBracket,
+                                                                label: session.isCurrent
+                                                                    ? 'Sign out'
+                                                                    : 'Revoke',
+                                                                onSelect:
+                                                                    () => {
+                                                                        void revokeSession(
+                                                                            session
+                                                                        );
+                                                                    },
+                                                                tone: session.isCurrent
+                                                                    ? 'danger'
+                                                                    : 'default',
+                                                            },
+                                                        ]}
+                                                        label={`Open session actions for ${session.deviceLabel}`}
+                                                    />
+                                                )}
                                             </TableActionCell>
                                         </tr>
                                     ))
