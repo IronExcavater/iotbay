@@ -1,4 +1,4 @@
-import { getJson, postJson } from '@shared/services/http';
+import { getJson } from '@shared/services/http';
 
 export interface AuditEvent {
     action: string;
@@ -26,31 +26,5 @@ export const auditApi = {
                 signal
             )
         ).events;
-    },
-
-    async undoEvent(
-        auditEventId: string,
-        signal?: AbortSignal
-    ): Promise<AuditEvent> {
-        return (
-            await postJson<{ event: AuditEvent }>(
-                `/api/audit/events/${auditEventId}/undo`,
-                undefined,
-                signal
-            )
-        ).event;
-    },
-
-    async redoEvent(
-        auditEventId: string,
-        signal?: AbortSignal
-    ): Promise<AuditEvent> {
-        return (
-            await postJson<{ event: AuditEvent }>(
-                `/api/audit/events/${auditEventId}/redo`,
-                undefined,
-                signal
-            )
-        ).event;
     },
 };

@@ -24,7 +24,7 @@ export function TableHead({ children }: { children: ReactNode }) {
     );
 }
 
-// Wraps both the action <td> and its inner alignment div — the two always
+// Wraps both the action <td> and its inner alignment div; the two always
 // appear together, so combining them removes a layer of boilerplate.
 export function TableActionCell({ children }: { children: ReactNode }) {
     return (

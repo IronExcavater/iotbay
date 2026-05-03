@@ -13,6 +13,7 @@ from src.access_logs.models import (
 from src.access_logs.repository import AccessLogRepository
 from src.addresses.service import AddressService
 from src.audit.models import (
+    AUDIT_ACTION_EMAIL_VERIFIED,
     AUDIT_ACTION_LOGOUT_OTHERS,
     AUDIT_ACTION_MANAGED_USER_UPDATED,
     AUDIT_ACTION_MFA_SETTINGS_UPDATED,
@@ -498,6 +499,12 @@ class AuthService:
             updated_at=UtcTime.now().iso,
         )
         self.user_repository.delete_user_token_by_hash(token_hash=token_hash)
+        self._record_user_audit(
+            action=AUDIT_ACTION_EMAIL_VERIFIED,
+            actor_user_id=updated_user.user_id,
+            entity_id=updated_user.user_id,
+            after={"email": updated_user.email},
+        )
         return updated_user
 
     def invited_staff(self, token: str) -> User:
@@ -874,6 +881,20 @@ class AuthService:
             now_iso=UtcTime.now().iso,
         )
 
+    def list_admin_sessions(
+        self,
+        *,
+        current_session_token: str | None,
+    ) -> list[UserSessionInfo]:
+        return self.user_repository.list_active_sessions(
+            current_session_token_hash=(
+                hash_session_token(current_session_token)
+                if current_session_token is not None
+                else None
+            ),
+            now_iso=UtcTime.now().iso,
+        )
+
     def revoke_session(
         self,
         *,
@@ -920,6 +941,56 @@ class AuthService:
                 action=AUDIT_ACTION_SESSION_REVOKED,
                 actor_user_id=actor.user_id,
                 entity_id=actor.user_id,
+                entity_type=AUDIT_ENTITY_TYPE_USER,
+                occurred_at=now_iso,
+                after={"sessionId": target.id},
+            )
+
+    def admin_revoke_session(
+        self,
+        *,
+        actor: User,
+        current_session_token: str | None,
+        ip_address: str | None = None,
+        session_id: bytes,
+        user_agent: str | None = None,
+    ) -> None:
+        current_session_token_hash = (
+            hash_session_token(current_session_token)
+            if current_session_token is not None
+            else None
+        )
+        target = self.user_repository.select_active_session(
+            session_id=session_id,
+            now_iso=UtcTime.now().iso,
+        )
+        if target is None:
+            raise SessionNotFoundError()
+        if target.session_token_hash == current_session_token_hash:
+            raise CurrentSessionRevocationNotAllowedError()
+
+        now_iso = UtcTime.now().iso
+        with self.user_repository.connect() as connection:
+            self.user_repository.end_user_session(
+                connection,
+                ended_at=now_iso,
+                ended_reason=SESSION_ENDED_REASON_REVOKED,
+                session_id=target.session_id,
+            )
+            self.access_log_repository.insert_access_log(
+                connection,
+                event_type=ACCESS_EVENT_SESSION_REVOKED,
+                ip_address=ip_address,
+                occurred_at=now_iso,
+                session_id=target.session_id,
+                user_agent=user_agent,
+                user_id=target.user_id,
+            )
+            self.audit.record_event(
+                connection,
+                action=AUDIT_ACTION_SESSION_REVOKED,
+                actor_user_id=actor.user_id,
+                entity_id=target.user_id,
                 entity_type=AUDIT_ENTITY_TYPE_USER,
                 occurred_at=now_iso,
                 after={"sessionId": target.id},

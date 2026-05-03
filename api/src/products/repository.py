@@ -46,6 +46,7 @@ class ProductRepository(Repository):
         *,
         name: str,
         code: str,
+        media_urls: list[str],
         price_cents: int,
         actor_user_id: bytes,
     ) -> Product:
@@ -53,6 +54,7 @@ class ProductRepository(Repository):
         product = Product.create(
             name=name,
             code=code,
+            media_urls=media_urls,
             price_cents=price_cents,
             now_iso=now_iso,
         )
@@ -91,6 +93,7 @@ class ProductRepository(Repository):
         product_id: bytes,
         name: str,
         code: str,
+        media_urls: list[str],
         price_cents: int,
         actor_user_id: bytes,
     ) -> Product:
@@ -101,6 +104,7 @@ class ProductRepository(Repository):
         updated_product = existing_product.updated(
             name=name,
             code=code,
+            media_urls=media_urls,
             price_cents=price_cents,
             updated_at=UtcTime.now().iso,
         )
@@ -149,9 +153,16 @@ class ProductRepository(Repository):
             if isinstance(price_value, int)
             else existing_product.price_cents
         )
+        media_urls_value = snapshot.get("mediaUrls")
+        media_urls = (
+            [item for item in media_urls_value if isinstance(item, str)]
+            if isinstance(media_urls_value, list)
+            else existing_product.media_urls
+        )
         return self.update_product(
             actor_user_id=actor_user_id,
             code=str(snapshot.get("code") or existing_product.code),
+            media_urls=media_urls,
             name=str(snapshot.get("name") or existing_product.name),
             price_cents=price_cents,
             product_id=product_id,

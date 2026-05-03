@@ -33,6 +33,7 @@ SEED_TABLES = (
     ),
     SeedTable(name="products", order_by="code ASC"),
     SeedTable(name="entity_audit_log", order_by="entity_type ASC, entity_id ASC"),
+    SeedTable(name="audit_events", order_by="occurred_at ASC, audit_event_id ASC"),
 )
 
 MIGRATION_SLUG_PATTERN = re.compile(r"[^a-z0-9]+")

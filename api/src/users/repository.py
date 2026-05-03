@@ -299,6 +299,48 @@ class UserRepository(Repository):
             ).fetchall()
         return [UserSessionInfo.from_row(row) for row in rows]
 
+    def list_active_sessions(
+        self,
+        *,
+        current_session_token_hash: str | None,
+        now_iso: str,
+    ) -> list[UserSessionInfo]:
+        with self.connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT
+                    user_sessions.*,
+                    users.email AS user_email,
+                    users.first_name AS user_first_name,
+                    users.last_name AS user_last_name,
+                    trusted_session_tokens.expires_at AS trusted_expires_at,
+                    latest_logs.occurred_at AS latest_access_at,
+                    latest_logs.event_type AS latest_event_type,
+                    latest_logs.ip_address AS latest_ip_address,
+                    latest_logs.user_agent AS latest_user_agent,
+                    user_sessions.session_token_hash = ? AS is_current
+                FROM user_sessions
+                JOIN users ON users.user_id = user_sessions.user_id
+                LEFT JOIN trusted_session_tokens
+                    ON trusted_session_tokens.trusted_session_token_id =
+                        user_sessions.trusted_token_id
+                LEFT JOIN access_logs AS latest_logs
+                    ON latest_logs.access_log_id = (
+                        SELECT access_logs.access_log_id
+                        FROM access_logs
+                        WHERE access_logs.session_id = user_sessions.session_id
+                        ORDER BY access_logs.occurred_at DESC,
+                            access_logs.access_log_id DESC
+                        LIMIT 1
+                    )
+                WHERE user_sessions.ended_at IS NULL
+                  AND user_sessions.expires_at > ?
+                ORDER BY user_sessions.last_seen_at DESC, user_sessions.created_at DESC
+                """,
+                (current_session_token_hash or "", now_iso),
+            ).fetchall()
+        return [UserSessionInfo.from_row(row) for row in rows]
+
     def end_user_session(
         self,
         connection: sqlite3.Connection,
@@ -357,6 +399,25 @@ class UserRepository(Repository):
                   AND expires_at > ?
                 """,
                 (session_id, user_id, now_iso),
+            ).fetchone()
+        return UserSession.from_row(row) if row is not None else None
+
+    def select_active_session(
+        self,
+        *,
+        session_id: bytes,
+        now_iso: str,
+    ) -> UserSession | None:
+        with self.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT *
+                FROM user_sessions
+                WHERE session_id = ?
+                  AND ended_at IS NULL
+                  AND expires_at > ?
+                """,
+                (session_id, now_iso),
             ).fetchone()
         return UserSession.from_row(row) if row is not None else None
 

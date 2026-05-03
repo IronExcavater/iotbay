@@ -104,7 +104,7 @@ export function AccountContactSection({
     values: ProfileValues;
 }) {
     return (
-        <section className="border-ui-200 grid gap-4 border-t pt-6">
+        <section className="grid gap-4">
             <h3 className="text-ui-700 text-sm font-semibold tracking-[0.08em] uppercase">
                 Contact
             </h3>
@@ -140,7 +140,7 @@ export function AccountStaffSection({
     values: ProfileValues;
 }) {
     return (
-        <section className="border-ui-200 grid gap-4 border-t pt-6">
+        <section className="grid gap-4">
             <h3 className="text-ui-700 text-sm font-semibold tracking-[0.08em] uppercase">
                 Staff
             </h3>
@@ -201,7 +201,6 @@ export function AccountActionsSection({
     return (
         <section
             className={clsx(
-                'border-ui-200 border-t pt-6',
                 hasChanges
                     ? 'grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start'
                     : 'flex justify-end'

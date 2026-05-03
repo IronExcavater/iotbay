@@ -65,6 +65,15 @@ curl -H "x-api-key: change-me-local-api-key" http://localhost:5001/api/health
 
 Use the `IOTBAY_API_KEY` value from your `.env` file.
 
+### Seeded Accounts
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Superadmin staff | `superadmin@iotbay.local` | `Password123!` |
+| Admin staff | `ops.admin@iotbay.local` | `Password123!` |
+| Customer | `jamie.customer@example.com` | `Password123!` |
+| Customer | `casey.customer@example.com` | `Password123!` |
+
 ## Daily Use
 
 After `git pull`, run:
