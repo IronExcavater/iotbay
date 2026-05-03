@@ -19,10 +19,12 @@ export function OverlayDialog({
     title,
 }: OverlayDialogProps) {
     useEffect(() => {
-        const body = document.body;
-        const scrollY = body.scrollTop;
-        const previousOverflow = body.style.overflowY;
-        body.style.overflowY = 'hidden';
+        const scrollEl =
+            document.querySelector<HTMLElement>('[data-scroll-root]') ??
+            document.body;
+        const scrollY = scrollEl.scrollTop;
+        const previousOverflow = scrollEl.style.overflowY;
+        scrollEl.style.overflowY = 'hidden';
 
         function handleKeyDown(event: KeyboardEvent) {
             if (event.key === 'Escape') {
@@ -33,8 +35,8 @@ export function OverlayDialog({
         document.addEventListener('keydown', handleKeyDown);
 
         return () => {
-            body.style.overflowY = previousOverflow;
-            body.scrollTop = scrollY;
+            scrollEl.style.overflowY = previousOverflow;
+            scrollEl.scrollTop = scrollY;
             document.removeEventListener('keydown', handleKeyDown);
         };
     }, [onClose]);
