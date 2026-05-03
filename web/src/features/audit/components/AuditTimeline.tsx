@@ -16,7 +16,7 @@ export function AuditTimeline({
     isLoading = false,
 }: AuditTimelineProps) {
     return (
-        <section className="grid gap-3">
+        <section className="grid gap-4">
             <div className="flex items-center justify-between gap-3">
                 <h2 className="text-ui-900 text-lg font-semibold">Activity</h2>
                 {!isLoading && events.length > 0 && (
@@ -31,32 +31,55 @@ export function AuditTimeline({
             ) : events.length === 0 ? (
                 <p className="text-ui-500 text-sm">No activity recorded yet.</p>
             ) : (
-                <ol className="divide-ui-200 divide-y">
-                    {events.map((event) => {
+                <ol className="grid gap-0">
+                    {events.map((event, index) => {
                         const summary = formatEventSummary(event);
 
                         return (
                             <li
-                                className="grid gap-1 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-4"
+                                className="grid grid-cols-[1rem_minmax(0,1fr)] gap-3"
                                 key={event.id}
                             >
-                                <div className="min-w-0">
-                                    <p className="text-ui-900 truncate text-sm font-medium">
-                                        {summary.title}
-                                    </p>
-                                    {summary.detail && (
-                                        <p className="text-ui-500 mt-0.5 truncate text-sm">
-                                            {summary.detail}
-                                        </p>
+                                <div className="relative flex justify-center">
+                                    <span
+                                        aria-hidden="true"
+                                        className="bg-ui-0 ring-ui-300 relative z-10 mt-1.5 size-3 shrink-0 rounded-full ring-2"
+                                    />
+                                    {index < events.length - 1 && (
+                                        <span
+                                            aria-hidden="true"
+                                            className="bg-ui-200 absolute top-5 bottom-0 left-1/2 w-px -translate-x-1/2"
+                                        />
                                     )}
                                 </div>
-                                <p className="text-ui-500 text-xs sm:text-right">
-                                    {formatActor(event)} -{' '}
-                                    {DateTimeValue.format(
-                                        event.occurredAt,
-                                        'short'
-                                    )}
-                                </p>
+
+                                <div
+                                    className={
+                                        index < events.length - 1
+                                            ? 'min-w-0 pb-5'
+                                            : 'min-w-0'
+                                    }
+                                >
+                                    <div className="grid gap-1 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-4">
+                                        <div className="min-w-0">
+                                            <p className="text-ui-900 truncate text-sm font-medium">
+                                                {summary.title}
+                                            </p>
+                                            {summary.detail && (
+                                                <p className="text-ui-500 mt-0.5 truncate text-sm">
+                                                    {summary.detail}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <p className="text-ui-500 text-xs sm:pt-0.5 sm:text-right">
+                                            {formatActor(event)} -{' '}
+                                            {DateTimeValue.format(
+                                                event.occurredAt,
+                                                'short'
+                                            )}
+                                        </p>
+                                    </div>
+                                </div>
                             </li>
                         );
                     })}
@@ -74,7 +97,11 @@ function formatEventSummary(event: AuditEvent): EventSummary {
     const diff = event.diff;
 
     if (isCreatedAction(event.action)) {
-        return { title: `Created ${entityNameFromDiff(event)}` };
+        return {
+            detail:
+                event.entityType === 'product' ? 'Catalogue item' : undefined,
+            title: `Created ${entityNameFromDiff(event)}`,
+        };
     }
 
     if (event.action === 'mfa_settings_updated' && diff?.emailEnabled) {
@@ -82,11 +109,15 @@ function formatEventSummary(event: AuditEvent): EventSummary {
             title: enabledValue(diff.emailEnabled.after)
                 ? 'Turned on email MFA'
                 : 'Turned off email MFA',
+            detail: 'Account sign-in protection',
         };
     }
 
     if (isVerifiedAction(event.action)) {
-        return { title: `Verified ${verifiedTarget(event)}` };
+        return {
+            detail: 'Email verification completed',
+            title: `Verified ${verifiedTarget(event)}`,
+        };
     }
 
     if (!diff || Object.keys(diff).length === 0) {
@@ -108,7 +139,9 @@ function formatEventSummary(event: AuditEvent): EventSummary {
             title: valuePresent(after)
                 ? `Updated ${label}`
                 : `Cleared ${label}`,
-            detail: valuePresent(after) ? formatValue(after) : undefined,
+            detail: valuePresent(after)
+                ? `Set to ${formatValue(after)}`
+                : undefined,
         };
     }
 
@@ -117,8 +150,8 @@ function formatEventSummary(event: AuditEvent): EventSummary {
         title:
             event.action === 'status_changed'
                 ? `Set status to ${formatValue(diff.status?.after)}`
-                : formatActionLabel(event.action),
-        detail: joinLabels(labels),
+                : formatGroupedTitle(event.action, labels),
+        detail: formatGroupedDetail(entries),
     };
 }
 
@@ -176,6 +209,35 @@ function fieldLabel(field: string) {
 function joinLabels(labels: string[]) {
     if (labels.length <= 2) return labels.join(' and ');
     return `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`;
+}
+
+function formatGroupedTitle(action: string, labels: string[]) {
+    if (action === 'updated') {
+        return `Updated ${joinLabels(labels)}`;
+    }
+    if (action === 'profile_updated') {
+        return `Updated profile`;
+    }
+    if (action === 'managed_user_updated') {
+        return `Updated account`;
+    }
+    return formatActionLabel(action);
+}
+
+function formatGroupedDetail(
+    entries: Array<[string, { after: unknown; before: unknown }]>
+) {
+    const changed = entries
+        .slice(0, 4)
+        .map(
+            ([field, { after }]) =>
+                `${fieldLabel(field)}: ${formatValue(after)}`
+        );
+    const overflow =
+        entries.length > changed.length
+            ? ` +${entries.length - changed.length} more`
+            : '';
+    return `${changed.join(', ')}${overflow}`;
 }
 
 function formatValue(value: unknown): string {

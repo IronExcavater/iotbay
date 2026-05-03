@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { FaPenToSquare } from 'react-icons/fa6';
+import { FaArrowLeft, FaPenToSquare } from 'react-icons/fa6';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import {
@@ -317,47 +317,50 @@ export default function UserDetailPage({
             <section className="grid gap-4">
                 <div>
                     <Button
-                        className="h-auto px-0"
+                        className="text-ui-600 hover:text-ui-900 h-auto gap-2 px-0 hover:bg-transparent"
                         onClick={() => navigate(admin ? '/admin/users' : '/')}
                         type="button"
                         variant="ghost"
                     >
+                        <FaArrowLeft aria-hidden="true" className="size-3" />
                         Back to {admin ? 'users' : 'home'}
                     </Button>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="min-w-0">
-                        <h1 className="text-ui-900 text-4xl font-semibold tracking-tight">
-                            {me
-                                ? 'Account'
-                                : `${detailUser.firstName} ${detailUser.lastName}`}
-                        </h1>
+                        <div className="flex min-w-0 items-center gap-2">
+                            <h1 className="text-ui-900 truncate text-3xl font-semibold tracking-tight">
+                                {me
+                                    ? 'Account'
+                                    : `${detailUser.firstName} ${detailUser.lastName}`}
+                            </h1>
+                            {canEditDetails &&
+                                (!me || accountTab === 'details') && (
+                                    <Button
+                                        aria-label="Edit details"
+                                        className="inline-flex size-8 shrink-0 rounded-full p-0"
+                                        onClick={
+                                            me || isOwnUser
+                                                ? openEditDialog
+                                                : openManagedUserDialog
+                                        }
+                                        type="button"
+                                        variant="ghost"
+                                    >
+                                        <FaPenToSquare
+                                            aria-hidden="true"
+                                            className="size-3.5"
+                                        />
+                                    </Button>
+                                )}
+                        </div>
                         <p className="text-ui-500 mt-1 truncate text-sm">
                             {me
                                 ? `${detailUser.firstName} ${detailUser.lastName} - ${detailUser.email}`
                                 : detailUser.email}
                         </p>
                     </div>
-
-                    {canEditDetails && (!me || accountTab === 'details') && (
-                        <Button
-                            aria-label="Edit details"
-                            className="inline-flex size-9 rounded-full p-0"
-                            onClick={
-                                me || isOwnUser
-                                    ? openEditDialog
-                                    : openManagedUserDialog
-                            }
-                            type="button"
-                            variant="secondary"
-                        >
-                            <FaPenToSquare
-                                aria-hidden="true"
-                                className="size-3.5"
-                            />
-                        </Button>
-                    )}
                 </div>
 
                 {me && (
