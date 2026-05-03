@@ -92,18 +92,18 @@ export function toProfileValues(user: ProfileUser): ProfileValues {
 export function toProfileUpdateInput(
     values: ProfileValues,
     {
-        hasChanges,
+        emailChanged,
         isCustomer,
         isStaff,
     }: {
-        hasChanges: boolean;
+        emailChanged: boolean;
         isCustomer: boolean;
         isStaff: boolean;
     }
 ): UpdateProfileInput {
     return {
         ...(isCustomer ? toAddressInput(values) : {}),
-        currentPassword: hasChanges ? values.currentPassword : undefined,
+        currentPassword: emailChanged ? values.currentPassword : undefined,
         designation: isStaff ? values.designation.trim() : '',
         email: values.email.trim(),
         firstName: values.firstName.trim(),
@@ -119,11 +119,11 @@ export function toProfileUpdateInput(
 export function validateProfileForm(
     values: ProfileValues,
     {
-        hasChanges,
+        emailChanged,
         isCustomer,
         isStaff,
     }: {
-        hasChanges: boolean;
+        emailChanged: boolean;
         isCustomer: boolean;
         isStaff: boolean;
     }
@@ -153,7 +153,7 @@ export function validateProfileForm(
         );
     }
 
-    if (hasChanges) {
+    if (emailChanged) {
         fieldErrors.currentPassword = values.currentPassword.trim()
             ? undefined
             : 'Current password is required';

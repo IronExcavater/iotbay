@@ -19,8 +19,10 @@ export function OverlayDialog({
     title,
 }: OverlayDialogProps) {
     useEffect(() => {
-        const previousOverflow = document.body.style.overflow;
-        document.body.style.overflow = 'hidden';
+        const body = document.body;
+        const scrollY = body.scrollTop;
+        const previousOverflow = body.style.overflowY;
+        body.style.overflowY = 'hidden';
 
         function handleKeyDown(event: KeyboardEvent) {
             if (event.key === 'Escape') {
@@ -31,7 +33,8 @@ export function OverlayDialog({
         document.addEventListener('keydown', handleKeyDown);
 
         return () => {
-            document.body.style.overflow = previousOverflow;
+            body.style.overflowY = previousOverflow;
+            body.scrollTop = scrollY;
             document.removeEventListener('keydown', handleKeyDown);
         };
     }, [onClose]);
@@ -47,7 +50,8 @@ export function OverlayDialog({
 
             <section
                 className={clsx(
-                    'bg-ui-0 border-ui-200 relative z-10 grid w-full max-w-xl gap-5 rounded-xl border p-6 shadow-2xl',
+                    'bg-ui-0 border-ui-200 relative z-10 grid w-full max-w-xl gap-5 overflow-y-auto rounded-xl border p-6 shadow-2xl',
+                    'max-h-[calc(100dvh-3rem)]',
                     className
                 )}
             >

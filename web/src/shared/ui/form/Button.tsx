@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import { FaSpinner } from 'react-icons/fa6';
 import { Link, type LinkProps } from 'react-router-dom';
 
-type ButtonVariant = 'danger' | 'ghost' | 'primary' | 'secondary';
+type ButtonVariant = 'danger' | 'ghost' | 'link' | 'primary' | 'secondary';
 
 export const Button = forwardRef<
     HTMLButtonElement,
@@ -70,6 +70,7 @@ export function ButtonLink({
 const variantClassName: Record<ButtonVariant, string> = {
     danger: 'h-10 px-3 text-red-700 ring-1 ring-red-200 hover:bg-red-50',
     ghost: 'text-ui-500 hover:bg-ui-100 hover:text-ui-900 disabled:text-ui-300',
+    link: 'h-auto px-0 text-ui-600 hover:text-ui-900 disabled:text-ui-300',
     primary:
         'bg-ui-950 h-10 px-4 text-ui-0 ring-1 ring-ui-0 hover:bg-ui-800 focus-visible:ring-offset-1 focus-visible:ring-offset-ui-0 disabled:bg-ui-400',
     secondary: 'h-10 px-3 ring-1 ring-ui-300 hover:bg-ui-100',
