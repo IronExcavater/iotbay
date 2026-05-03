@@ -1,5 +1,5 @@
 import { FaArrowsRotate, FaPenToSquare, FaTrashCan } from 'react-icons/fa6';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import type { Product } from '@features/products/api';
 import { Button } from '@shared/ui/form/Button';
@@ -41,6 +41,8 @@ export function ProductTable({
     search,
     setSearch,
 }: ProductTableProps) {
+    const navigate = useNavigate();
+
     return (
         <section className="bg-ui-0 border-ui-200 overflow-hidden rounded border">
             <div className="border-ui-200 flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
@@ -125,8 +127,13 @@ export function ProductTable({
                         ) : (
                             products.map((product) => (
                                 <tr
-                                    className="border-ui-200 hover:bg-ui-50 border-t align-top"
+                                    className="border-ui-200 hover:bg-ui-50 cursor-pointer border-t align-top"
                                     key={product.id}
+                                    onClick={() => {
+                                        navigate(
+                                            `/admin/products/${product.id}`
+                                        );
+                                    }}
                                 >
                                     <td className="px-5 py-3">
                                         <Link
@@ -165,24 +172,30 @@ export function ProductTable({
                                         </Tooltip>
                                     </td>
                                     <TableActionCell>
-                                        <ActionMenu
-                                            items={[
-                                                {
-                                                    icon: FaPenToSquare,
-                                                    label: 'Edit',
-                                                    onSelect: () =>
-                                                        onEdit(product),
-                                                },
-                                                {
-                                                    icon: FaTrashCan,
-                                                    label: 'Delete',
-                                                    onSelect: () =>
-                                                        onDelete(product),
-                                                    tone: 'danger',
-                                                },
-                                            ]}
-                                            label="Open product actions"
-                                        />
+                                        <div
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                            }}
+                                        >
+                                            <ActionMenu
+                                                items={[
+                                                    {
+                                                        icon: FaPenToSquare,
+                                                        label: 'Edit',
+                                                        onSelect: () =>
+                                                            onEdit(product),
+                                                    },
+                                                    {
+                                                        icon: FaTrashCan,
+                                                        label: 'Delete',
+                                                        onSelect: () =>
+                                                            onDelete(product),
+                                                        tone: 'danger',
+                                                    },
+                                                ]}
+                                                label="Open product actions"
+                                            />
+                                        </div>
                                     </TableActionCell>
                                 </tr>
                             ))

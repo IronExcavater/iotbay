@@ -22,6 +22,7 @@ interface ProductFormDialogProps {
         inputRef: React.Ref<HTMLInputElement>;
     };
     onClose: () => void;
+    onMediaUrlsChange: (value: string) => void;
     onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
     priceInput: {
         handleChange: React.ChangeEventHandler<HTMLInputElement>;
@@ -39,6 +40,7 @@ export function ProductFormDialog({
     isSubmitting,
     nameInput,
     onClose,
+    onMediaUrlsChange,
     onSubmit,
     priceInput,
     submitLabel,
@@ -84,6 +86,21 @@ export function ProductFormDialog({
                     required
                     value={values.price}
                 />
+
+                <Field
+                    hint="One image URL per line"
+                    label="Images"
+                    metaPlacement="below"
+                >
+                    <textarea
+                        className="bg-ui-0 text-ui-900 placeholder:text-ui-500 ring-ui-300 focus:ring-ui-900 min-h-24 w-full resize-y rounded border-0 px-3 py-2 text-sm ring-1 transition-[background-color,box-shadow,color] outline-none focus:ring-2"
+                        onChange={(event) => {
+                            onMediaUrlsChange(event.target.value);
+                        }}
+                        placeholder="https://example.com/product.jpg"
+                        value={values.mediaUrls}
+                    />
+                </Field>
 
                 <div className="grid gap-3 pt-2">
                     <Button

@@ -165,6 +165,9 @@ export interface SessionInfo {
     latestUserAgent?: string | null;
     mfaVerifiedAt?: string | null;
     trustedExpiresAt?: string | null;
+    userEmail?: string | null;
+    userId?: string | null;
+    userName?: string | null;
 }
 
 export interface UserMfaSettings {
@@ -299,12 +302,27 @@ export const authApi = {
             .items;
     },
 
+    async listAdminSessions(signal?: AbortSignal): Promise<SessionInfo[]> {
+        return (await getJson<SessionsResponse>('/api/admin/sessions', signal))
+            .items;
+    },
+
     revokeSession(
         sessionId: string,
         signal?: AbortSignal
     ): Promise<{ ok: boolean }> {
         return deleteJsonResponse<{ ok: boolean }>(
             `/api/me/sessions/${sessionId}`,
+            signal
+        );
+    },
+
+    revokeAdminSession(
+        sessionId: string,
+        signal?: AbortSignal
+    ): Promise<{ ok: boolean }> {
+        return deleteJsonResponse<{ ok: boolean }>(
+            `/api/admin/sessions/${sessionId}`,
             signal
         );
     },

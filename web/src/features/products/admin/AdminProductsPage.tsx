@@ -209,6 +209,12 @@ export default function AdminProductsPage() {
                 isSubmitting={isSubmitting}
                 nameInput={nameInput}
                 onClose={closeForm}
+                onMediaUrlsChange={(value) => {
+                    setFormValues((current) => ({
+                        ...current,
+                        mediaUrls: value,
+                    }));
+                }}
                 onSubmit={handleSubmit}
                 priceInput={priceInput}
                 submitLabel={submitLabel}

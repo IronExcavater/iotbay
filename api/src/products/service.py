@@ -24,12 +24,14 @@ class ProductService:
         *,
         actor_user_id: bytes,
         code: str,
+        media_urls: list[str],
         name: str,
         price_cents: int,
     ) -> Product:
         product = self.repository.insert_product(
             actor_user_id=actor_user_id,
             code=code,
+            media_urls=media_urls,
             name=name,
             price_cents=price_cents,
         )
@@ -46,6 +48,7 @@ class ProductService:
         *,
         actor_user_id: bytes,
         code: str,
+        media_urls: list[str],
         name: str,
         price_cents: int,
         product_id: bytes,
@@ -54,6 +57,7 @@ class ProductService:
         product = self.repository.update_product(
             actor_user_id=actor_user_id,
             code=code,
+            media_urls=media_urls,
             name=name,
             price_cents=price_cents,
             product_id=product_id,

@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { FaDisplay, FaMoon, FaSun } from 'react-icons/fa6';
-import { useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 
 import { AccountMenu } from '@app/layouts/site-nav/AccountMenu';
 import { BrandLink } from '@app/layouts/site-nav/BrandLink';
@@ -38,8 +38,13 @@ export default function SiteNav() {
                 <div aria-hidden="true" className="size-10" />
 
                 <div className="mx-auto w-full max-w-6xl">
-                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 lg:gap-6">
+                    <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 lg:gap-6">
                         <BrandLink />
+
+                        <nav className="flex min-w-0 items-center gap-1 overflow-x-auto text-sm">
+                            <SiteNavLink to="/products">Catalogue</SiteNavLink>
+                            <SiteNavLink to="/orders">Orders</SiteNavLink>
+                        </nav>
 
                         <nav className="flex flex-wrap items-center justify-end gap-2.5 text-sm sm:gap-3">
                             {user ? (
@@ -142,5 +147,22 @@ export default function SiteNav() {
                 </div>
             </div>
         </header>
+    );
+}
+
+function SiteNavLink({ children, to }: { children: ReactNode; to: string }) {
+    return (
+        <NavLink
+            className={({ isActive }) =>
+                `rounded px-3 py-2 font-medium transition-[background-color,color] ${
+                    isActive
+                        ? 'bg-ui-100 text-ui-900'
+                        : 'text-ui-600 hover:bg-ui-100 hover:text-ui-900'
+                }`
+            }
+            to={to}
+        >
+            {children}
+        </NavLink>
     );
 }

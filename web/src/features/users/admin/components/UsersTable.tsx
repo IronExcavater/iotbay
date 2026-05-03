@@ -5,7 +5,7 @@ import {
     FaPenToSquare,
     FaPowerOff,
 } from 'react-icons/fa6';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import type { ManagedUser } from '@features/users/api';
 import { Button } from '@shared/ui/form/Button';
@@ -51,6 +51,8 @@ export function UsersTable({
     toolbarAction,
     usersError,
 }: UsersTableProps) {
+    const navigate = useNavigate();
+
     return (
         <section className="bg-ui-0 border-ui-200 overflow-hidden rounded border">
             <div className="border-ui-200 flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
@@ -133,8 +135,13 @@ export function UsersTable({
                         ) : (
                             filteredUsers.map((managedUser) => (
                                 <tr
-                                    className="border-ui-200 hover:bg-ui-50 border-t align-top"
+                                    className="border-ui-200 hover:bg-ui-50 cursor-pointer border-t align-top"
                                     key={managedUser.id}
+                                    onClick={() => {
+                                        navigate(
+                                            `/admin/users/${managedUser.id}`
+                                        );
+                                    }}
                                 >
                                     <td className="px-5 py-3">
                                         <TableStackCell>
@@ -168,12 +175,6 @@ export function UsersTable({
                                                         }
                                                     </span>
                                                 )}
-                                            {managedUser.staffId && (
-                                                <span className="text-ui-500 text-xs">
-                                                    Staff ID:{' '}
-                                                    {managedUser.staffId}
-                                                </span>
-                                            )}
                                         </TableStackCell>
                                     </td>
                                     <td className="px-4 py-3">
@@ -183,6 +184,12 @@ export function UsersTable({
                                     </td>
                                     <td className="px-5 py-3">
                                         <TableStackCell className="text-ui-500 text-xs">
+                                            {managedUser.staffId && (
+                                                <span className="truncate">
+                                                    Staff ID:{' '}
+                                                    {managedUser.staffId}
+                                                </span>
+                                            )}
                                             {managedUser.phoneNumber && (
                                                 <span className="truncate">
                                                     {managedUser.phoneNumber}
@@ -196,54 +203,63 @@ export function UsersTable({
                                                 <span>
                                                     {managedUser.country}
                                                 </span>
-                                            ) : (
+                                            ) : !managedUser.staffId &&
+                                              !managedUser.phoneNumber ? (
                                                 <span>No contact details</span>
-                                            )}
+                                            ) : null}
                                         </TableStackCell>
                                     </td>
                                     <TableActionCell>
-                                        <ActionMenu
-                                            items={[
-                                                {
-                                                    disabled:
-                                                        !canEdit(managedUser),
-                                                    icon: FaPenToSquare,
-                                                    label: 'Edit',
-                                                    onSelect: () =>
-                                                        onEdit(managedUser),
-                                                },
-                                                {
-                                                    disabled:
-                                                        !canChangeStatus(
-                                                            managedUser
-                                                        ),
-                                                    icon:
-                                                        managedUser.status ===
-                                                        'active'
-                                                            ? FaBan
-                                                            : FaPowerOff,
-                                                    label:
-                                                        managedUser.status ===
-                                                        'active'
-                                                            ? 'Deactivate'
-                                                            : 'Reactivate',
-                                                    onSelect: () =>
-                                                        onStatusChange(
-                                                            managedUser,
+                                        <div
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                            }}
+                                        >
+                                            <ActionMenu
+                                                items={[
+                                                    {
+                                                        disabled:
+                                                            !canEdit(
+                                                                managedUser
+                                                            ),
+                                                        icon: FaPenToSquare,
+                                                        label: 'Edit',
+                                                        onSelect: () =>
+                                                            onEdit(managedUser),
+                                                    },
+                                                    {
+                                                        disabled:
+                                                            !canChangeStatus(
+                                                                managedUser
+                                                            ),
+                                                        icon:
                                                             managedUser.status ===
-                                                                'active'
-                                                                ? 'disabled'
-                                                                : 'active'
-                                                        ),
-                                                    tone:
-                                                        managedUser.status ===
-                                                        'active'
-                                                            ? 'danger'
-                                                            : 'default',
-                                                },
-                                            ]}
-                                            label={`Open actions for ${managedUser.firstName} ${managedUser.lastName}`}
-                                        />
+                                                            'active'
+                                                                ? FaBan
+                                                                : FaPowerOff,
+                                                        label:
+                                                            managedUser.status ===
+                                                            'active'
+                                                                ? 'Deactivate'
+                                                                : 'Reactivate',
+                                                        onSelect: () =>
+                                                            onStatusChange(
+                                                                managedUser,
+                                                                managedUser.status ===
+                                                                    'active'
+                                                                    ? 'disabled'
+                                                                    : 'active'
+                                                            ),
+                                                        tone:
+                                                            managedUser.status ===
+                                                            'active'
+                                                                ? 'danger'
+                                                                : 'default',
+                                                    },
+                                                ]}
+                                                label={`Open actions for ${managedUser.firstName} ${managedUser.lastName}`}
+                                            />
+                                        </div>
                                     </TableActionCell>
                                 </tr>
                             ))

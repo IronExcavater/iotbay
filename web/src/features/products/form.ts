@@ -9,6 +9,7 @@ import { ProductCode, ProductName } from '@shared/value-objects/ProductText';
 
 export interface ProductFormValues {
     code: string;
+    mediaUrls: string;
     name: string;
     price: string;
 }
@@ -19,6 +20,7 @@ export type ProductFieldErrors = Partial<Record<ProductFieldName, string>>;
 export function createProductFormValues(): ProductFormValues {
     return {
         code: '',
+        mediaUrls: '',
         name: '',
         price: '',
     };
@@ -27,6 +29,7 @@ export function createProductFormValues(): ProductFormValues {
 export function toProductFormValues(product: Product): ProductFormValues {
     return {
         code: product.code,
+        mediaUrls: product.mediaUrls.join('\n'),
         name: product.name,
         price: Money.toInput(product.priceCents),
     };
@@ -36,6 +39,11 @@ export function assessProductForm(values: ProductFormValues) {
     const name = ProductName.assess(values.name);
     const code = ProductCode.assess(values.code);
     const price = Money.assess(values.price);
+    const mediaUrls = values.mediaUrls
+        .split(/\r?\n/)
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .slice(0, 6);
     const fieldErrors = collectFieldErrors<ProductFieldName>({
         code,
         name,
@@ -49,6 +57,7 @@ export function assessProductForm(values: ProductFormValues) {
             !hasErrors && name.value && code.value && price.value !== null
                 ? ({
                       code: code.value,
+                      mediaUrls,
                       name: name.value,
                       priceCents: price.value,
                   } satisfies CreateProductInput)

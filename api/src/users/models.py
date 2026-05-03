@@ -96,6 +96,11 @@ USER_STATUS_VALIDATOR = ChoiceValidator(
 )
 
 
+def _user_name(first_name: str | None, last_name: str | None) -> str | None:
+    parts = [part for part in (first_name, last_name) if part]
+    return " ".join(parts) if parts else None
+
+
 @dataclass(slots=True, frozen=True)
 class User(SqliteRowModel, BlobUuidModel, ApiModel):
     public_fields = (
@@ -208,6 +213,9 @@ class UserSessionInfo(SqliteRowModel, BlobUuidModel):
     latest_ip_address: str | None = None
     latest_user_agent: str | None = None
     is_current: bool = False
+    user_email: str | None = None
+    user_first_name: str | None = None
+    user_last_name: str | None = None
     session_id: bytes = field(default_factory=new_id_bytes)
 
     @classmethod
@@ -233,6 +241,9 @@ class UserSessionInfo(SqliteRowModel, BlobUuidModel):
             "latestUserAgent": self.latest_user_agent,
             "mfaVerifiedAt": self.mfa_verified_at,
             "trustedExpiresAt": self.trusted_expires_at,
+            "userEmail": self.user_email,
+            "userId": id_bytes_to_string(self.user_id),
+            "userName": _user_name(self.user_first_name, self.user_last_name),
         }
 
 
