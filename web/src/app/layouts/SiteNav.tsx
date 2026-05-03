@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react';
-import { FaDisplay, FaMoon, FaSun } from 'react-icons/fa6';
+import { FaCartShopping, FaDisplay, FaMoon, FaSun } from 'react-icons/fa6';
 import { NavLink, useNavigate } from 'react-router-dom';
 
 import { AccountMenu } from '@app/layouts/site-nav/AccountMenu';
@@ -7,7 +7,8 @@ import { BrandLink } from '@app/layouts/site-nav/BrandLink';
 import { ThemeMenuItem, ThemeToggle } from '@app/layouts/site-nav/ThemeToggle';
 import { useThemeMode } from '@app/theme/ThemeProvider';
 import { useAuth } from '@features/auth/AuthProvider';
-import { ButtonLink } from '@shared/ui/form/Button';
+import { useCart } from '@features/cart/CartProvider';
+import { Button, ButtonLink } from '@shared/ui/form/Button';
 import { AnchoredPopover } from '@shared/ui/overlay/AnchoredPopover';
 import { MenuPanel } from '@shared/ui/overlay/MenuItems';
 
@@ -15,6 +16,7 @@ export default function SiteNav() {
     const navigate = useNavigate();
     const { logout, user } = useAuth();
     const { mode, setMode } = useThemeMode();
+    const { items: cartItems } = useCart();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement | null>(null);
@@ -47,6 +49,21 @@ export default function SiteNav() {
                         </nav>
 
                         <nav className="flex flex-wrap items-center justify-end gap-2.5 text-sm sm:gap-3">
+                            {cartItems.length > 0 && (
+                                <Button
+                                    aria-label={`Cart, ${cartItems.length} item${cartItems.length !== 1 ? 's' : ''}`}
+                                    className="relative gap-2"
+                                    disabled
+                                    type="button"
+                                    variant="ghost"
+                                >
+                                    <FaCartShopping
+                                        aria-hidden="true"
+                                        className="size-4"
+                                    />
+                                    <span>{cartItems.length}</span>
+                                </Button>
+                            )}
                             {user ? (
                                 <AccountMenu
                                     menuLabel={menuLabel}

@@ -99,7 +99,7 @@ export default function AccountPage() {
 
         // Validate the edited registration details before sending them to the backend.
         const nextFieldErrors = validateProfileForm(values, {
-            hasChanges,
+            emailChanged,
             isCustomer,
             isStaff,
         });
@@ -111,7 +111,7 @@ export default function AccountPage() {
         try {
             const result = await updateMe(
                 toProfileUpdateInput(values, {
-                    hasChanges,
+                    emailChanged,
                     isCustomer,
                     isStaff,
                 })
@@ -241,6 +241,7 @@ export default function AccountPage() {
                         error={fieldErrors.currentPassword}
                         hasChanges={hasChanges}
                         isSubmitting={isSubmitting}
+                        requiresPassword={emailChanged}
                         onBlur={() => {
                             setFieldError(
                                 'currentPassword',

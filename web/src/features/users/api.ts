@@ -17,6 +17,7 @@ export interface ManagedUser {
 }
 
 export interface UpdateManagedUserInput {
+    currentPassword?: string;
     designation?: string;
     email: string;
     firstName: string;

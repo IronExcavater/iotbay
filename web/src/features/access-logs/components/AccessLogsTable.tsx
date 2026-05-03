@@ -7,7 +7,6 @@ import { toErrorMessage } from '@shared/services/http';
 import { Avatar } from '@shared/ui/Avatar';
 import { Button } from '@shared/ui/form/Button';
 import { DatePicker } from '@shared/ui/form/DatePicker';
-import { MenuSelect } from '@shared/ui/form/MenuSelect';
 import { SearchInput } from '@shared/ui/form/SearchInput';
 import {
     Table,
@@ -19,16 +18,8 @@ import {
 } from '@shared/ui/table/Table';
 import { DateTimeValue } from '@shared/value-objects/DateTimeValue';
 
-const EVENT_TYPE_OPTIONS = [
-    { label: 'All events', value: '' },
-    { label: 'Login', value: 'login' },
-    { label: 'Logout', value: 'logout' },
-    { label: 'Session revoked', value: 'session_revoked' },
-];
-
 export function AccessLogsTable({ admin = false }: { admin?: boolean }) {
     const [logs, setLogs] = useState<AccessLogEntry[]>([]);
-    const [eventType, setEventType] = useState('');
     const [fromDate, setFromDate] = useState('');
     const [search, setSearch] = useState('');
     const [toDate, setToDate] = useState('');
@@ -42,7 +33,7 @@ export function AccessLogsTable({ admin = false }: { admin?: boolean }) {
         async function loadLogs() {
             setIsLoading(true);
             try {
-                const query = { eventType, fromDate, toDate };
+                const query = { eventType: '', fromDate, toDate };
                 const nextLogs = admin
                     ? await accessLogsApi.listAdmin(
                           query,
@@ -67,7 +58,7 @@ export function AccessLogsTable({ admin = false }: { admin?: boolean }) {
 
         void loadLogs();
         return () => abortController.abort();
-    }, [admin, eventType, fromDate, toDate, refreshKey]);
+    }, [admin, fromDate, toDate, refreshKey]);
 
     const colCount = admin ? 5 : 4;
     const filteredLogs = logs.filter((log) => {
@@ -127,16 +118,6 @@ export function AccessLogsTable({ admin = false }: { admin?: boolean }) {
                         placeholder="Before date"
                         value={toDate}
                     />
-                    <div className="w-40">
-                        <MenuSelect
-                            label="Filter logs by event"
-                            labelHidden
-                            onChange={setEventType}
-                            options={EVENT_TYPE_OPTIONS}
-                            placeholder="Event"
-                            value={eventType}
-                        />
-                    </div>
                 </div>
             </div>
 
