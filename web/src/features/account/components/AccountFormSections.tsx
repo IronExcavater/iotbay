@@ -3,6 +3,8 @@ import clsx from 'clsx';
 import type { ProfileValues } from '@features/account/types';
 import { AddressFields } from '@features/addresses/AddressFields';
 import type { AddressFieldName } from '@features/addresses/form';
+import { fileToDataUrl, isSupportedImage } from '@shared/services/media';
+import { Avatar } from '@shared/ui/Avatar';
 import { Button } from '@shared/ui/form/Button';
 import { Field } from '@shared/ui/form/Field';
 import { Input } from '@shared/ui/form/Input';
@@ -23,6 +25,7 @@ export function AccountPersonalSection({
     onFirstNameChange,
     onLastNameBlur,
     onLastNameChange,
+    onProfileImageChange,
     values,
 }: {
     fieldErrors: FieldErrors;
@@ -32,13 +35,51 @@ export function AccountPersonalSection({
     onFirstNameChange: (value: string) => void;
     onLastNameBlur: () => void;
     onLastNameChange: (value: string) => void;
+    onProfileImageChange: (value: string) => void;
     values: ProfileValues;
 }) {
+    const fullName = `${values.firstName} ${values.lastName}`.trim();
+
     return (
         <section className="grid gap-4">
             <h3 className="text-ui-700 text-sm font-semibold tracking-[0.08em] uppercase">
                 Personal
             </h3>
+            <div className="flex flex-wrap items-center gap-4">
+                <Avatar
+                    imageUrl={values.profileImageUrl}
+                    name={fullName}
+                    size="lg"
+                />
+                <div className="flex flex-wrap gap-2">
+                    <label className="text-ui-700 ring-ui-300 hover:bg-ui-100 relative inline-flex h-9 cursor-pointer items-center rounded px-3 text-sm font-medium ring-1">
+                        Change photo
+                        <input
+                            accept="image/*"
+                            className="sr-only"
+                            onChange={(event) => {
+                                const file = event.target.files?.[0];
+                                event.target.value = '';
+                                if (!file || !isSupportedImage(file)) return;
+                                void fileToDataUrl(file).then(
+                                    onProfileImageChange
+                                );
+                            }}
+                            type="file"
+                        />
+                    </label>
+                    {values.profileImageUrl && (
+                        <Button
+                            className="text-ui-600 hover:text-ui-900 h-9 px-0 hover:bg-transparent"
+                            onClick={() => onProfileImageChange('')}
+                            type="button"
+                            variant="ghost"
+                        >
+                            Remove
+                        </Button>
+                    )}
+                </div>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
                 <Field
                     error={fieldErrors.firstName}

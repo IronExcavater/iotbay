@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 
 import { accessLogsApi, type AccessLogEntry } from '@features/access-logs/api';
 import { toErrorMessage } from '@shared/services/http';
+import { Avatar } from '@shared/ui/Avatar';
 import { Button } from '@shared/ui/form/Button';
 import { DatePicker } from '@shared/ui/form/DatePicker';
 import { MenuSelect } from '@shared/ui/form/MenuSelect';
@@ -185,18 +186,33 @@ export function AccessLogsTable({ admin = false }: { admin?: boolean }) {
                                     {admin && (
                                         <td className="px-5 py-3">
                                             <TableStackCell>
-                                                <Link
-                                                    className="text-ui-900 text-sm font-medium hover:underline"
-                                                    to={`/admin/users/${log.userId}`}
-                                                >
-                                                    {log.userName ??
-                                                        log.userEmail}
-                                                </Link>
-                                                {log.userName && (
-                                                    <span className="text-ui-500 truncate text-xs">
-                                                        {log.userEmail}
-                                                    </span>
-                                                )}
+                                                <div className="flex items-center gap-3">
+                                                    <Avatar
+                                                        imageUrl={
+                                                            log.userProfileImageUrl
+                                                        }
+                                                        name={
+                                                            log.userName ??
+                                                            log.userEmail ??
+                                                            'Unknown user'
+                                                        }
+                                                        size="sm"
+                                                    />
+                                                    <div className="grid min-w-0 gap-1">
+                                                        <Link
+                                                            className="text-ui-900 truncate text-sm font-medium hover:underline"
+                                                            to={`/admin/users/${log.userId}`}
+                                                        >
+                                                            {log.userName ??
+                                                                log.userEmail}
+                                                        </Link>
+                                                        {log.userName && (
+                                                            <span className="text-ui-500 truncate text-xs">
+                                                                {log.userEmail}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </TableStackCell>
                                         </td>
                                     )}

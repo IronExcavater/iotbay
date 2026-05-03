@@ -47,8 +47,10 @@ import {
     canEditManagedUser,
     manageablePermissionOptions,
 } from '@features/users/permissions';
+import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { downloadHtml } from '@shared/services/download';
 import { toErrorMessage } from '@shared/services/http';
+import { Avatar } from '@shared/ui/Avatar';
 import { Button } from '@shared/ui/form/Button';
 import { ActionMenu } from '@shared/ui/overlay/ActionMenu';
 import { OverlayDialog } from '@shared/ui/overlay/OverlayDialog';
@@ -142,6 +144,10 @@ export default function UserDetailPage({
 
     const isCustomer = detailUser?.userType === 'customer';
     const isStaff = detailUser?.userType === 'staff';
+    const detailName = detailUser
+        ? `${detailUser.firstName} ${detailUser.lastName}`
+        : '';
+    useDocumentTitle(me ? 'Account' : detailName || 'User');
     const hasChanges = hasProfileChanges(values, initialValues);
     const emailChanged = Boolean(
         currentUser &&
@@ -342,7 +348,12 @@ export default function UserDetailPage({
                 </div>
 
                 <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="min-w-0">
+                    <Avatar
+                        imageUrl={detailUser.profileImageUrl}
+                        name={detailName}
+                        size="lg"
+                    />
+                    <div className="min-w-0 flex-1">
                         <div className="flex min-w-0 items-center gap-2">
                             <h1 className="text-ui-900 truncate text-3xl font-semibold tracking-tight">
                                 {me
@@ -457,6 +468,9 @@ export default function UserDetailPage({
                                 updateValues({
                                     lastName: LastName.formatInput(value),
                                 });
+                            }}
+                            onProfileImageChange={(value) => {
+                                updateValues({ profileImageUrl: value });
                             }}
                             values={values}
                         />

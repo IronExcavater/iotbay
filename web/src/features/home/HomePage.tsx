@@ -1,8 +1,10 @@
 import { useAuth } from '@features/auth/AuthProvider';
+import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 
 export default function HomePage() {
     const { user } = useAuth();
     const heading = user ? `Welcome, ${user.firstName}` : 'Welcome to IoTBay';
+    useDocumentTitle('Home');
 
     return (
         <section className="grid gap-10 py-6 sm:py-10">

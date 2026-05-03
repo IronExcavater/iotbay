@@ -18,6 +18,7 @@ import {
     type ProductFieldErrors,
     type ProductFormValues,
 } from '@features/products/form';
+import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { useFormattedInput } from '@shared/hooks/useFormattedInput';
 import { toErrorMessage } from '@shared/services/http';
 import { Button } from '@shared/ui/form/Button';
@@ -42,7 +43,7 @@ export default function ProductDetailPage({
     const [fieldErrors, setFieldErrors] = useState<ProductFieldErrors>({});
     const [formValues, setFormValues] = useState<ProductFormValues>({
         code: '',
-        mediaUrls: '',
+        mediaUrls: [],
         name: '',
         price: '',
     });
@@ -50,6 +51,7 @@ export default function ProductDetailPage({
         entityId: productId,
         entityType: 'product',
     });
+    useDocumentTitle(product?.name ?? 'Product');
     const nameInput = useFormattedInput({
         onChange: (value) =>
             setFormValues((current) => ({ ...current, name: value })),
@@ -310,10 +312,10 @@ export default function ProductDetailPage({
                 isSubmitting={isSubmitting}
                 nameInput={nameInput}
                 onClose={closeEditDialog}
-                onMediaUrlsChange={(value) => {
+                onMediaUrlsChange={(mediaUrls) => {
                     setFormValues((current) => ({
                         ...current,
-                        mediaUrls: value,
+                        mediaUrls,
                     }));
                 }}
                 onSubmit={handleSubmit}

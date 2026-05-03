@@ -18,6 +18,7 @@ export interface User {
     postcode?: string | null;
     permission?: string | null;
     phoneNumber?: string | null;
+    profileImageUrl?: string | null;
     staffId?: string | null;
     state?: string | null;
     suburb?: string | null;
@@ -111,6 +112,7 @@ export interface UpdateProfileInput {
     permission?: string;
     phoneCountry?: string;
     phoneNumber?: string;
+    profileImageUrl?: string;
     staffId?: string;
     state?: string;
     suburb?: string;
@@ -168,6 +170,7 @@ export interface SessionInfo {
     userEmail?: string | null;
     userId?: string | null;
     userName?: string | null;
+    userProfileImageUrl?: string | null;
 }
 
 export interface UserMfaSettings {

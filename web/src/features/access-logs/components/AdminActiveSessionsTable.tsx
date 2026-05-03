@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 
 import { authApi, type SessionInfo } from '@features/auth/api';
 import { toErrorMessage } from '@shared/services/http';
+import { Avatar } from '@shared/ui/Avatar';
 import { Button } from '@shared/ui/form/Button';
 import { ActionMenu } from '@shared/ui/overlay/ActionMenu';
 import {
@@ -144,27 +145,42 @@ export function AdminActiveSessionsTable() {
                                 >
                                     <td className="px-5 py-3">
                                         <TableStackCell>
-                                            {session.userId ? (
-                                                <Link
-                                                    className="text-ui-900 font-medium hover:underline"
-                                                    to={`/admin/users/${session.userId}`}
-                                                >
-                                                    {session.userName ??
+                                            <div className="flex items-center gap-3">
+                                                <Avatar
+                                                    imageUrl={
+                                                        session.userProfileImageUrl
+                                                    }
+                                                    name={
+                                                        session.userName ??
                                                         session.userEmail ??
-                                                        'Unknown user'}
-                                                </Link>
-                                            ) : (
-                                                <span className="text-ui-900 font-medium">
-                                                    {session.userName ??
-                                                        session.userEmail ??
-                                                        'Unknown user'}
-                                                </span>
-                                            )}
-                                            {session.userEmail && (
-                                                <span className="text-ui-500 truncate text-xs">
-                                                    {session.userEmail}
-                                                </span>
-                                            )}
+                                                        'Unknown user'
+                                                    }
+                                                    size="sm"
+                                                />
+                                                <div className="grid min-w-0 gap-1">
+                                                    {session.userId ? (
+                                                        <Link
+                                                            className="text-ui-900 truncate font-medium hover:underline"
+                                                            to={`/admin/users/${session.userId}`}
+                                                        >
+                                                            {session.userName ??
+                                                                session.userEmail ??
+                                                                'Unknown user'}
+                                                        </Link>
+                                                    ) : (
+                                                        <span className="text-ui-900 truncate font-medium">
+                                                            {session.userName ??
+                                                                session.userEmail ??
+                                                                'Unknown user'}
+                                                        </span>
+                                                    )}
+                                                    {session.userEmail && (
+                                                        <span className="text-ui-500 truncate text-xs">
+                                                            {session.userEmail}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </TableStackCell>
                                     </td>
                                     <td className="px-5 py-3">

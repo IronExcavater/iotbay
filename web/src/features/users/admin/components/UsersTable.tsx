@@ -8,6 +8,7 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 
 import type { ManagedUser } from '@features/users/api';
+import { Avatar } from '@shared/ui/Avatar';
 import { Button } from '@shared/ui/form/Button';
 import { FormNotice } from '@shared/ui/form/FormNotice';
 import { SearchInput } from '@shared/ui/form/SearchInput';
@@ -145,16 +146,27 @@ export function UsersTable({
                                 >
                                     <td className="px-5 py-3">
                                         <TableStackCell>
-                                            <Link
-                                                className="text-ui-900 font-medium"
-                                                to={`/admin/users/${managedUser.id}`}
-                                            >
-                                                {managedUser.firstName}{' '}
-                                                {managedUser.lastName}
-                                            </Link>
-                                            <span className="text-ui-500 truncate text-xs">
-                                                {managedUser.email}
-                                            </span>
+                                            <div className="flex items-center gap-3">
+                                                <Avatar
+                                                    imageUrl={
+                                                        managedUser.profileImageUrl
+                                                    }
+                                                    name={`${managedUser.firstName} ${managedUser.lastName}`}
+                                                    size="sm"
+                                                />
+                                                <div className="grid min-w-0 gap-1">
+                                                    <Link
+                                                        className="text-ui-900 truncate font-medium"
+                                                        to={`/admin/users/${managedUser.id}`}
+                                                    >
+                                                        {managedUser.firstName}{' '}
+                                                        {managedUser.lastName}
+                                                    </Link>
+                                                    <span className="text-ui-500 truncate text-xs">
+                                                        {managedUser.email}
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </TableStackCell>
                                     </td>
                                     <td className="px-4 py-3">

@@ -11,6 +11,7 @@ import {
     type ProductFieldErrors,
     type ProductFormValues,
 } from '@features/products/form';
+import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { useFormattedInput } from '@shared/hooks/useFormattedInput';
 import { useSearchFilter } from '@shared/hooks/useSearchFilter';
 import { toErrorMessage } from '@shared/services/http';
@@ -19,6 +20,7 @@ import { Money } from '@shared/value-objects/Money';
 import { ProductCode, ProductName } from '@shared/value-objects/ProductText';
 
 export default function AdminProductsPage() {
+    useDocumentTitle('Products');
     const { showToast } = useToast();
     const [products, setProducts] = useState<Product[]>([]);
     const [isLoadingProducts, setIsLoadingProducts] = useState(true);
@@ -209,10 +211,10 @@ export default function AdminProductsPage() {
                 isSubmitting={isSubmitting}
                 nameInput={nameInput}
                 onClose={closeForm}
-                onMediaUrlsChange={(value) => {
+                onMediaUrlsChange={(mediaUrls) => {
                     setFormValues((current) => ({
                         ...current,
-                        mediaUrls: value,
+                        mediaUrls,
                     }));
                 }}
                 onSubmit={handleSubmit}

@@ -105,7 +105,8 @@ class AccessLogRepository(Repository):
                     access_logs.*,
                     users.email AS user_email,
                     users.first_name AS user_first_name,
-                    users.last_name AS user_last_name
+                    users.last_name AS user_last_name,
+                    users.profile_image_url AS user_profile_image_url
                 FROM access_logs
                 JOIN users ON users.user_id = access_logs.user_id
                 {where}

@@ -31,6 +31,7 @@ type ProfileUser = Pick<
     | 'lastName'
     | 'permission'
     | 'phoneNumber'
+    | 'profileImageUrl'
     | 'staffId'
 > &
     Partial<
@@ -57,6 +58,7 @@ export const DEFAULT_PROFILE_VALUES: ProfileValues = {
     permission: '',
     phoneCountry: getBrowserPhoneCountry(),
     phoneNumber: '',
+    profileImageUrl: '',
     staffId: '',
     state: '',
     suburb: '',
@@ -80,6 +82,7 @@ export function toProfileValues(user: ProfileUser): ProfileValues {
         phoneCountry,
         phoneNumber: toEditablePhoneNumber(user.phoneNumber, phoneCountry),
         postcode: user.postcode ?? '',
+        profileImageUrl: user.profileImageUrl ?? '',
         staffId: user.staffId ?? '',
         state: user.state ?? '',
         suburb: user.suburb ?? '',
@@ -108,6 +111,7 @@ export function toProfileUpdateInput(
         permission: '',
         phoneCountry: isCustomer ? values.phoneCountry : '',
         phoneNumber: isCustomer ? values.phoneNumber.trim() : '',
+        profileImageUrl: values.profileImageUrl,
         staffId: isStaff ? values.staffId.trim() : '',
     };
 }
@@ -184,6 +188,7 @@ export function hasProfileChanges(
         'firstName',
         'lastName',
         'postcode',
+        'profileImageUrl',
         'staffId',
         'state',
         'suburb',
