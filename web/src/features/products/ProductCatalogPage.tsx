@@ -12,6 +12,7 @@ import {
     TableHead,
     TableLoadingRow,
     TableMessageRow,
+    TablePrimaryActionRow,
 } from '@shared/ui/table/Table';
 import { Tooltip } from '@shared/ui/Tooltip';
 import { DateTimeValue } from '@shared/value-objects/DateTimeValue';
@@ -180,7 +181,7 @@ function ProductCard({ product }: { product: Product }) {
 
     return (
         <Link
-            className="group border-ui-200 bg-ui-0 hover:border-ui-300 hover:bg-ui-50 grid overflow-hidden rounded border transition-[background-color,border-color]"
+            className="group border-ui-200 bg-ui-0 hover:border-ui-300 hover:bg-ui-50 focus-visible:ring-ui-900 focus-visible:ring-offset-ui-0 grid overflow-hidden rounded border transition-[background-color,border-color,box-shadow] outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
             to={`/products/${product.id}`}
         >
             <div className="bg-ui-100 aspect-4/3 overflow-hidden">
@@ -267,25 +268,20 @@ function ProductList({
                             />
                         ) : (
                             products.map((product) => (
-                                <tr
-                                    className="border-ui-200 hover:bg-ui-50 cursor-pointer border-t align-top"
+                                <TablePrimaryActionRow
                                     key={product.id}
-                                    onClick={() => {
+                                    label={`View ${product.name}`}
+                                    onAction={() => {
                                         onNavigate(`/products/${product.id}`);
                                     }}
                                 >
                                     <td className="text-ui-600 px-5 py-3 font-mono text-xs">
-                                        <Link to={`/products/${product.id}`}>
-                                            {product.code}
-                                        </Link>
+                                        {product.code}
                                     </td>
                                     <td className="px-5 py-3">
-                                        <Link
-                                            className="text-ui-900 font-medium"
-                                            to={`/products/${product.id}`}
-                                        >
+                                        <span className="text-ui-900 font-medium">
                                             {product.name}
-                                        </Link>
+                                        </span>
                                     </td>
                                     <td className="px-5 py-3">
                                         {Money.format(product.priceCents)}
@@ -305,7 +301,7 @@ function ProductList({
                                             </span>
                                         </Tooltip>
                                     </td>
-                                </tr>
+                                </TablePrimaryActionRow>
                             ))
                         )}
                     </tbody>

@@ -10,7 +10,9 @@ import ResetPasswordPage from '@features/auth/pages/ResetPasswordPage';
 import StaffRegistrationPage from '@features/auth/pages/StaffRegistrationPage';
 import VerifyEmailPage from '@features/auth/pages/VerifyEmailPage';
 import { ProtectedRoute } from '@features/auth/ProtectedRoute';
+import CartPage from '@features/cart/CartPage';
 import HomePage from '@features/home/HomePage';
+import TermsPage from '@features/legal/TermsPage';
 import OrdersPage from '@features/orders/OrdersPage';
 import AdminProductsPage from '@features/products/admin/AdminProductsPage';
 import ProductCatalogPage from '@features/products/ProductCatalogPage';
@@ -36,6 +38,14 @@ export const router = createBrowserRouter([
             {
                 path: 'products/:productId',
                 element: <ProductDetailPage />,
+            },
+            {
+                path: 'cart',
+                element: <CartPage />,
+            },
+            {
+                path: 'terms',
+                element: <TermsPage />,
             },
             {
                 element: <ProtectedRoute access="guest" />,

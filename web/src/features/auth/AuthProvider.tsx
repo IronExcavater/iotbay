@@ -100,10 +100,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 return result;
             }
 
+            const savedUser = {
+                ...result,
+                profileImageUrl:
+                    result.profileImageUrl ?? input.profileImageUrl ?? null,
+            };
             // Refresh the in-memory authenticated user with the newly saved
             // registration details returned from the backend.
-            setUser(result);
-            return result;
+            setUser(savedUser);
+            return savedUser;
         },
         user,
     };

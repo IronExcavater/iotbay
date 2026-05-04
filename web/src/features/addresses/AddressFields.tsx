@@ -107,6 +107,7 @@ export function AddressFields({
         Partial<Record<AddressFieldName, HTMLInputElement | null>>
     >({});
     const suggestionsCacheRef = useRef(new Map<string, AddressSuggestion[]>());
+    const initialSuggestionQueryRef = useRef<string | null>(null);
     const browserLocale = useMemo(() => getBrowserAddressLocale(), []);
     const suggestionCountry = countryCode ?? browserLocale.country;
     const suggestionLanguage = browserLocale.language;
@@ -124,6 +125,11 @@ export function AddressFields({
         values[part.field].trim()
     );
     const query = activeField ? buildSuggestionQuery(values) : '';
+    if (initialSuggestionQueryRef.current === null) {
+        initialSuggestionQueryRef.current = buildSuggestionQuery(values);
+    }
+    const isInitialSuggestionQuery =
+        Boolean(query) && query === initialSuggestionQueryRef.current;
 
     useEffect(() => {
         if (hasCollapsedAddressValue) return;
@@ -132,7 +138,7 @@ export function AddressFields({
     }, [hasCollapsedAddressValue]);
 
     useEffect(() => {
-        if (!activeField || query.length < 3) {
+        if (!activeField || query.length < 3 || isInitialSuggestionQuery) {
             setSuggestions([]);
             return;
         }
@@ -178,7 +184,13 @@ export function AddressFields({
             controller.abort();
             window.clearTimeout(timeoutId);
         };
-    }, [activeField, query, suggestionCountry, suggestionLanguage]);
+    }, [
+        activeField,
+        isInitialSuggestionQuery,
+        query,
+        suggestionCountry,
+        suggestionLanguage,
+    ]);
 
     async function handleSuggestionSelect(suggestion: AddressSuggestion) {
         setSuggestions([]);

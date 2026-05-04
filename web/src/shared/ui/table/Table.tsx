@@ -1,4 +1,8 @@
-import { type ComponentPropsWithRef, type ReactNode } from 'react';
+import {
+    type ComponentPropsWithRef,
+    type KeyboardEvent,
+    type ReactNode,
+} from 'react';
 import clsx from 'clsx';
 
 export function Table({
@@ -33,6 +37,41 @@ export function TableActionCell({ children }: { children: ReactNode }) {
                 {children}
             </div>
         </td>
+    );
+}
+
+export function TablePrimaryActionRow({
+    children,
+    className,
+    label,
+    onAction,
+}: {
+    children: ReactNode;
+    className?: string;
+    label: string;
+    onAction: () => void;
+}) {
+    function handleKeyDown(event: KeyboardEvent<HTMLTableRowElement>) {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+
+        event.preventDefault();
+        onAction();
+    }
+
+    return (
+        <tr
+            aria-label={label}
+            className={clsx(
+                'border-ui-200 hover:bg-ui-50 focus-visible:bg-ui-50 focus-visible:ring-ui-900 cursor-pointer border-t align-top transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset',
+                className
+            )}
+            onClick={onAction}
+            onKeyDown={handleKeyDown}
+            role="link"
+            tabIndex={0}
+        >
+            {children}
+        </tr>
     );
 }
 

@@ -49,8 +49,10 @@ export default function SiteFooter() {
                         <h2 className="text-ui-900 font-semibold">Navigate</h2>
                         <TextLink to="/">Home</TextLink>
                         <TextLink to="/products">Catalogue</TextLink>
+                        <TextLink to="/cart">Cart</TextLink>
                         <TextLink to="/orders">Orders</TextLink>
                         <TextLink to="/account">Account</TextLink>
+                        <TextLink to="/terms">Terms</TextLink>
                         {showStaffPortal && (
                             <TextAnchor href={staffPortalHref}>
                                 Staff portal

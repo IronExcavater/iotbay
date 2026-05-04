@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 
 export interface CartItem {
+    code?: string;
+    imageUrl?: string;
     name: string;
     priceCents: number;
     productId: string;
@@ -8,6 +10,7 @@ export interface CartItem {
 
 interface CartContextValue {
     addToCart: (item: CartItem) => void;
+    clearCart: () => void;
     isInCart: (productId: string) => boolean;
     items: CartItem[];
     removeFromCart: (productId: string) => void;
@@ -34,9 +37,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setItems((current) => current.filter((i) => i.productId !== productId));
     }
 
+    function clearCart() {
+        setItems([]);
+    }
+
     return (
         <CartContext.Provider
-            value={{ addToCart, isInCart, items, removeFromCart }}
+            value={{ addToCart, clearCart, isInCart, items, removeFromCart }}
         >
             {children}
         </CartContext.Provider>
