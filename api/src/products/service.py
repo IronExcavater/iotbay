@@ -7,6 +7,12 @@ from src.audit.models import (
 )
 from src.audit.service import AuditService
 from src.common.clock import UtcTime
+from src.common.web import ApiError
+from src.media.repository import (
+    InvalidMediaDataError,
+    MediaRepository,
+    is_data_image_url,
+)
 from src.products.models import Product
 from src.products.repository import ProductRepository
 
@@ -14,6 +20,7 @@ from src.products.repository import ProductRepository
 @dataclass(slots=True, frozen=True)
 class ProductService:
     audit: AuditService
+    media_repository: MediaRepository
     repository: ProductRepository
 
     def list_products(self) -> list[Product]:
@@ -28,10 +35,11 @@ class ProductService:
         name: str,
         price_cents: int,
     ) -> Product:
+        stored_media_urls = self._stored_media_urls(media_urls)
         product = self.repository.insert_product(
             actor_user_id=actor_user_id,
             code=code,
-            media_urls=media_urls,
+            media_urls=stored_media_urls,
             name=name,
             price_cents=price_cents,
         )
@@ -54,10 +62,11 @@ class ProductService:
         product_id: bytes,
     ) -> Product:
         before = self.repository.select_product_by_id(product_id=product_id)
+        stored_media_urls = self._stored_media_urls(media_urls)
         product = self.repository.update_product(
             actor_user_id=actor_user_id,
             code=code,
-            media_urls=media_urls,
+            media_urls=stored_media_urls,
             name=name,
             price_cents=price_cents,
             product_id=product_id,
@@ -70,6 +79,24 @@ class ProductService:
             product=product,
         )
         return product
+
+    def _stored_media_urls(self, values: list[str]) -> list[str]:
+        stored_values: list[str] = []
+        with self.repository.connect() as connection:
+            for value in values:
+                if not is_data_image_url(value):
+                    stored_values.append(value)
+                    continue
+                try:
+                    stored_values.append(
+                        self.media_repository.store_data_url(
+                            connection,
+                            data_url=value,
+                        )
+                    )
+                except InvalidMediaDataError as error:
+                    raise ApiError(str(error), 400, code="MEDIA_INVALID") from error
+        return stored_values
 
     def delete_product(self, *, product_id: bytes) -> None:
         self.repository.delete_product(product_id=product_id)
