@@ -62,6 +62,7 @@ def create_product():
     product = services().products.create_product(
         name=data.name,
         code=data.code,
+        media_urls=data.media_urls,
         price_cents=data.price_cents,
         actor_user_id=current_authenticated_staff_user(
             *PRODUCT_WRITE_PERMISSIONS
@@ -80,6 +81,7 @@ def update_product(product_id: str):
         product_id=_parse_product_id(product_id),
         name=data.name,
         code=data.code,
+        media_urls=data.media_urls,
         price_cents=data.price_cents,
         actor_user_id=current_authenticated_staff_user(
             *PRODUCT_WRITE_PERMISSIONS

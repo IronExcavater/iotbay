@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass, field
 
 from src.common.sqlite_model import (
@@ -47,6 +48,7 @@ class Product(SqliteRowModel, BlobUuidModel, ApiModel):
         *,
         name: str,
         code: str,
+        media_urls: list[str],
         price_cents: int,
         now_iso: str,
     ) -> "Product":
@@ -60,7 +62,7 @@ class Product(SqliteRowModel, BlobUuidModel, ApiModel):
             created_at=now_iso,
             updated_at=now_iso,
             description="",
-            media_urls_json="[]",
+            media_urls_json=json.dumps(normalize_media_urls(media_urls)),
         )
 
     def updated(
@@ -68,6 +70,7 @@ class Product(SqliteRowModel, BlobUuidModel, ApiModel):
         *,
         name: str,
         code: str,
+        media_urls: list[str],
         price_cents: int,
         updated_at: str,
     ) -> "Product":
@@ -79,17 +82,26 @@ class Product(SqliteRowModel, BlobUuidModel, ApiModel):
             created_at=self.created_at,
             updated_at=updated_at,
             description=self.description,
-            media_urls_json=self.media_urls_json,
+            media_urls_json=json.dumps(normalize_media_urls(media_urls)),
         )
 
     @property
     def media_urls(self) -> list[str]:
-        return []
+        try:
+            parsed = json.loads(self.media_urls_json or "[]")
+        except json.JSONDecodeError:
+            return []
+
+        if not isinstance(parsed, list):
+            return []
+
+        return [item for item in parsed if isinstance(item, str) and item.strip()]
 
     def snapshot(self) -> dict[str, object]:
         return {
             "code": self.code,
             "description": self.description,
+            "mediaUrls": self.media_urls,
             "name": self.name,
             "priceCents": self.price_cents,
         }
@@ -105,3 +117,8 @@ def normalize_product_code(value: str) -> str:
 
 def validate_product_price_cents(value: int) -> int:
     return MoneyAmount.validate_domain_cents(value)
+
+
+def normalize_media_urls(value: list[str]) -> list[str]:
+    urls = [item.strip() for item in value if item.strip()][:6]
+    return urls or ["/iotbay_icon_themed.svg"]

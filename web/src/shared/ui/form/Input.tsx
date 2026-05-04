@@ -20,13 +20,18 @@ export const Input = forwardRef<
         inputSize?: InputSize;
     }
 >(function Input(
-    { className, hasError = false, inputSize = 'default', ...props },
+    { className, hasError = false, inputSize = 'default', type, ...props },
     ref
 ) {
     return (
         <input
-            className={clsx(inputStyles(hasError, inputSize), className)}
+            className={clsx(
+                inputStyles(hasError, inputSize),
+                type === 'date' && 'site-date-input',
+                className
+            )}
             ref={ref}
+            type={type}
             {...props}
         />
     );

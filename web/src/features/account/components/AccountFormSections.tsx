@@ -1,8 +1,14 @@
 import clsx from 'clsx';
+import { FaPen, FaXmark } from 'react-icons/fa6';
 
 import type { ProfileValues } from '@features/account/types';
 import { AddressFields } from '@features/addresses/AddressFields';
 import type { AddressFieldName } from '@features/addresses/form';
+import {
+    compressImageToDataUrl,
+    isSupportedImage,
+} from '@shared/services/media';
+import { Avatar } from '@shared/ui/Avatar';
 import { Button } from '@shared/ui/form/Button';
 import { Field } from '@shared/ui/form/Field';
 import { Input } from '@shared/ui/form/Input';
@@ -23,6 +29,7 @@ export function AccountPersonalSection({
     onFirstNameChange,
     onLastNameBlur,
     onLastNameChange,
+    onProfileImageChange,
     values,
 }: {
     fieldErrors: FieldErrors;
@@ -32,13 +39,74 @@ export function AccountPersonalSection({
     onFirstNameChange: (value: string) => void;
     onLastNameBlur: () => void;
     onLastNameChange: (value: string) => void;
+    onProfileImageChange: (value: string) => void;
     values: ProfileValues;
 }) {
+    const fullName = `${values.firstName} ${values.lastName}`.trim();
+
     return (
         <section className="grid gap-4">
             <h3 className="text-ui-700 text-sm font-semibold tracking-[0.08em] uppercase">
                 Personal
             </h3>
+            <div className="grid grid-cols-[auto_1fr] items-center gap-4">
+                <div className="relative inline-flex">
+                    <label className="group focus-within:ring-ui-900 relative inline-flex cursor-pointer rounded-full focus-within:ring-2 focus-within:ring-offset-2 focus-within:outline-none">
+                        <Avatar
+                            imageUrl={values.profileImageUrl}
+                            name={fullName}
+                            size="lg"
+                        />
+                        <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                            <FaPen
+                                aria-hidden="true"
+                                className="size-4 text-white"
+                            />
+                        </span>
+                        <input
+                            accept="image/*"
+                            aria-label="Change profile photo"
+                            className="sr-only"
+                            onChange={(event) => {
+                                const file = event.target.files?.[0];
+                                event.target.value = '';
+                                if (!file || !isSupportedImage(file)) return;
+                                void compressImageToDataUrl(
+                                    file,
+                                    280,
+                                    0.76
+                                ).then(onProfileImageChange);
+                            }}
+                            type="file"
+                        />
+                    </label>
+                    {values.profileImageUrl && (
+                        <button
+                            aria-label="Remove profile photo"
+                            className="bg-ui-0 text-ui-500 absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full shadow-sm transition-[box-shadow,color] outline-none hover:text-red-700 hover:ring-1 hover:ring-red-200 focus-visible:text-red-700 focus-visible:ring-2 focus-visible:ring-red-700"
+                            onClick={() => onProfileImageChange('')}
+                            type="button"
+                        >
+                            <FaXmark aria-hidden="true" className="size-2.5" />
+                        </button>
+                    )}
+                </div>
+
+                <Field error={fieldErrors.email} label="Email" required>
+                    <Input
+                        hasError={Boolean(fieldErrors.email)}
+                        maxLength={Email.MAX_LENGTH}
+                        onBlur={onEmailBlur}
+                        onChange={(event) => {
+                            onEmailChange(event.target.value);
+                        }}
+                        placeholder="jane.doe@email.com"
+                        type="email"
+                        value={values.email}
+                    />
+                </Field>
+            </div>
+
             <div className="grid gap-4 sm:grid-cols-2">
                 <Field
                     error={fieldErrors.firstName}
@@ -70,20 +138,6 @@ export function AccountPersonalSection({
                     />
                 </Field>
             </div>
-
-            <Field error={fieldErrors.email} label="Email" required>
-                <Input
-                    hasError={Boolean(fieldErrors.email)}
-                    maxLength={Email.MAX_LENGTH}
-                    onBlur={onEmailBlur}
-                    onChange={(event) => {
-                        onEmailChange(event.target.value);
-                    }}
-                    placeholder="jane.doe@email.com"
-                    type="email"
-                    value={values.email}
-                />
-            </Field>
         </section>
     );
 }
@@ -104,7 +158,7 @@ export function AccountContactSection({
     values: ProfileValues;
 }) {
     return (
-        <section className="border-ui-200 grid gap-4 border-t pt-6">
+        <section className="grid gap-4">
             <h3 className="text-ui-700 text-sm font-semibold tracking-[0.08em] uppercase">
                 Contact
             </h3>
@@ -140,7 +194,7 @@ export function AccountStaffSection({
     values: ProfileValues;
 }) {
     return (
-        <section className="border-ui-200 grid gap-4 border-t pt-6">
+        <section className="grid gap-4">
             <h3 className="text-ui-700 text-sm font-semibold tracking-[0.08em] uppercase">
                 Staff
             </h3>
@@ -168,10 +222,6 @@ export function AccountStaffSection({
                         value={values.designation}
                     />
                 </Field>
-
-                <Field error={errors.permission} label="Permission">
-                    <Input disabled value={values.permission || 'Admin'} />
-                </Field>
             </div>
         </section>
     );
@@ -185,6 +235,7 @@ export function AccountActionsSection({
     onBlur,
     onChange,
     onSubmitToggle,
+    requiresPassword,
     showPassword,
     value,
 }: {
@@ -195,23 +246,23 @@ export function AccountActionsSection({
     onBlur: () => void;
     onChange: (value: string) => void;
     onSubmitToggle: () => void;
+    requiresPassword: boolean;
     showPassword: boolean;
     value: string;
 }) {
     return (
         <section
             className={clsx(
-                'border-ui-200 border-t pt-6',
-                hasChanges
+                requiresPassword
                     ? 'grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start'
                     : 'flex justify-end'
             )}
         >
-            {hasChanges && (
+            {requiresPassword && (
                 <Field
                     error={error}
                     hint={currentPasswordHint}
-                    label="Password"
+                    label="Your password"
                     metaPlacement="inline"
                     required
                 >
@@ -231,7 +282,7 @@ export function AccountActionsSection({
                 </Field>
             )}
 
-            <div className={clsx(hasChanges && 'sm:pt-6')}>
+            <div className={clsx(requiresPassword && 'sm:pt-6')}>
                 <Button
                     disabled={isSubmitting || !hasChanges}
                     loading={isSubmitting}

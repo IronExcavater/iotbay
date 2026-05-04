@@ -9,7 +9,7 @@ IoTBay is a monorepo with two workspaces:
 
 ### 1. Toolchain
 
-Download [`mise`](https://mise.en.dev) to install the [`Node.js`](https://nodejs.org/en) and [`uv`](https://docs.astral.sh/uv/) versions used by this project.
+Download [mise](https://mise.en.dev) to install the [Node.js](https://nodejs.org/en) and [uv](https://docs.astral.sh/uv/) versions used by this project.
 
 ```bash
 winget install jdx.mise # Windows
@@ -65,6 +65,15 @@ curl -H "x-api-key: change-me-local-api-key" http://localhost:5001/api/health
 
 Use the `IOTBAY_API_KEY` value from your `.env` file.
 
+### Seeded Accounts
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Superadmin staff | `superadmin@iotbay.local` | `Password123!` |
+| Admin staff | `ops.admin@iotbay.local` | `Password123!` |
+| Customer | `jamie.customer@example.com` | `Password123!` |
+| Customer | `casey.customer@example.com` | `Password123!` |
+
 ## Daily Use
 
 After `git pull`, run:
@@ -110,6 +119,37 @@ Use `npm run fix:all` when you want lint and formatting fixes applied.
 
 Pull requests and pushes to `main` run the same checks in GitHub Actions.
 
+## Testing
+
+### Unit tests
+
+Run Python unit tests for isolated checks on services, repositories, and database
+behavior.
+
+```bash
+npm run test:unit
+```
+
+### API Tests
+
+Run Python API tests for backend REST HTTP requests and responses.
+
+```bash
+npm run test:api
+```
+
+### End-to-End Tests
+
+Run Python Selenium tests for frontend layout, navigation, forms, and data
+visibility.
+The Selenium tests run Chrome in headless mode, so no browser window opens by default.
+Selenium requires [Chrome](https://www.google.com/chrome/) to be installed to run
+the E2E tests.
+
+```bash
+npm run test:e2e
+```
+
 ## Database Changes
 
 ### Migrations
@@ -152,21 +192,3 @@ npm run -w api seed:dump
 ```
 
 Review the `api/db/seed.sql` diff before committing it.
-
-## API Testing
-
-Postman can be used to test the API with a GUI: https://www.postman.com/
-
-Create a Postman environment such as `IOTBay Local` with:
-
-```text
-baseUrl = http://localhost:5001
-```
-
-Then build requests with `{{baseUrl}}/api/...`, for example:
-
-```text
-GET {{baseUrl}}/api/health
-```
-# IntroToDev
-# IntroToDev

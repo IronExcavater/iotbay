@@ -18,6 +18,7 @@ import {
     canChangeManagedUserStatus,
     canEditManagedUser,
 } from '@features/users/permissions';
+import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { useManagedUsers } from '@shared/hooks/useManagedUsers';
 import { useSearchFilter } from '@shared/hooks/useSearchFilter';
 import { toErrorMessage } from '@shared/services/http';
@@ -25,6 +26,7 @@ import { ButtonLink } from '@shared/ui/form/Button';
 import { useToast } from '@shared/ui/toast/ToastProvider';
 
 export default function AdminUsersPage() {
+    useDocumentTitle('Users');
     const { user } = useAuth();
     const { showToast } = useToast();
     const { isLoadingUsers, loadUsers, replaceUser, users, usersError } =

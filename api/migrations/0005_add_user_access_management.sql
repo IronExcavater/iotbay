@@ -103,6 +103,3 @@ ON audit_events (actor_user_id, occurred_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_audit_events_occurred_at
 ON audit_events (occurred_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_audit_events_source
-ON audit_events (source_audit_event_id);

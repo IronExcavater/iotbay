@@ -18,6 +18,7 @@ export interface User {
     postcode?: string | null;
     permission?: string | null;
     phoneNumber?: string | null;
+    profileImageUrl?: string | null;
     staffId?: string | null;
     state?: string | null;
     suburb?: string | null;
@@ -111,6 +112,7 @@ export interface UpdateProfileInput {
     permission?: string;
     phoneCountry?: string;
     phoneNumber?: string;
+    profileImageUrl?: string;
     staffId?: string;
     state?: string;
     suburb?: string;
@@ -165,6 +167,10 @@ export interface SessionInfo {
     latestUserAgent?: string | null;
     mfaVerifiedAt?: string | null;
     trustedExpiresAt?: string | null;
+    userEmail?: string | null;
+    userId?: string | null;
+    userName?: string | null;
+    userProfileImageUrl?: string | null;
 }
 
 export interface UserMfaSettings {
@@ -299,12 +305,27 @@ export const authApi = {
             .items;
     },
 
+    async listAdminSessions(signal?: AbortSignal): Promise<SessionInfo[]> {
+        return (await getJson<SessionsResponse>('/api/admin/sessions', signal))
+            .items;
+    },
+
     revokeSession(
         sessionId: string,
         signal?: AbortSignal
     ): Promise<{ ok: boolean }> {
         return deleteJsonResponse<{ ok: boolean }>(
             `/api/me/sessions/${sessionId}`,
+            signal
+        );
+    },
+
+    revokeAdminSession(
+        sessionId: string,
+        signal?: AbortSignal
+    ): Promise<{ ok: boolean }> {
+        return deleteJsonResponse<{ ok: boolean }>(
+            `/api/admin/sessions/${sessionId}`,
             signal
         );
     },

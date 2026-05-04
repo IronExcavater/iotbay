@@ -324,11 +324,34 @@ def list_sessions() -> ResponseReturnValue:
     return {"items": [session.to_dict() for session in sessions]}, HTTPStatus.OK
 
 
+@auth_bp.get("/admin/sessions")
+@staff_permission_required(STAFF_PERMISSION_SUPERADMIN)
+def list_admin_sessions() -> ResponseReturnValue:
+    current_authenticated_staff_user(STAFF_PERMISSION_SUPERADMIN)
+    sessions = services().auth.list_admin_sessions(
+        current_session_token=request_session_token(),
+    )
+    return {"items": [session.to_dict() for session in sessions]}, HTTPStatus.OK
+
+
 @auth_bp.delete("/me/sessions/<string:session_id>")
 @login_required
 def revoke_session(session_id: str) -> ResponseReturnValue:
     services().auth.revoke_session(
         actor=current_authenticated_user(),
+        current_session_token=request_session_token(),
+        ip_address=_client_ip(),
+        session_id=_parse_session_id(session_id),
+        user_agent=_user_agent(),
+    )
+    return {"ok": True}, HTTPStatus.OK
+
+
+@auth_bp.delete("/admin/sessions/<string:session_id>")
+@staff_permission_required(STAFF_PERMISSION_SUPERADMIN)
+def admin_revoke_session(session_id: str) -> ResponseReturnValue:
+    services().auth.admin_revoke_session(
+        actor=current_authenticated_staff_user(STAFF_PERMISSION_SUPERADMIN),
         current_session_token=request_session_token(),
         ip_address=_client_ip(),
         session_id=_parse_session_id(session_id),

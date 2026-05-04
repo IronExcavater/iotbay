@@ -86,6 +86,9 @@ class AuthRouteTestCase(AppTestCase):
             "alex.customer@example.com",
         )
         self.assertTrue(payload["download"]["filename"].endswith(".html"))
+        self.assertIn("<style>", payload["download"]["html"])
+        self.assertIn(".action-link", payload["download"]["html"])
+        self.assertNotIn("styles.css", payload["download"]["html"])
         self.assertEqual(self.client.get("/api/me").status_code, 401)
 
     def test_register_rejects_unsafe_passwords(self) -> None:
@@ -385,6 +388,50 @@ class AuthRouteTestCase(AppTestCase):
             user_type="customer",
         )
         self.assertEqual(response.get_json()["user"]["phoneNumber"], "+61412345678")
+
+    def test_update_me_saves_profile_image_without_current_password(self) -> None:
+        session = create_test_session(self.client)
+        image_url = "data:image/png;base64,aW90YmF5"
+
+        response = self.client.patch(
+            "/api/me",
+            json={
+                "email": session.email,
+                "firstName": "Alex",
+                "lastName": "Nguyen",
+                "profileImageUrl": image_url,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["user"]["profileImageUrl"], image_url)
+
+        repository = extension_from(
+            self.client.application,
+            "user_repository",
+            UserRepository,
+        )
+        saved_user = repository.select_user_by_id(user_id=session.user.user_id)
+        self.assertIsNotNone(saved_user)
+        assert saved_user is not None
+        self.assertEqual(saved_user.profile_image_url, image_url)
+
+    def test_update_me_preserves_superadmin_permission(self) -> None:
+        session = create_superadmin_test_session(self.client)
+
+        response = self.client.patch(
+            "/api/me",
+            json={
+                "email": session.email,
+                "firstName": "Sam",
+                "lastName": "Rivera",
+                "staffId": "STF-900",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["user"]["permission"], "superadmin")
+        self.assertEqual(self.client.get("/api/admin/users").status_code, 200)
 
     def test_update_me_email_change_requires_current_password_and_reverification(
         self,

@@ -25,6 +25,7 @@ from src.users.models import (
     PERMISSION_VALIDATOR,
     PHONE_COUNTRY_VALIDATOR,
     PHONE_NUMBER_VALIDATOR,
+    PROFILE_IMAGE_URL_VALIDATOR,
     STAFF_ID_VALIDATOR,
     USER_STATUS_VALIDATOR,
     USER_TYPE_VALIDATOR,
@@ -149,6 +150,10 @@ PermissionValue = Annotated[
     str,
     AfterValidator(_optional_request_validator(PERMISSION_VALIDATOR)),
 ]
+ProfileImageUrlValue = Annotated[
+    str,
+    AfterValidator(_optional_request_validator(PROFILE_IMAGE_URL_VALIDATOR)),
+]
 
 
 class AuthRequest(BaseModel):
@@ -216,6 +221,7 @@ class ChangePendingEmailRequest(AuthRequest):
 class UpdateProfileRequest(ProfileRequest):
     email: EmailValue
     current_password: CurrentPasswordValue = ""
+    profile_image_url: ProfileImageUrlValue = ""
     staff_id: StaffIdValue = ""
     designation: DesignationValue = ""
     permission: PermissionValue = ""
@@ -232,6 +238,7 @@ class AdminUpdateUserRequest(AuthRequest):
     email: EmailValue
     first_name: FirstNameValue
     last_name: LastNameValue
+    profile_image_url: ProfileImageUrlValue = ""
     staff_id: StaffIdValue = ""
     designation: DesignationValue = ""
     permission: PermissionValue = ""

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 
 import { authApi, type User } from '@features/auth/api';
 import { PasswordRuleList } from '@features/auth/PasswordRuleList';
+import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { normalizeMessage, toErrorMessage } from '@shared/services/http';
 import { Button } from '@shared/ui/form/Button';
 import { Field } from '@shared/ui/form/Field';
@@ -36,6 +37,7 @@ const DEFAULT_VALUES: StaffRegistrationValues = {
 };
 
 export default function StaffRegistrationPage() {
+    useDocumentTitle('Staff registration');
     const [searchParams] = useSearchParams();
     const { showToast } = useToast();
     const [invitation, setInvitation] = useState<User | null>(null);

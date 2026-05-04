@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { authApi } from '@features/auth/api';
 import { useAuth } from '@features/auth/AuthProvider';
 import { manageablePermissionOptions } from '@features/users/permissions';
+import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { downloadHtmlAndNotify } from '@shared/services/download';
 import { toErrorMessage } from '@shared/services/http';
 import { Button } from '@shared/ui/form/Button';
@@ -38,6 +39,7 @@ const DEFAULT_VALUES: InviteStaffValues = {
 };
 
 export default function InviteStaffPage() {
+    useDocumentTitle('Invite staff');
     const navigate = useNavigate();
     const { user } = useAuth();
     const { showToast } = useToast();

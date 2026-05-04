@@ -43,7 +43,7 @@ export default function AdminLayout() {
     ];
 
     return (
-        <section className="min-h-[calc(100vh-73px)] md:flex md:items-start">
+        <section className="min-h-full md:flex md:items-start">
             <div className="bg-ui-0 border-ui-200 border-b px-4 sm:px-6 md:hidden">
                 <nav className="-mb-px flex overflow-x-auto">
                     {navItems.map((item) => {
@@ -75,7 +75,7 @@ export default function AdminLayout() {
 
             <aside
                 className={clsx(
-                    'bg-ui-0 border-ui-200 hidden overflow-hidden border-b transition-[width] duration-200 ease-out md:sticky md:top-18.25 md:block md:h-[calc(100dvh-73px)] md:shrink-0 md:self-start md:border-r md:border-b-0',
+                    'bg-ui-0 border-ui-200 hidden overflow-hidden border-b transition-[width] duration-200 ease-out md:sticky md:top-0 md:block md:h-[calc(100dvh-73px)] md:shrink-0 md:self-start md:border-r md:border-b-0',
                     isCollapsed ? 'md:w-14' : 'md:w-56'
                 )}
             >
