@@ -527,29 +527,25 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
                     )}
 
                     {isSignUp && (
-                        <label className="text-ui-700 flex items-start gap-2 pt-1 text-sm">
-                            <input
-                                checked={acceptedTerms}
-                                className="accent-ui-900 mt-0.5"
-                                onChange={(event) => {
-                                    setAcceptedTerms(event.target.checked);
-                                    setTermsError(null);
-                                }}
-                                type="checkbox"
-                            />
-                            <span>
-                                I agree to the{' '}
-                                <TextLink to="/terms">
-                                    terms and conditions
-                                </TextLink>
-                                .
-                                {termsError && (
-                                    <span className="mt-1 block text-red-700">
-                                        {termsError}
-                                    </span>
-                                )}
-                            </span>
-                        </label>
+                        <Checkbox
+                            checked={acceptedTerms}
+                            className="items-start pt-1"
+                            onChange={(checked) => {
+                                setAcceptedTerms(checked);
+                                setTermsError(null);
+                            }}
+                        >
+                            I agree to the{' '}
+                            <TextLink to="/terms">
+                                terms and conditions
+                            </TextLink>
+                            .
+                            {termsError && (
+                                <span className="mt-1 block text-red-700">
+                                    {termsError}
+                                </span>
+                            )}
+                        </Checkbox>
                     )}
 
                     <div className="grid gap-1.5 pt-1">

@@ -19,20 +19,22 @@ export function Checkbox({
     onChange,
 }: CheckboxProps) {
     return (
-        <button
-            aria-checked={checked}
+        <label
             className={clsx(
                 'group text-ui-700 inline-flex items-center gap-2 text-left text-sm outline-none',
                 disabled ? 'text-ui-400 cursor-not-allowed' : 'cursor-pointer',
                 className
             )}
-            disabled={disabled}
-            onClick={() => {
-                onChange(!checked);
-            }}
-            role="checkbox"
-            type="button"
         >
+            <input
+                checked={checked}
+                className="peer sr-only"
+                disabled={disabled}
+                onChange={(event) => {
+                    onChange(event.target.checked);
+                }}
+                type="checkbox"
+            />
             <span
                 className={clsx(
                     'inline-flex size-4 shrink-0 items-center justify-center rounded border transition-[background-color,border-color,color,box-shadow]',
@@ -40,12 +42,12 @@ export function Checkbox({
                         ? 'border-ui-900 bg-ui-900 text-ui-0'
                         : 'border-ui-300 bg-ui-0 text-transparent',
                     !disabled &&
-                        'group-focus-visible:ring-ui-900 group-focus-visible:ring-2 group-focus-visible:ring-offset-2'
+                        'peer-focus-visible:ring-ui-900 peer-focus-visible:ring-2 peer-focus-visible:ring-offset-2'
                 )}
             >
                 <FaCheck aria-hidden="true" className="size-2.5" />
             </span>
             <span>{children}</span>
-        </button>
+        </label>
     );
 }

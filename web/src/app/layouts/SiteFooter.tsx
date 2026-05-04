@@ -43,11 +43,11 @@ export default function SiteFooter() {
 
     return (
         <footer className="bg-ui-0 border-ui-200 border-t">
-            <div className="text-ui-600 mx-auto grid w-full max-w-6xl gap-x-8 gap-y-5 px-4 py-5 text-sm sm:w-fit sm:grid-cols-[auto_auto_auto] sm:px-6">
+            <div className="text-ui-600 mx-auto grid w-full max-w-6xl gap-y-8 px-4 py-8 text-sm sm:grid-cols-[auto_auto_auto] sm:gap-x-20 sm:px-6 lg:gap-x-28">
                 <section>
                     <div className="grid gap-2 text-left">
                         <h2 className="text-ui-900 font-semibold">Navigate</h2>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-flow-col sm:grid-rows-3 sm:gap-x-5">
+                        <div className="grid grid-cols-2 gap-x-5 gap-y-1.5 sm:grid-flow-col sm:grid-rows-4 sm:gap-x-6">
                             <TextLink to="/">Home</TextLink>
                             <TextLink to="/products">Catalogue</TextLink>
                             <TextLink to="/cart">Cart</TextLink>

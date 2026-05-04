@@ -6,7 +6,7 @@ export default function OrdersPage() {
     return (
         <section className="grid gap-6">
             <PageHeader
-                description="Order history and delivery tracking."
+                description="Orders placed from this account will appear here."
                 title="Orders"
             />
         </section>
