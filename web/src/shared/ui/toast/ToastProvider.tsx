@@ -53,10 +53,9 @@ export function ToastProvider({ children }: PropsWithChildren) {
             <div className="pointer-events-none fixed bottom-4 left-4 z-50 flex max-w-sm flex-col gap-2">
                 {toasts.map((toast) => (
                     <ToastItem
+                        id={toast.id}
                         key={toast.id}
-                        onDismiss={() => {
-                            dismissToast(toast.id);
-                        }}
+                        onDismiss={dismissToast}
                     >
                         {toast.message}
                     </ToastItem>
@@ -72,9 +71,11 @@ export function useToast() {
 
 function ToastItem({
     children,
+    id,
     onDismiss,
 }: PropsWithChildren<{
-    onDismiss: () => void;
+    id: number;
+    onDismiss: (id: number) => void;
 }>) {
     const [isVisible, setIsVisible] = useState(false);
     const [isLeaving, setIsLeaving] = useState(false);
@@ -89,15 +90,15 @@ function ToastItem({
     useEffect(() => {
         const timeout = window.setTimeout(() => {
             setIsLeaving(true);
-            window.setTimeout(onDismiss, 200);
+            window.setTimeout(() => onDismiss(id), 200);
         }, 5000);
 
         return () => window.clearTimeout(timeout);
-    }, [onDismiss]);
+    }, [id, onDismiss]);
 
     function handleDismiss() {
         setIsLeaving(true);
-        window.setTimeout(onDismiss, 200);
+        window.setTimeout(() => onDismiss(id), 200);
     }
 
     return (
@@ -113,7 +114,7 @@ function ToastItem({
             <p className="min-w-0 flex-1 text-sm">{children}</p>
             <button
                 aria-label="Dismiss notification"
-                className="text-ui-300 hover:text-ui-0 cursor-pointer transition-colors"
+                className="text-ui-300 hover:text-ui-0 focus-visible:ring-ui-700 cursor-pointer transition-colors outline-none focus-visible:ring-2"
                 onClick={handleDismiss}
                 type="button"
             >

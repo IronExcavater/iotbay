@@ -1,4 +1,8 @@
-import { type ComponentPropsWithRef, type ReactNode } from 'react';
+import {
+    type ComponentPropsWithRef,
+    type KeyboardEvent,
+    type ReactNode,
+} from 'react';
 import clsx from 'clsx';
 
 export function Table({
@@ -24,7 +28,7 @@ export function TableHead({ children }: { children: ReactNode }) {
     );
 }
 
-// Wraps both the action <td> and its inner alignment div — the two always
+// Wraps both the action <td> and its inner alignment div; the two always
 // appear together, so combining them removes a layer of boilerplate.
 export function TableActionCell({ children }: { children: ReactNode }) {
     return (
@@ -33,6 +37,41 @@ export function TableActionCell({ children }: { children: ReactNode }) {
                 {children}
             </div>
         </td>
+    );
+}
+
+export function TablePrimaryActionRow({
+    children,
+    className,
+    label,
+    onAction,
+}: {
+    children: ReactNode;
+    className?: string;
+    label: string;
+    onAction: () => void;
+}) {
+    function handleKeyDown(event: KeyboardEvent<HTMLTableRowElement>) {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+
+        event.preventDefault();
+        onAction();
+    }
+
+    return (
+        <tr
+            aria-label={label}
+            className={clsx(
+                'border-ui-200 hover:bg-ui-50 focus-visible:bg-ui-50 cursor-pointer border-t align-top transition-[background-color,box-shadow] outline-none focus-visible:[box-shadow:inset_0_0_0_2px_var(--ui-900)]',
+                className
+            )}
+            onClick={onAction}
+            onKeyDown={handleKeyDown}
+            role="link"
+            tabIndex={0}
+        >
+            {children}
+        </tr>
     );
 }
 

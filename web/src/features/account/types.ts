@@ -13,6 +13,7 @@ export interface ProfileValues {
     permission: string;
     phoneCountry: CountryCode;
     phoneNumber: string;
+    profileImageUrl: string;
     staffId: string;
     state: string;
     suburb: string;

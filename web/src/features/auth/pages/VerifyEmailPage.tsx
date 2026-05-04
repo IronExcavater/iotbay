@@ -7,6 +7,7 @@ import {
     normalizeNextPath,
     resolvePostAuthPath,
 } from '@features/auth/redirects';
+import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { downloadHtmlAndNotify } from '@shared/services/download';
 import {
     BackendError,
@@ -31,6 +32,7 @@ type VerificationScreen = 'error' | 'pending' | 'verifying';
 type VerificationFieldName = 'email' | 'password';
 
 export default function VerifyEmailPage() {
+    useDocumentTitle('Verify email');
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { showToast } = useToast();

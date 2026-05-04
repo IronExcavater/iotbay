@@ -130,6 +130,7 @@ export function PhoneField({
                             setIsCountryMenuOpen(false);
                         }}
                         open={isCountryMenuOpen}
+                        zIndex={60}
                     >
                         <MenuPanel className="w-72">
                             <div className="bg-ui-0 sticky top-0 z-10">

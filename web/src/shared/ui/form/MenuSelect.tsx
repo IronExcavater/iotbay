@@ -17,6 +17,7 @@ export interface MenuSelectOption {
 interface MenuSelectProps {
     error?: string;
     label: ReactNode;
+    labelHidden?: boolean;
     onChange: (value: string) => void;
     options: MenuSelectOption[];
     placeholder?: string;
@@ -28,6 +29,7 @@ interface MenuSelectProps {
 export function MenuSelect({
     error,
     label,
+    labelHidden = false,
     onChange,
     options,
     placeholder = 'Select option',
@@ -60,90 +62,101 @@ export function MenuSelect({
         }
     }, [isOpen, searchable]);
 
-    return (
-        <Field error={error} label={label} required={required}>
-            <div className="relative" ref={rootRef}>
-                <button
+    const control = (
+        <div className="relative" ref={rootRef}>
+            <button
+                aria-label={
+                    labelHidden && typeof label === 'string' ? label : undefined
+                }
+                className={clsx(
+                    'bg-ui-0 hover:bg-ui-50 h-10 w-full rounded border-0 px-3 ring-1 transition-[background-color,box-shadow,color] outline-none',
+                    error
+                        ? 'ring-red-500 focus:ring-2 focus:ring-red-500'
+                        : 'ring-ui-300 focus:ring-ui-900 focus:ring-2',
+                    'flex cursor-pointer items-center justify-between gap-3 text-left'
+                )}
+                onClick={() => {
+                    setIsOpen((current) => !current);
+                }}
+                type="button"
+            >
+                <span
                     className={clsx(
-                        'h-10 w-full rounded border-0 px-3 ring-1 transition-[background-color,box-shadow,color] outline-none',
-                        error
-                            ? 'ring-red-500 focus:ring-2 focus:ring-red-500'
-                            : 'ring-ui-300 focus:ring-ui-900 focus:ring-2',
-                        'flex cursor-pointer items-center justify-between gap-3 text-left'
+                        'truncate text-sm',
+                        selectedOption ? 'text-ui-900' : 'text-ui-500'
                     )}
-                    onClick={() => {
-                        setIsOpen((current) => !current);
-                    }}
-                    type="button"
                 >
-                    <span
-                        className={clsx(
-                            'truncate text-sm',
-                            selectedOption ? 'text-ui-900' : 'text-ui-500'
-                        )}
-                    >
-                        {selectedOption?.label ?? placeholder}
-                    </span>
+                    {selectedOption?.label ?? placeholder}
+                </span>
 
-                    <DropdownChevron className="shrink-0" isOpen={isOpen} />
-                </button>
+                <DropdownChevron className="shrink-0" isOpen={isOpen} />
+            </button>
 
-                <AnchoredPopover
-                    anchorRef={rootRef}
-                    matchAnchorWidth
-                    onClose={() => {
-                        setIsOpen(false);
-                    }}
-                    open={isOpen}
-                >
-                    <MenuPanel>
-                        {searchable && (
-                            <div>
-                                <DropdownSearchInput
-                                    inputRef={searchInputRef}
-                                    onChange={setSearch}
-                                    placeholder="Search options"
-                                    value={search}
-                                />
+            <AnchoredPopover
+                anchorRef={rootRef}
+                matchAnchorWidth
+                onClose={() => {
+                    setIsOpen(false);
+                }}
+                open={isOpen}
+            >
+                <MenuPanel>
+                    {searchable && (
+                        <div>
+                            <DropdownSearchInput
+                                inputRef={searchInputRef}
+                                onChange={setSearch}
+                                placeholder="Search options"
+                                value={search}
+                            />
+                        </div>
+                    )}
+
+                    <div className="max-h-64 overflow-y-auto" tabIndex={-1}>
+                        {filteredOptions.map((option) => (
+                            <button
+                                className={clsx(
+                                    'text-ui-700 hover:bg-ui-100 hover:text-ui-900 focus-visible:ring-ui-900 flex w-full cursor-pointer items-start justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition outline-none focus-visible:ring-2 focus-visible:ring-inset',
+                                    option.value === value && 'bg-ui-50'
+                                )}
+                                key={option.value}
+                                onClick={() => {
+                                    setIsOpen(false);
+                                    onChange(option.value);
+                                }}
+                                type="button"
+                            >
+                                <span className="grid gap-0.5">
+                                    <span className="text-ui-900">
+                                        {option.label}
+                                    </span>
+                                    {option.description && (
+                                        <span className="text-ui-500">
+                                            {option.description}
+                                        </span>
+                                    )}
+                                </span>
+                            </button>
+                        ))}
+
+                        {filteredOptions.length === 0 && (
+                            <div className="text-ui-500 px-3 py-2 text-sm">
+                                No matches
                             </div>
                         )}
+                    </div>
+                </MenuPanel>
+            </AnchoredPopover>
+        </div>
+    );
 
-                        <div className="max-h-64 overflow-y-auto" tabIndex={-1}>
-                            {filteredOptions.map((option) => (
-                                <button
-                                    className={clsx(
-                                        'text-ui-700 hover:bg-ui-100 hover:text-ui-900 focus-visible:ring-ui-900 flex w-full cursor-pointer items-start justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition outline-none focus-visible:ring-2 focus-visible:ring-inset',
-                                        option.value === value && 'bg-ui-50'
-                                    )}
-                                    key={option.value}
-                                    onClick={() => {
-                                        setIsOpen(false);
-                                        onChange(option.value);
-                                    }}
-                                    type="button"
-                                >
-                                    <span className="grid gap-0.5">
-                                        <span className="text-ui-900">
-                                            {option.label}
-                                        </span>
-                                        {option.description && (
-                                            <span className="text-ui-500">
-                                                {option.description}
-                                            </span>
-                                        )}
-                                    </span>
-                                </button>
-                            ))}
+    if (labelHidden) {
+        return control;
+    }
 
-                            {filteredOptions.length === 0 && (
-                                <div className="text-ui-500 px-3 py-2 text-sm">
-                                    No matches
-                                </div>
-                            )}
-                        </div>
-                    </MenuPanel>
-                </AnchoredPopover>
-            </div>
+    return (
+        <Field error={error} label={label} required={required}>
+            {control}
         </Field>
     );
 }

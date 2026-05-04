@@ -5,7 +5,13 @@
       "name": "Dev",
       "type": "node-terminal",
       "request": "launch",
-      "command": "npm run dev",
+      "command": "npm run dev"
+    },
+    {
+      "name": "E2E Tests",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run test:e2e"
     },
     {
       "name": "Browser",

@@ -1,16 +1,33 @@
 <!doctype html>
 <html lang="en">
-<head>
-    <meta charset="utf-8">
-    <style>$inline_styles</style>
-</head>
-<body>
-    <main class="email-shell">
-        <p>Hello,</p>
-        <p>Use this code to finish signing in to your IOTBay account:</p>
-        <p class="email-token">$code</p>
-        <p>This code expires $formatted_expires_at.</p>
-        <p>If you did not try to sign in, you can ignore this email.</p>
-    </main>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Your IoTBay sign in code</title>
+    <style>
+      $inline_styles
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="card">
+        <div class="header">
+          <p class="brand">IoTBay</p>
+          <h1 class="title">Sign in code</h1>
+        </div>
+        <div class="content">
+          <p class="copy">
+            Use this code to finish signing in to <strong>$email</strong>.
+          </p>
+          <p class="email-token">$code</p>
+          <p class="note">
+            This code expires <strong>$formatted_expires_at</strong>.
+          </p>
+          <p class="footer">
+            If you did not try to sign in, you can ignore this email.
+          </p>
+        </div>
+      </div>
+    </div>
+  </body>
 </html>

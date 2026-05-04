@@ -59,6 +59,7 @@ body,
 
 body {
     margin: 0;
+    overflow: hidden;
     background: var(--ui-0);
     color: var(--ui-900);
     font-feature-settings:
