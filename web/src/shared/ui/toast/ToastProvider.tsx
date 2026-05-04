@@ -113,7 +113,7 @@ function ToastItem({
             <p className="min-w-0 flex-1 text-sm">{children}</p>
             <button
                 aria-label="Dismiss notification"
-                className="text-ui-300 hover:text-ui-0 cursor-pointer transition-colors"
+                className="text-ui-300 hover:text-ui-0 focus-visible:ring-ui-700 cursor-pointer transition-colors outline-none focus-visible:ring-2"
                 onClick={handleDismiss}
                 type="button"
             >

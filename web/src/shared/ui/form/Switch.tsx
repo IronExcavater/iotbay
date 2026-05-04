@@ -21,7 +21,8 @@ export function Switch({
             aria-checked={checked}
             aria-label={label}
             className={clsx(
-                'relative inline-flex h-6 w-10 shrink-0 items-center rounded-full border-2 border-transparent transition-colors outline-none',
+                'relative inline-flex h-6 w-10 shrink-0 items-center rounded-full border-2 border-transparent outline-none',
+                hasInteracted && 'transition-colors',
                 checked ? 'bg-ui-900' : 'bg-ui-300',
                 disabled
                     ? 'cursor-not-allowed opacity-50'
