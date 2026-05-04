@@ -5,8 +5,9 @@ import {
     FaPenToSquare,
     FaPowerOff,
 } from 'react-icons/fa6';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
+import { formatStoredPhoneNumber } from '@features/auth/phone';
 import type { ManagedUser } from '@features/users/api';
 import { Avatar } from '@shared/ui/Avatar';
 import { Button } from '@shared/ui/form/Button';
@@ -19,6 +20,7 @@ import {
     TableHead,
     TableLoadingRow,
     TableMessageRow,
+    TablePrimaryActionRow,
     TableSingleLineCell,
     TableStackCell,
 } from '@shared/ui/table/Table';
@@ -135,10 +137,10 @@ export function UsersTable({
                             />
                         ) : (
                             filteredUsers.map((managedUser) => (
-                                <tr
-                                    className="border-ui-200 hover:bg-ui-50 cursor-pointer border-t align-top"
+                                <TablePrimaryActionRow
                                     key={managedUser.id}
-                                    onClick={() => {
+                                    label={`View ${managedUser.firstName} ${managedUser.lastName}`}
+                                    onAction={() => {
                                         navigate(
                                             `/admin/users/${managedUser.id}`
                                         );
@@ -155,13 +157,10 @@ export function UsersTable({
                                                     size="sm"
                                                 />
                                                 <div className="grid min-w-0 gap-1">
-                                                    <Link
-                                                        className="text-ui-900 truncate font-medium"
-                                                        to={`/admin/users/${managedUser.id}`}
-                                                    >
+                                                    <span className="text-ui-900 truncate font-medium">
                                                         {managedUser.firstName}{' '}
                                                         {managedUser.lastName}
-                                                    </Link>
+                                                    </span>
                                                     <span className="text-ui-500 truncate text-xs">
                                                         {managedUser.email}
                                                     </span>
@@ -204,7 +203,9 @@ export function UsersTable({
                                             )}
                                             {managedUser.phoneNumber && (
                                                 <span className="truncate">
-                                                    {managedUser.phoneNumber}
+                                                    {formatStoredPhoneNumber(
+                                                        managedUser.phoneNumber
+                                                    )}
                                                 </span>
                                             )}
                                             {managedUser.addressLabel ? (
@@ -273,7 +274,7 @@ export function UsersTable({
                                             />
                                         </div>
                                     </TableActionCell>
-                                </tr>
+                                </TablePrimaryActionRow>
                             ))
                         )}
                     </tbody>

@@ -83,6 +83,8 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
     const [mfaCode, setMfaCode] = useState('');
     const [mfaCodeError, setMfaCodeError] = useState<string | null>(null);
     const [trustBrowser, setTrustBrowser] = useState(false);
+    const [acceptedTerms, setAcceptedTerms] = useState(false);
+    const [termsError, setTermsError] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -152,6 +154,8 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
         setMfaCode('');
         setMfaCodeError(null);
         setTrustBrowser(false);
+        setAcceptedTerms(false);
+        setTermsError(null);
         setShowPassword(false);
         setShowConfirmPassword(false);
     }
@@ -292,11 +296,19 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
 
     async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
         event.preventDefault();
+        if (isSignUp && !acceptedTerms) {
+            setTermsError(
+                'Accept the terms and conditions to create an account'
+            );
+        }
 
         const nextFieldErrors = validateCurrentForm();
         setFieldErrors(nextFieldErrors);
 
-        if (Object.values(nextFieldErrors).some(Boolean)) {
+        if (
+            Object.values(nextFieldErrors).some(Boolean) ||
+            (isSignUp && !acceptedTerms)
+        ) {
             return;
         }
         setIsSubmitting(true);
@@ -521,9 +533,37 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
                         </Field>
                     )}
 
+                    {isSignUp && (
+                        <label className="text-ui-700 flex items-start gap-2 pt-1 text-sm">
+                            <input
+                                checked={acceptedTerms}
+                                className="accent-ui-900 mt-0.5"
+                                onChange={(event) => {
+                                    setAcceptedTerms(event.target.checked);
+                                    setTermsError(null);
+                                }}
+                                type="checkbox"
+                            />
+                            <span>
+                                I agree to the{' '}
+                                <TextLink to="/terms">
+                                    terms and conditions
+                                </TextLink>
+                                .
+                                {termsError && (
+                                    <span className="mt-1 block text-red-700">
+                                        {termsError}
+                                    </span>
+                                )}
+                            </span>
+                        </label>
+                    )}
+
                     <div className="grid gap-1.5 pt-1">
                         <Button
-                            disabled={isSubmitting}
+                            disabled={
+                                isSubmitting || (isSignUp && !acceptedTerms)
+                            }
                             loading={isSubmitting}
                             type="submit"
                             variant="primary"

@@ -189,99 +189,104 @@ export default function ProductDetailPage({
         <section className="grid gap-8">
             {pageError && <p className="text-sm text-red-700">{pageError}</p>}
 
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <Button
-                    className="gap-2"
-                    onClick={() =>
-                        navigate(admin ? '/admin/products' : '/products')
-                    }
-                    type="button"
-                    variant="link"
-                >
-                    <FaArrowLeft aria-hidden="true" className="size-3" />
-                    Back to {admin ? 'products' : 'catalogue'}
-                </Button>
-            </div>
-
-            <section className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
-                <MediaCarousel
-                    media={media}
-                    productName={product.name}
-                    selectedIndex={selectedMediaIndex}
-                    onSelect={setSelectedMediaIndex}
-                />
-
-                <div className="grid content-start gap-5">
-                    <div className="grid gap-1.5">
-                        <p className="text-ui-500 font-mono text-sm">
-                            {product.code}
-                        </p>
-                        <div className="flex min-w-0 items-center gap-2">
-                            <h1 className="text-ui-900 truncate text-3xl font-semibold tracking-tight">
-                                {product.name}
-                            </h1>
-                            {admin && (
-                                <Button
-                                    aria-label="Edit product"
-                                    className="inline-flex size-8 shrink-0 rounded-full p-0"
-                                    onClick={openEditDialog}
-                                    type="button"
-                                    variant="ghost"
-                                >
-                                    <FaPenToSquare
-                                        aria-hidden="true"
-                                        className="size-3.5"
-                                    />
-                                </Button>
-                            )}
-                        </div>
-                        <p className="text-ui-900 text-2xl font-semibold">
-                            {Money.format(product.priceCents)}
-                        </p>
-                    </div>
-
-                    <div className="grid gap-2">
-                        <h2 className="text-ui-900 text-xl font-semibold">
-                            Description
-                        </h2>
-                        <p className="text-ui-600 text-base leading-7">
-                            {product.description ||
-                                'Technical details are being prepared.'}
-                        </p>
-                    </div>
-
-                    {!admin && (
-                        <div className="mt-1">
-                            {inCart ? (
-                                <Button
-                                    className="gap-2"
-                                    onClick={() => removeFromCart(product.id)}
-                                    type="button"
-                                    variant="secondary"
-                                >
-                                    <FaCheck
-                                        aria-hidden="true"
-                                        className="size-3"
-                                    />
-                                    In cart · Remove
-                                </Button>
-                            ) : (
-                                <Button
-                                    onClick={() =>
-                                        addToCart({
-                                            name: product.name,
-                                            priceCents: product.priceCents,
-                                            productId: product.id,
-                                        })
-                                    }
-                                    type="button"
-                                >
-                                    Add to cart
-                                </Button>
-                            )}
-                        </div>
-                    )}
+            <section className="grid gap-4">
+                <div>
+                    <Button
+                        className="gap-2"
+                        onClick={() =>
+                            navigate(admin ? '/admin/products' : '/products')
+                        }
+                        type="button"
+                        variant="link"
+                    >
+                        <FaArrowLeft aria-hidden="true" className="size-3" />
+                        Back to {admin ? 'products' : 'catalogue'}
+                    </Button>
                 </div>
+
+                <section className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
+                    <MediaCarousel
+                        media={media}
+                        productName={product.name}
+                        selectedIndex={selectedMediaIndex}
+                        onSelect={setSelectedMediaIndex}
+                    />
+
+                    <div className="grid content-start gap-5">
+                        <div className="grid gap-1.5">
+                            <p className="text-ui-500 font-mono text-sm">
+                                {product.code}
+                            </p>
+                            <div className="flex min-w-0 items-center gap-2">
+                                <h1 className="text-ui-900 truncate text-3xl font-semibold tracking-tight">
+                                    {product.name}
+                                </h1>
+                                {admin && (
+                                    <Button
+                                        aria-label="Edit product"
+                                        className="inline-flex size-8 shrink-0 rounded-full p-0"
+                                        onClick={openEditDialog}
+                                        type="button"
+                                        variant="ghost"
+                                    >
+                                        <FaPenToSquare
+                                            aria-hidden="true"
+                                            className="size-3.5"
+                                        />
+                                    </Button>
+                                )}
+                            </div>
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                <p className="text-ui-900 text-2xl font-semibold">
+                                    {Money.format(product.priceCents)}
+                                </p>
+                                {!admin &&
+                                    (inCart ? (
+                                        <Button
+                                            className="gap-2"
+                                            onClick={() =>
+                                                removeFromCart(product.id)
+                                            }
+                                            type="button"
+                                            variant="secondary"
+                                        >
+                                            <FaCheck
+                                                aria-hidden="true"
+                                                className="size-3"
+                                            />
+                                            Remove from cart
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            onClick={() =>
+                                                addToCart({
+                                                    code: product.code,
+                                                    imageUrl: media[0],
+                                                    name: product.name,
+                                                    priceCents:
+                                                        product.priceCents,
+                                                    productId: product.id,
+                                                })
+                                            }
+                                            type="button"
+                                        >
+                                            Add to cart
+                                        </Button>
+                                    ))}
+                            </div>
+                        </div>
+
+                        <div className="grid gap-2">
+                            <h2 className="text-ui-900 text-xl font-semibold">
+                                Description
+                            </h2>
+                            <p className="text-ui-600 text-base leading-7">
+                                {product.description ||
+                                    'Technical details are being prepared.'}
+                            </p>
+                        </div>
+                    </div>
+                </section>
             </section>
 
             {admin && <AuditTimeline events={audit.events} />}
@@ -429,25 +434,9 @@ function MediaCarousel({
                         />
                     </IconButton>
                 </div>
-
-                <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5">
-                    {media.map((_, i) => (
-                        <button
-                            key={i}
-                            aria-label={`Go to image ${i + 1}`}
-                            className={`h-1.5 rounded-full transition-[width,background-color] outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-black ${
-                                i === selectedIndex
-                                    ? 'w-4 bg-white'
-                                    : 'w-1.5 bg-white/60 hover:bg-white/80'
-                            }`}
-                            onClick={() => onSelect(i)}
-                            type="button"
-                        />
-                    ))}
-                </div>
             </div>
 
-            <div className="-mx-1 -my-0.5 flex gap-2 overflow-x-auto px-1 py-0.5">
+            <div className="-mx-1.5 -my-1 flex gap-2 overflow-x-auto px-1.5 py-1">
                 {media.map((url, index) => (
                     <button
                         key={url}
@@ -455,10 +444,10 @@ function MediaCarousel({
                             index === selectedIndex ? 'true' : undefined
                         }
                         aria-label={`Show image ${index + 1}`}
-                        className={`focus-visible:ring-ui-900 h-16 w-20 shrink-0 overflow-hidden rounded border outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
+                        className={`focus-visible:ring-ui-900 focus-visible:ring-offset-ui-0 h-16 w-20 shrink-0 overflow-hidden rounded border transition-[border-color,box-shadow] outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
                             index === selectedIndex
                                 ? 'border-ui-900'
-                                : 'border-ui-200'
+                                : 'border-ui-200 hover:border-ui-400'
                         }`}
                         onClick={() => onSelect(index)}
                         type="button"

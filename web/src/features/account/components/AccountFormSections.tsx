@@ -71,9 +71,11 @@ export function AccountPersonalSection({
                                 const file = event.target.files?.[0];
                                 event.target.value = '';
                                 if (!file || !isSupportedImage(file)) return;
-                                void compressImageToDataUrl(file).then(
-                                    onProfileImageChange
-                                );
+                                void compressImageToDataUrl(
+                                    file,
+                                    280,
+                                    0.76
+                                ).then(onProfileImageChange);
                             }}
                             type="file"
                         />
@@ -81,7 +83,7 @@ export function AccountPersonalSection({
                     {values.profileImageUrl && (
                         <button
                             aria-label="Remove profile photo"
-                            className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-red-500 text-white ring-2 ring-white outline-none hover:bg-red-600 focus-visible:ring-red-700"
+                            className="bg-ui-0 text-ui-500 absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full shadow-sm transition-[box-shadow,color] outline-none hover:text-red-700 hover:ring-1 hover:ring-red-200 focus-visible:text-red-700 focus-visible:ring-2 focus-visible:ring-red-700"
                             onClick={() => onProfileImageChange('')}
                             type="button"
                         >

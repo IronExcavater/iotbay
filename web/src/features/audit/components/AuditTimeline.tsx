@@ -111,7 +111,7 @@ function formatEventSummary(event: AuditEvent): EventSummary {
             title: enabledValue(diff.emailEnabled.after)
                 ? 'Turned on email MFA'
                 : 'Turned off email MFA',
-            detail: 'Account sign-in protection',
+            detail: `Changed from ${formatValue(diff.emailEnabled.before)} to ${formatValue(diff.emailEnabled.after)}`,
         };
     }
 
@@ -141,9 +141,7 @@ function formatEventSummary(event: AuditEvent): EventSummary {
             title: valuePresent(after)
                 ? `Updated ${label}`
                 : `Cleared ${label}`,
-            detail: valuePresent(after)
-                ? `Set to ${formatValue(after)}`
-                : undefined,
+            detail: `Changed from ${formatValue(before)} to ${formatValue(after)}`,
         };
     }
 
@@ -252,8 +250,8 @@ function formatGroupedDetail(
     const changed = entries
         .slice(0, 4)
         .map(
-            ([field, { after }]) =>
-                `${fieldLabel(field)}: ${formatValue(after)}`
+            ([field, { after, before }]) =>
+                `${fieldLabel(field)}: ${formatValue(before)} -> ${formatValue(after)}`
         );
     const overflow =
         entries.length > changed.length

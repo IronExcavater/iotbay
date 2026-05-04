@@ -43,17 +43,19 @@ export function AccountMenu({
             <button
                 aria-label={menuLabel}
                 className={clsx(
-                    'text-ui-700 hover:bg-ui-100 ring-ui-400 focus-visible:ring-ui-900 flex items-center gap-2 rounded py-1.5 pr-3 pl-1.5 ring-1 transition-[background-color,box-shadow,color] outline-none focus-visible:ring-2'
+                    'group text-ui-700 focus-visible:ring-ui-900 flex items-center gap-1.5 rounded p-0.5 transition-[box-shadow,color] outline-none focus-visible:ring-2'
                 )}
                 onClick={onToggle}
                 type="button"
             >
-                <Avatar
-                    imageUrl={profileImageUrl}
-                    name={profileLabel}
-                    size="sm"
-                />
-                <span className="hidden sm:inline">{profileLabel}</span>
+                <span className="group-hover:bg-ui-100 group-focus-visible:bg-ui-100 flex items-center gap-2 rounded py-1 pr-2 pl-1 transition-colors">
+                    <Avatar
+                        imageUrl={profileImageUrl}
+                        name={profileLabel}
+                        size="sm"
+                    />
+                    <span className="hidden sm:inline">{profileLabel}</span>
+                </span>
                 <DropdownChevron isOpen={open} />
             </button>
 

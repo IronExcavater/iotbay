@@ -38,7 +38,10 @@ import { AuditTimeline } from '@features/audit/components/AuditTimeline';
 import { useEntityAudit } from '@features/audit/useEntityAudit';
 import { authApi, type SessionInfo, type User } from '@features/auth/api';
 import { useAuth } from '@features/auth/AuthProvider';
-import { validatePhoneNumber } from '@features/auth/phone';
+import {
+    formatStoredPhoneNumber,
+    validatePhoneNumber,
+} from '@features/auth/phone';
 import { buildVerifyEmailPath } from '@features/auth/redirects';
 import { ManagedUserDialog } from '@features/users/admin/components/ManagedUserDialog';
 import { usersApi, type ManagedUser } from '@features/users/api';
@@ -452,7 +455,7 @@ export default function UserDetailPage({
                     className="border-ui-200 relative border-b"
                     role="tablist"
                 >
-                    <div className="flex gap-5" ref={tabListRef}>
+                    <div className="flex gap-1" ref={tabListRef}>
                         <DetailTab
                             active={userTab === 'details'}
                             label="Details"
@@ -617,7 +620,7 @@ export default function UserDetailPage({
 }
 
 function UserDetailsSummary({ user }: { user: DetailUser }) {
-    const phone = user.phoneNumber;
+    const phone = formatStoredPhoneNumber(user.phoneNumber);
     const address = 'addressLabel' in user ? user.addressLabel : null;
 
     return (
@@ -831,7 +834,7 @@ function DetailTab({
     return (
         <button
             aria-selected={active}
-            className={`focus-visible:ring-ui-900 rounded-sm pb-3 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
+            className={`focus-visible:ring-ui-900 rounded px-3 pt-2 pb-3 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
                 active ? 'text-ui-900' : 'text-ui-500 hover:text-ui-700'
             }`}
             onClick={onClick}
