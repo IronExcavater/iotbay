@@ -43,12 +43,14 @@ export function AccountMenu({
             <button
                 aria-label={menuLabel}
                 className={clsx(
-                    'group text-ui-700 flex h-10 items-center gap-1.5 rounded outline-none'
+                    'group text-ui-700 flex h-10 items-center gap-1.5 rounded-full border border-transparent px-1.5 pr-2 transition-[background-color,border-color,box-shadow,color] outline-none',
+                    'hover:bg-ui-100 hover:text-ui-900 focus-visible:border-ui-300 focus-visible:bg-ui-100 focus-visible:text-ui-900 focus-visible:ring-ui-900 focus-visible:ring-2 focus-visible:ring-offset-2',
+                    open && 'bg-ui-100 text-ui-900 border-ui-200 shadow-sm'
                 )}
                 onClick={onToggle}
                 type="button"
             >
-                <span className="group-hover:text-ui-900 group-focus-visible:text-ui-900 flex min-w-0 items-center gap-2 rounded py-1 pr-1 pl-1 transition-colors">
+                <span className="flex min-w-0 items-center gap-2 rounded py-1 transition-colors">
                     <Avatar
                         className="group-hover:ring-ui-400 group-focus-visible:ring-ui-900 transition-shadow group-focus-visible:ring-2"
                         imageUrl={profileImageUrl}

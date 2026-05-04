@@ -49,6 +49,8 @@ def register_api_access(app: Flask) -> None:
     def require_api_access() -> None:
         if request.method == "OPTIONS" or not request.path.startswith("/api"):
             return
+        if request.method == "GET" and request.path.startswith("/api/media/"):
+            return
 
         provided_key = request.headers.get(API_ACCESS_HEADER_NAME, "").strip()
         if not provided_key:
