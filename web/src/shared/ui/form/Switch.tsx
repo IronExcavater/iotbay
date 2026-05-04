@@ -38,7 +38,7 @@ export function Switch({
         >
             <span
                 className={clsx(
-                    'pointer-events-none block size-5 rounded-full bg-white shadow-sm',
+                    'bg-ui-0 pointer-events-none block size-5 rounded-full shadow-sm',
                     hasInteracted && 'transition-transform',
                     checked ? 'translate-x-4' : 'translate-x-0'
                 )}

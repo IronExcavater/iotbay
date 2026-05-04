@@ -1,5 +1,5 @@
 import { FaArrowsRotate, FaPenToSquare, FaTrashCan } from 'react-icons/fa6';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 import type { Product } from '@features/products/api';
 import { Button } from '@shared/ui/form/Button';
@@ -11,6 +11,7 @@ import {
     TableHead,
     TableLoadingRow,
     TableMessageRow,
+    TablePrimaryActionRow,
 } from '@shared/ui/table/Table';
 import { Tooltip } from '@shared/ui/Tooltip';
 import { DateTimeValue } from '@shared/value-objects/DateTimeValue';
@@ -126,30 +127,24 @@ export function ProductTable({
                             />
                         ) : (
                             products.map((product) => (
-                                <tr
-                                    className="border-ui-200 hover:bg-ui-50 cursor-pointer border-t align-top"
+                                <TablePrimaryActionRow
                                     key={product.id}
-                                    onClick={() => {
+                                    label={`View ${product.name}`}
+                                    onAction={() => {
                                         navigate(
                                             `/admin/products/${product.id}`
                                         );
                                     }}
                                 >
                                     <td className="px-5 py-3">
-                                        <Link
-                                            className="text-ui-500 flex min-h-8 items-center font-mono text-xs"
-                                            to={`/admin/products/${product.id}`}
-                                        >
+                                        <span className="text-ui-500 flex min-h-8 items-center font-mono text-xs">
                                             {product.code}
-                                        </Link>
+                                        </span>
                                     </td>
                                     <td className="px-5 py-3.5">
-                                        <Link
-                                            className="text-ui-900 flex min-h-8 items-center truncate font-medium"
-                                            to={`/admin/products/${product.id}`}
-                                        >
+                                        <span className="text-ui-900 flex min-h-8 items-center truncate font-medium">
                                             {product.name}
-                                        </Link>
+                                        </span>
                                     </td>
                                     <td className="px-5 py-3">
                                         <span className="flex min-h-8 items-center">
@@ -197,7 +192,7 @@ export function ProductTable({
                                             />
                                         </div>
                                     </TableActionCell>
-                                </tr>
+                                </TablePrimaryActionRow>
                             ))
                         )}
                     </tbody>

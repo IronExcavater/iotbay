@@ -70,7 +70,7 @@ export default function SiteNav() {
                                         </span>
                                     )
                                 }
-                                onClick={() => navigate('/orders')}
+                                onClick={() => navigate('/cart')}
                                 size="md"
                                 type="button"
                             >
