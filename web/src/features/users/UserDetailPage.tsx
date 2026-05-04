@@ -1,4 +1,11 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import {
+    useEffect,
+    useLayoutEffect,
+    useRef,
+    useState,
+    type FormEvent,
+    type ReactNode,
+} from 'react';
 import {
     FaArrowLeft,
     FaArrowRightFromBracket,
@@ -102,6 +109,21 @@ export default function UserDetailPage({
     const [userTab, setUserTab] = useState<'activity' | 'details' | 'security'>(
         'details'
     );
+    const tabListRef = useRef<HTMLDivElement>(null);
+    const tabIndicatorRef = useRef<HTMLDivElement>(null);
+
+    useLayoutEffect(() => {
+        const list = tabListRef.current;
+        const indicator = tabIndicatorRef.current;
+        if (!list || !indicator) return;
+        const activeBtn = list.querySelector<HTMLElement>(
+            '[aria-selected="true"]'
+        );
+        if (activeBtn) {
+            indicator.style.left = `${activeBtn.offsetLeft}px`;
+            indicator.style.width = `${activeBtn.offsetWidth}px`;
+        }
+    }, [userTab, detailUser]);
 
     const resolvedUserId = me ? currentUser?.id : userId;
     const audit = useEntityAudit({
@@ -326,7 +348,28 @@ export default function UserDetailPage({
     }
 
     if (isLoading) {
-        return <p className="text-ui-500 text-sm">Loading user...</p>;
+        return (
+            <section className="grid gap-8">
+                <div className="bg-ui-100 h-4 w-24 animate-pulse rounded" />
+                <section className="grid gap-4">
+                    <div className="flex items-start gap-4">
+                        <div className="bg-ui-100 size-14 shrink-0 animate-pulse rounded-full" />
+                        <div className="grid flex-1 gap-2 pt-1">
+                            <div className="bg-ui-100 h-7 w-48 animate-pulse rounded" />
+                            <div className="bg-ui-100 h-4 w-32 animate-pulse rounded" />
+                        </div>
+                    </div>
+                    <div className="border-ui-200 flex gap-5 border-b pb-0">
+                        {['Details', 'Security', 'Activity'].map((label) => (
+                            <div
+                                key={label}
+                                className="bg-ui-100 h-4 w-14 animate-pulse rounded pb-3"
+                            />
+                        ))}
+                    </div>
+                </section>
+            </section>
+        );
     }
 
     if (!detailUser || !resolvedUserId) {
@@ -345,7 +388,7 @@ export default function UserDetailPage({
                 canEditManagedUser(currentUser, detailUser as ManagedUser)));
 
     return (
-        <section className="mx-auto grid max-w-4xl gap-8">
+        <section className="grid gap-8">
             {pageError && <p className="text-sm text-red-700">{pageError}</p>}
 
             <section className="grid gap-4">
@@ -406,23 +449,30 @@ export default function UserDetailPage({
 
                 <div
                     aria-label="User sections"
-                    className="border-ui-200 flex gap-5 border-b"
+                    className="border-ui-200 relative border-b"
                     role="tablist"
                 >
-                    <DetailTab
-                        active={userTab === 'details'}
-                        label="Details"
-                        onClick={() => setUserTab('details')}
-                    />
-                    <DetailTab
-                        active={userTab === 'security'}
-                        label="Security"
-                        onClick={() => setUserTab('security')}
-                    />
-                    <DetailTab
-                        active={userTab === 'activity'}
-                        label="Activity"
-                        onClick={() => setUserTab('activity')}
+                    <div className="flex gap-5" ref={tabListRef}>
+                        <DetailTab
+                            active={userTab === 'details'}
+                            label="Details"
+                            onClick={() => setUserTab('details')}
+                        />
+                        <DetailTab
+                            active={userTab === 'security'}
+                            label="Security"
+                            onClick={() => setUserTab('security')}
+                        />
+                        <DetailTab
+                            active={userTab === 'activity'}
+                            label="Activity"
+                            onClick={() => setUserTab('activity')}
+                        />
+                    </div>
+                    <div
+                        aria-hidden="true"
+                        className="bg-ui-900 absolute bottom-0 h-0.5 transition-[left,width] duration-200"
+                        ref={tabIndicatorRef}
                     />
                 </div>
             </section>
@@ -781,10 +831,8 @@ function DetailTab({
     return (
         <button
             aria-selected={active}
-            className={`focus-visible:ring-ui-900 border-b-2 px-0 pb-2 text-sm font-medium outline-none focus-visible:ring-2 ${
-                active
-                    ? 'border-ui-900 text-ui-900'
-                    : 'text-ui-500 hover:text-ui-900 border-transparent'
+            className={`focus-visible:ring-ui-900 rounded-sm pb-3 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
+                active ? 'text-ui-900' : 'text-ui-500 hover:text-ui-700'
             }`}
             onClick={onClick}
             role="tab"

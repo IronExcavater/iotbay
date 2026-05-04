@@ -1,8 +1,9 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
     FaArrowLeft,
     FaChevronLeft,
     FaChevronRight,
+    FaCheck,
     FaPenToSquare,
 } from 'react-icons/fa6';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -23,6 +24,7 @@ import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { useFormattedInput } from '@shared/hooks/useFormattedInput';
 import { toErrorMessage } from '@shared/services/http';
 import { Button } from '@shared/ui/form/Button';
+import { IconButton } from '@shared/ui/form/IconButton';
 import { useToast } from '@shared/ui/toast/ToastProvider';
 import { Money } from '@shared/value-objects/Money';
 import { ProductCode, ProductName } from '@shared/value-objects/ProductText';
@@ -35,7 +37,7 @@ export default function ProductDetailPage({
     const navigate = useNavigate();
     const { productId = '' } = useParams();
     const { showToast } = useToast();
-    const { addToCart, isInCart } = useCart();
+    const { addToCart, isInCart, removeFromCart } = useCart();
     const [product, setProduct] = useState<Product | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isEditOpen, setIsEditOpen] = useState(false);
@@ -105,7 +107,29 @@ export default function ProductDetailPage({
     }, [admin, productId]);
 
     if (isLoading) {
-        return <p className="text-ui-500 text-sm">Loading product...</p>;
+        return (
+            <section className="grid gap-8">
+                <div className="bg-ui-100 h-4 w-32 animate-pulse rounded" />
+                <section className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
+                    <div className="bg-ui-100 aspect-4/3 animate-pulse rounded border" />
+                    <div className="grid content-start gap-4">
+                        <div className="grid gap-2">
+                            <div className="bg-ui-100 h-3 w-20 animate-pulse rounded" />
+                            <div className="bg-ui-100 h-8 w-3/4 animate-pulse rounded" />
+                        </div>
+                        <div className="bg-ui-100 h-7 w-24 animate-pulse rounded" />
+                        <div className="grid gap-2">
+                            <div className="bg-ui-100 h-5 w-28 animate-pulse rounded" />
+                            <div className="space-y-2">
+                                <div className="bg-ui-100 h-4 w-full animate-pulse rounded" />
+                                <div className="bg-ui-100 h-4 w-full animate-pulse rounded" />
+                                <div className="bg-ui-100 h-4 w-2/3 animate-pulse rounded" />
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </section>
+        );
     }
 
     if (!product) {
@@ -120,7 +144,7 @@ export default function ProductDetailPage({
         product.mediaUrls.length > 0
             ? product.mediaUrls
             : ['/iotbay_icon_themed.svg'];
-    const selectedMedia = media[Math.min(selectedMediaIndex, media.length - 1)];
+    const inCart = isInCart(product.id);
 
     function openEditDialog() {
         if (!product) return;
@@ -162,7 +186,7 @@ export default function ProductDetailPage({
     }
 
     return (
-        <section className="mx-auto grid max-w-6xl gap-8">
+        <section className="grid gap-8">
             {pageError && <p className="text-sm text-red-700">{pageError}</p>}
 
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -180,88 +204,15 @@ export default function ProductDetailPage({
             </div>
 
             <section className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
-                <div className="grid gap-3">
-                    <div className="bg-ui-100 border-ui-200 relative flex aspect-4/3 items-center justify-center overflow-hidden rounded border">
-                        <img
-                            alt={product.name}
-                            className="h-full w-full object-cover"
-                            src={selectedMedia}
-                        />
+                <MediaCarousel
+                    media={media}
+                    productName={product.name}
+                    selectedIndex={selectedMediaIndex}
+                    onSelect={setSelectedMediaIndex}
+                />
 
-                        {media.length > 1 && (
-                            <div className="absolute inset-x-3 top-1/2 flex -translate-y-1/2 justify-between">
-                                <button
-                                    aria-label="Previous image"
-                                    className="bg-ui-0/90 text-ui-700 hover:bg-ui-0 border-ui-200 focus-visible:ring-ui-900 inline-flex size-9 items-center justify-center rounded-full border shadow-sm outline-none focus-visible:ring-2"
-                                    onClick={() => {
-                                        setSelectedMediaIndex((current) =>
-                                            current === 0
-                                                ? media.length - 1
-                                                : current - 1
-                                        );
-                                    }}
-                                    type="button"
-                                >
-                                    <FaChevronLeft
-                                        aria-hidden="true"
-                                        className="size-3.5"
-                                    />
-                                </button>
-                                <button
-                                    aria-label="Next image"
-                                    className="bg-ui-0/90 text-ui-700 hover:bg-ui-0 border-ui-200 focus-visible:ring-ui-900 inline-flex size-9 items-center justify-center rounded-full border shadow-sm outline-none focus-visible:ring-2"
-                                    onClick={() => {
-                                        setSelectedMediaIndex((current) =>
-                                            current === media.length - 1
-                                                ? 0
-                                                : current + 1
-                                        );
-                                    }}
-                                    type="button"
-                                >
-                                    <FaChevronRight
-                                        aria-hidden="true"
-                                        className="size-3.5"
-                                    />
-                                </button>
-                            </div>
-                        )}
-                    </div>
-
-                    {media.length > 1 && (
-                        <div className="flex gap-2 overflow-x-auto">
-                            {media.map((mediaUrl, index) => (
-                                <button
-                                    aria-label={`Show image ${index + 1}`}
-                                    className={`focus-visible:ring-ui-900 h-16 w-20 shrink-0 overflow-hidden rounded border outline-none focus-visible:ring-2 ${
-                                        index === selectedMediaIndex
-                                            ? 'border-ui-900'
-                                            : 'border-ui-200'
-                                    }`}
-                                    aria-current={
-                                        index === selectedMediaIndex
-                                            ? 'true'
-                                            : undefined
-                                    }
-                                    key={mediaUrl}
-                                    onClick={() => {
-                                        setSelectedMediaIndex(index);
-                                    }}
-                                    type="button"
-                                >
-                                    <img
-                                        alt=""
-                                        className="h-full w-full object-cover"
-                                        src={mediaUrl}
-                                    />
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                <div className="grid content-start gap-4">
-                    <div className="grid gap-2">
+                <div className="grid content-start gap-5">
+                    <div className="grid gap-1.5">
                         <p className="text-ui-500 font-mono text-sm">
                             {product.code}
                         </p>
@@ -284,32 +235,11 @@ export default function ProductDetailPage({
                                 </Button>
                             )}
                         </div>
-                        <p className="text-ui-500 text-sm">
-                            Catalogue code {product.code}
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-4">
                         <p className="text-ui-900 text-2xl font-semibold">
                             {Money.format(product.priceCents)}
                         </p>
-                        {!admin && (
-                            <Button
-                                disabled={isInCart(product.id)}
-                                onClick={() =>
-                                    addToCart({
-                                        name: product.name,
-                                        priceCents: product.priceCents,
-                                        productId: product.id,
-                                    })
-                                }
-                                type="button"
-                            >
-                                {isInCart(product.id)
-                                    ? 'In cart'
-                                    : 'Add to cart'}
-                            </Button>
-                        )}
                     </div>
+
                     <div className="grid gap-2">
                         <h2 className="text-ui-900 text-xl font-semibold">
                             Description
@@ -319,6 +249,38 @@ export default function ProductDetailPage({
                                 'Technical details are being prepared.'}
                         </p>
                     </div>
+
+                    {!admin && (
+                        <div className="mt-1">
+                            {inCart ? (
+                                <Button
+                                    className="gap-2"
+                                    onClick={() => removeFromCart(product.id)}
+                                    type="button"
+                                    variant="secondary"
+                                >
+                                    <FaCheck
+                                        aria-hidden="true"
+                                        className="size-3"
+                                    />
+                                    In cart · Remove
+                                </Button>
+                            ) : (
+                                <Button
+                                    onClick={() =>
+                                        addToCart({
+                                            name: product.name,
+                                            priceCents: product.priceCents,
+                                            productId: product.id,
+                                        })
+                                    }
+                                    type="button"
+                                >
+                                    Add to cart
+                                </Button>
+                            )}
+                        </div>
+                    )}
                 </div>
             </section>
 
@@ -344,5 +306,171 @@ export default function ProductDetailPage({
                 values={formValues}
             />
         </section>
+    );
+}
+
+function MediaCarousel({
+    media,
+    onSelect,
+    productName,
+    selectedIndex,
+}: {
+    media: string[];
+    onSelect: (index: number) => void;
+    productName: string;
+    selectedIndex: number;
+}) {
+    const carouselRef = useRef<HTMLDivElement>(null);
+    const pauseRef = useRef(false);
+    const selectedIndexRef = useRef(selectedIndex);
+
+    useEffect(() => {
+        selectedIndexRef.current = selectedIndex;
+    }, [selectedIndex]);
+
+    useEffect(() => {
+        if (media.length <= 1) return;
+
+        const container = carouselRef.current;
+        const handleEnter = () => {
+            pauseRef.current = true;
+        };
+        const handleLeave = () => {
+            pauseRef.current = false;
+        };
+        container?.addEventListener('mouseenter', handleEnter);
+        container?.addEventListener('mouseleave', handleLeave);
+
+        const timer = setInterval(() => {
+            if (!pauseRef.current) {
+                onSelect((selectedIndexRef.current + 1) % media.length);
+            }
+        }, 4000);
+
+        return () => {
+            clearInterval(timer);
+            container?.removeEventListener('mouseenter', handleEnter);
+            container?.removeEventListener('mouseleave', handleLeave);
+        };
+    }, [media.length, onSelect]);
+
+    useEffect(() => {
+        const container = carouselRef.current;
+        if (!container) return;
+        container.scrollTo({
+            left: selectedIndex * container.offsetWidth,
+            behavior: 'smooth',
+        });
+    }, [selectedIndex]);
+
+    if (media.length === 1) {
+        return (
+            <div className="bg-ui-100 border-ui-200 aspect-4/3 overflow-hidden rounded border">
+                <img
+                    alt={productName}
+                    className="h-full w-full object-cover"
+                    src={media[0]}
+                />
+            </div>
+        );
+    }
+
+    return (
+        <div className="grid gap-3">
+            <div className="border-ui-200 relative overflow-hidden rounded border">
+                <div
+                    ref={carouselRef}
+                    className="bg-ui-100 flex aspect-4/3 snap-x snap-mandatory overflow-x-hidden"
+                >
+                    {media.map((url) => (
+                        <div key={url} className="w-full shrink-0 snap-start">
+                            <img
+                                alt={productName}
+                                className="h-full w-full object-cover"
+                                src={url}
+                            />
+                        </div>
+                    ))}
+                </div>
+
+                <div className="absolute inset-x-3 top-1/2 flex -translate-y-1/2 justify-between">
+                    <IconButton
+                        aria-label="Previous image"
+                        highContrast
+                        onClick={() =>
+                            onSelect(
+                                selectedIndex === 0
+                                    ? media.length - 1
+                                    : selectedIndex - 1
+                            )
+                        }
+                        size="md"
+                        type="button"
+                        variant="overlay"
+                    >
+                        <FaChevronLeft
+                            aria-hidden="true"
+                            className="size-3.5"
+                        />
+                    </IconButton>
+                    <IconButton
+                        aria-label="Next image"
+                        highContrast
+                        onClick={() =>
+                            onSelect((selectedIndex + 1) % media.length)
+                        }
+                        size="md"
+                        type="button"
+                        variant="overlay"
+                    >
+                        <FaChevronRight
+                            aria-hidden="true"
+                            className="size-3.5"
+                        />
+                    </IconButton>
+                </div>
+
+                <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5">
+                    {media.map((_, i) => (
+                        <button
+                            key={i}
+                            aria-label={`Go to image ${i + 1}`}
+                            className={`h-1.5 rounded-full transition-[width,background-color] outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-black ${
+                                i === selectedIndex
+                                    ? 'w-4 bg-white'
+                                    : 'w-1.5 bg-white/60 hover:bg-white/80'
+                            }`}
+                            onClick={() => onSelect(i)}
+                            type="button"
+                        />
+                    ))}
+                </div>
+            </div>
+
+            <div className="-mx-1 -my-0.5 flex gap-2 overflow-x-auto px-1 py-0.5">
+                {media.map((url, index) => (
+                    <button
+                        key={url}
+                        aria-current={
+                            index === selectedIndex ? 'true' : undefined
+                        }
+                        aria-label={`Show image ${index + 1}`}
+                        className={`focus-visible:ring-ui-900 h-16 w-20 shrink-0 overflow-hidden rounded border outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
+                            index === selectedIndex
+                                ? 'border-ui-900'
+                                : 'border-ui-200'
+                        }`}
+                        onClick={() => onSelect(index)}
+                        type="button"
+                    >
+                        <img
+                            alt=""
+                            className="h-full w-full object-cover"
+                            src={url}
+                        />
+                    </button>
+                ))}
+            </div>
+        </div>
     );
 }

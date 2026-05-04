@@ -66,12 +66,13 @@ export function AuditTimeline({
                                         <div className="min-w-0">
                                             <p className="text-ui-900 truncate text-sm font-medium">
                                                 {summary.title}
+                                                {summary.detail && (
+                                                    <span className="text-ui-500 font-normal">
+                                                        {' · '}
+                                                        {summary.detail}
+                                                    </span>
+                                                )}
                                             </p>
-                                            {summary.detail && (
-                                                <p className="text-ui-500 mt-0.5 truncate text-sm">
-                                                    {summary.detail}
-                                                </p>
-                                            )}
                                         </div>
                                         <p className="text-ui-500 text-xs sm:pt-0.5 sm:text-right">
                                             {formatActor(event)} -{' '}

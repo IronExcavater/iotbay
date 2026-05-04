@@ -57,14 +57,14 @@ export function OverlayDialog({
                     className
                 )}
             >
-                <header className="border-ui-200 flex shrink-0 items-start justify-between gap-4 border-b px-6 py-4">
+                <header className="border-ui-200 flex shrink-0 items-center justify-between gap-4 border-b px-6 py-3">
                     <h2 className="text-ui-900 text-xl font-semibold tracking-tight">
                         {title}
                     </h2>
 
                     <Button
                         aria-label="Close dialog"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-full"
+                        className="inline-flex size-8 shrink-0 items-center justify-center rounded-full p-0"
                         onClick={onClose}
                         type="button"
                         variant="ghost"
@@ -73,7 +73,7 @@ export function OverlayDialog({
                     </Button>
                 </header>
 
-                <div className="overflow-y-auto p-6">{children}</div>
+                <div className="overflow-y-auto px-6 pt-5 pb-6">{children}</div>
             </section>
         </div>,
         document.body

@@ -49,7 +49,7 @@ export function AccountPersonalSection({
             <h3 className="text-ui-700 text-sm font-semibold tracking-[0.08em] uppercase">
                 Personal
             </h3>
-            <div className="grid grid-cols-[auto_1fr] items-start gap-4">
+            <div className="grid grid-cols-[auto_1fr] items-center gap-4">
                 <div className="relative inline-flex">
                     <label className="group focus-within:ring-ui-900 relative inline-flex cursor-pointer rounded-full focus-within:ring-2 focus-within:ring-offset-2 focus-within:outline-none">
                         <Avatar

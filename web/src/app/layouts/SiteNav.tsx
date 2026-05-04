@@ -8,7 +8,8 @@ import { ThemeMenuItem, ThemeToggle } from '@app/layouts/site-nav/ThemeToggle';
 import { useThemeMode } from '@app/theme/ThemeProvider';
 import { useAuth } from '@features/auth/AuthProvider';
 import { useCart } from '@features/cart/CartProvider';
-import { Button, ButtonLink } from '@shared/ui/form/Button';
+import { ButtonLink } from '@shared/ui/form/Button';
+import { IconButton } from '@shared/ui/form/IconButton';
 import { AnchoredPopover } from '@shared/ui/overlay/AnchoredPopover';
 import { MenuPanel } from '@shared/ui/overlay/MenuItems';
 
@@ -43,27 +44,42 @@ export default function SiteNav() {
                     <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 lg:gap-6">
                         <BrandLink />
 
-                        <nav className="flex min-w-0 items-center gap-1 overflow-x-auto text-sm">
-                            <SiteNavLink to="/products">Catalogue</SiteNavLink>
-                            <SiteNavLink to="/orders">Orders</SiteNavLink>
-                        </nav>
+                        <div className="-mx-1 -my-0.5 overflow-x-auto px-1 py-0.5">
+                            <nav className="flex items-center gap-1 text-sm whitespace-nowrap">
+                                <SiteNavLink to="/products">
+                                    Catalogue
+                                </SiteNavLink>
+                                <SiteNavLink to="/orders">Orders</SiteNavLink>
+                            </nav>
+                        </div>
 
                         <nav className="flex flex-wrap items-center justify-end gap-2.5 text-sm sm:gap-3">
-                            {cartItems.length > 0 && (
-                                <Button
-                                    aria-label={`Cart, ${cartItems.length} item${cartItems.length !== 1 ? 's' : ''}`}
-                                    className="relative gap-2"
-                                    disabled
-                                    type="button"
-                                    variant="ghost"
-                                >
-                                    <FaCartShopping
-                                        aria-hidden="true"
-                                        className="size-4"
-                                    />
-                                    <span>{cartItems.length}</span>
-                                </Button>
-                            )}
+                            <IconButton
+                                aria-label={
+                                    cartItems.length > 0
+                                        ? `Cart, ${cartItems.length} item${cartItems.length !== 1 ? 's' : ''}`
+                                        : 'Cart'
+                                }
+                                badge={
+                                    cartItems.length > 0 && (
+                                        <span
+                                            aria-hidden="true"
+                                            className="bg-ui-900 text-ui-0 pointer-events-none absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold"
+                                        >
+                                            {cartItems.length}
+                                        </span>
+                                    )
+                                }
+                                onClick={() => navigate('/orders')}
+                                size="md"
+                                type="button"
+                            >
+                                <FaCartShopping
+                                    aria-hidden="true"
+                                    className="size-4"
+                                />
+                            </IconButton>
+
                             {user ? (
                                 <AccountMenu
                                     menuLabel={menuLabel}
@@ -172,7 +188,7 @@ function SiteNavLink({ children, to }: { children: ReactNode; to: string }) {
     return (
         <NavLink
             className={({ isActive }) =>
-                `rounded px-3 py-2 font-medium transition-[background-color,color] ${
+                `focus-visible:ring-ui-900 rounded px-3 py-1.5 font-medium transition-[background-color,color] outline-none focus-visible:ring-2 ${
                     isActive
                         ? 'bg-ui-100 text-ui-900'
                         : 'text-ui-600 hover:bg-ui-100 hover:text-ui-900'
