@@ -14,11 +14,13 @@ class ProductRouteTestCase(AppTestCase):
 
     def test_create_product_and_list(self) -> None:
         create_staff_test_session(self.client)
+        media_urls = ["data:image/png;base64,aW90YmF5"]
         create_response = self.client.post(
             "/api/admin/products",
             json={
                 "name": "Smart Sensor",
                 "code": "snsr-001",
+                "mediaUrls": media_urls,
                 "priceCents": 12999,
             },
         )
@@ -28,8 +30,11 @@ class ProductRouteTestCase(AppTestCase):
         self.assertIsNotNone(created)
         self.assertEqual(created["name"], "Smart Sensor")
         self.assertEqual(created["code"], "SNSR-001")
+        self.assertEqual(created["mediaUrls"], media_urls)
         self.assertEqual(created["priceCents"], 12999)
-        self.assertEqual(len(self.client.get("/api/products").get_json()["items"]), 1)
+        listed_products = self.client.get("/api/products").get_json()["items"]
+        self.assertEqual(len(listed_products), 1)
+        self.assertEqual(listed_products[0]["mediaUrls"], media_urls)
 
     def test_create_product_requires_staff_access(self) -> None:
         unauthenticated_response = self.client.post(

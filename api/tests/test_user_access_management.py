@@ -159,6 +159,8 @@ class UserAccessManagementTestCase(AppTestCase):
             json={"email": session.email, "password": session.password},
         )
         self.assertEqual(login_response.status_code, 202)
+        self.assertIn(".email-token", login_response.get_json()["download"]["html"])
+        self.assertNotIn("styles.css", login_response.get_json()["download"]["html"])
         challenge = login_response.get_json()["mfaChallenge"]
 
         invalid_response = self.client.post(
