@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FaArrowRightFromBracket } from 'react-icons/fa6';
+import { FaArrowsRotate, FaArrowRightFromBracket } from 'react-icons/fa6';
 
 import { AccessLogsTable } from '@features/access-logs/components/AccessLogsTable';
 import {
@@ -9,6 +9,7 @@ import {
 } from '@features/auth/api';
 import { useAuth } from '@features/auth/AuthProvider';
 import { toErrorMessage } from '@shared/services/http';
+import { Button } from '@shared/ui/form/Button';
 import { Switch } from '@shared/ui/form/Switch';
 import { ActionMenu } from '@shared/ui/overlay/ActionMenu';
 import {
@@ -68,7 +69,7 @@ export function AccountSecuritySection({
     }, []);
 
     async function toggleMfa() {
-        if (!mfaSettings || readOnly) return;
+        if (!mfaSettings || readOnly || isUpdating) return;
         setIsUpdating(true);
         try {
             const settings = await authApi.updateMfaSettings({
@@ -127,7 +128,7 @@ export function AccountSecuritySection({
                         </span>
                         <Switch
                             checked={Boolean(mfaSettings?.emailEnabled)}
-                            disabled={readOnly || isUpdating || !mfaSettings}
+                            disabled={readOnly || !mfaSettings}
                             label="Email MFA"
                             onChange={() => {
                                 void toggleMfa();
@@ -139,9 +140,25 @@ export function AccountSecuritySection({
 
             <section className="bg-ui-0 border-ui-200 overflow-hidden rounded border">
                 <div className="border-ui-200 flex items-center justify-between gap-4 border-b px-5 py-4">
-                    <h2 className="text-ui-900 text-xl font-semibold">
-                        Sessions
-                    </h2>
+                    <div className="flex items-center gap-2">
+                        <h2 className="text-ui-900 text-xl font-semibold">
+                            Sessions
+                        </h2>
+                        <Button
+                            aria-label="Refresh sessions"
+                            className="inline-flex size-9 shrink-0 items-center justify-center rounded-full p-0"
+                            onClick={() => {
+                                void loadSettings();
+                            }}
+                            type="button"
+                            variant="ghost"
+                        >
+                            <FaArrowsRotate
+                                aria-hidden="true"
+                                className="size-3.5"
+                            />
+                        </Button>
+                    </div>
                     <p className="text-ui-500 shrink-0 text-sm">
                         Devices currently signed in to this account
                     </p>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { FaArrowsRotate, FaArrowRightFromBracket } from 'react-icons/fa6';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 import { authApi, type SessionInfo } from '@features/auth/api';
 import { toErrorMessage } from '@shared/services/http';
@@ -13,6 +13,7 @@ import {
     TableHead,
     TableLoadingRow,
     TableMessageRow,
+    TablePrimaryActionRow,
     TableSingleLineCell,
     TableStackCell,
 } from '@shared/ui/table/Table';
@@ -20,6 +21,7 @@ import { useToast } from '@shared/ui/toast/ToastProvider';
 import { DateTimeValue } from '@shared/value-objects/DateTimeValue';
 
 export function AdminActiveSessionsTable() {
+    const navigate = useNavigate();
     const { showToast } = useToast();
     const [sessions, setSessions] = useState<SessionInfo[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -139,9 +141,16 @@ export function AdminActiveSessionsTable() {
                             />
                         ) : (
                             sessions.map((session) => (
-                                <tr
-                                    className="border-ui-200 border-t align-top"
+                                <TablePrimaryActionRow
                                     key={session.id}
+                                    label={`Open ${session.userName ?? session.userEmail ?? 'user'}`}
+                                    onAction={() => {
+                                        if (session.userId) {
+                                            navigate(
+                                                `/admin/users/${session.userId}`
+                                            );
+                                        }
+                                    }}
                                 >
                                     <td className="px-5 py-3">
                                         <TableStackCell>
@@ -158,22 +167,11 @@ export function AdminActiveSessionsTable() {
                                                     size="sm"
                                                 />
                                                 <div className="grid min-w-0 gap-1">
-                                                    {session.userId ? (
-                                                        <Link
-                                                            className="text-ui-900 truncate font-medium hover:underline"
-                                                            to={`/admin/users/${session.userId}`}
-                                                        >
-                                                            {session.userName ??
-                                                                session.userEmail ??
-                                                                'Unknown user'}
-                                                        </Link>
-                                                    ) : (
-                                                        <span className="text-ui-900 truncate font-medium">
-                                                            {session.userName ??
-                                                                session.userEmail ??
-                                                                'Unknown user'}
-                                                        </span>
-                                                    )}
+                                                    <span className="text-ui-900 truncate font-medium">
+                                                        {session.userName ??
+                                                            session.userEmail ??
+                                                            'Unknown user'}
+                                                    </span>
                                                     {session.userEmail && (
                                                         <span className="text-ui-500 truncate text-xs">
                                                             {session.userEmail}
@@ -209,26 +207,35 @@ export function AdminActiveSessionsTable() {
                                         </TableSingleLineCell>
                                     </td>
                                     <TableActionCell>
-                                        <ActionMenu
-                                            items={[
-                                                {
-                                                    disabled:
-                                                        session.isCurrent ||
-                                                        revokingSessionId ===
-                                                            session.id,
-                                                    icon: FaArrowRightFromBracket,
-                                                    label: 'Revoke',
-                                                    onSelect: () => {
-                                                        void revokeSession(
-                                                            session
-                                                        );
+                                        <div
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                            }}
+                                            onKeyDown={(event) => {
+                                                event.stopPropagation();
+                                            }}
+                                        >
+                                            <ActionMenu
+                                                items={[
+                                                    {
+                                                        disabled:
+                                                            session.isCurrent ||
+                                                            revokingSessionId ===
+                                                                session.id,
+                                                        icon: FaArrowRightFromBracket,
+                                                        label: 'Revoke',
+                                                        onSelect: () => {
+                                                            void revokeSession(
+                                                                session
+                                                            );
+                                                        },
                                                     },
-                                                },
-                                            ]}
-                                            label={`Open session actions for ${session.deviceLabel}`}
-                                        />
+                                                ]}
+                                                label={`Open session actions for ${session.deviceLabel}`}
+                                            />
+                                        </div>
                                     </TableActionCell>
-                                </tr>
+                                </TablePrimaryActionRow>
                             ))
                         )}
                     </tbody>

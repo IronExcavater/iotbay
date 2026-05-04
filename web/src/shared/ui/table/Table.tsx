@@ -62,7 +62,7 @@ export function TablePrimaryActionRow({
         <tr
             aria-label={label}
             className={clsx(
-                'border-ui-200 hover:bg-ui-50 focus-visible:bg-ui-50 focus-visible:ring-ui-900 cursor-pointer border-t align-top transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset',
+                'border-ui-200 hover:bg-ui-50 focus-visible:bg-ui-50 cursor-pointer border-t align-top transition-[background-color,box-shadow] outline-none focus-visible:[box-shadow:inset_0_0_0_2px_var(--ui-900)]',
                 className
             )}
             onClick={onAction}

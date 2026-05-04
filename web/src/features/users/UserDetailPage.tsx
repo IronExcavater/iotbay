@@ -180,7 +180,7 @@ export default function UserDetailPage({
     );
     const currentPasswordHint = emailChanged
         ? 'Changing your email will require verification'
-        : 'Required to save changes';
+        : 'Only required when changing email';
 
     function setFieldError(
         name: keyof ProfileFieldErrors,
@@ -397,7 +397,7 @@ export default function UserDetailPage({
             <section className="grid gap-4">
                 <div>
                     <Button
-                        className="gap-2"
+                        className="gap-2 focus-visible:ring-0"
                         onClick={() => navigate(admin ? '/admin/users' : '/')}
                         type="button"
                         variant="link"

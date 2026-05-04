@@ -5,7 +5,10 @@ import type {
     ManagedUserFieldErrors,
     ManagedUserFormValues,
 } from '@features/users/form';
-import { fileToDataUrl, isSupportedImage } from '@shared/services/media';
+import {
+    compressImageToDataUrl,
+    isSupportedImage,
+} from '@shared/services/media';
 import { Avatar } from '@shared/ui/Avatar';
 import { Button } from '@shared/ui/form/Button';
 import { Field } from '@shared/ui/form/Field';
@@ -78,7 +81,11 @@ export function ManagedUserDialog({
                                     if (!file || !isSupportedImage(file)) {
                                         return;
                                     }
-                                    void fileToDataUrl(file).then((value) => {
+                                    void compressImageToDataUrl(
+                                        file,
+                                        280,
+                                        0.76
+                                    ).then((value) => {
                                         updateFormValue(
                                             'profileImageUrl',
                                             value

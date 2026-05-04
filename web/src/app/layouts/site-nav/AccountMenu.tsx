@@ -43,20 +43,24 @@ export function AccountMenu({
             <button
                 aria-label={menuLabel}
                 className={clsx(
-                    'group text-ui-700 focus-visible:ring-ui-900 flex items-center gap-1.5 rounded p-0.5 transition-[box-shadow,color] outline-none focus-visible:ring-2'
+                    'group text-ui-700 flex h-10 items-center gap-1.5 rounded outline-none'
                 )}
                 onClick={onToggle}
                 type="button"
             >
-                <span className="group-hover:bg-ui-100 group-focus-visible:bg-ui-100 flex items-center gap-2 rounded py-1 pr-2 pl-1 transition-colors">
+                <span className="group-hover:text-ui-900 group-focus-visible:text-ui-900 flex min-w-0 items-center gap-2 rounded py-1 pr-1 pl-1 transition-colors">
                     <Avatar
+                        className="group-hover:ring-ui-400 group-focus-visible:ring-ui-900 transition-shadow group-focus-visible:ring-2"
                         imageUrl={profileImageUrl}
                         name={profileLabel}
                         size="sm"
                     />
                     <span className="hidden sm:inline">{profileLabel}</span>
                 </span>
-                <DropdownChevron isOpen={open} />
+                <DropdownChevron
+                    className="group-hover:text-ui-900 group-focus-visible:text-ui-900 shrink-0 transition-colors"
+                    isOpen={open}
+                />
             </button>
 
             <AnchoredPopover
