@@ -20,6 +20,7 @@ import {
 import { BackendError } from '@shared/services/http';
 
 interface AuthContextValue {
+    authError: string | null;
     isAuthed: boolean;
     isLoading: boolean;
     login: (input: LoginInput) => Promise<LoginResult>;
@@ -34,6 +35,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
+    const [authError, setAuthError] = useState<string | null>(null);
     const [user, setUser] = useState<User | null>(null);
 
     useEffect(() => {
@@ -45,9 +47,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 // app startup always asks the API for the current user.
                 const currentUser = await authApi.me();
 
-                if (isActive) setUser(currentUser);
-            } catch {
-                if (isActive) setUser(null);
+                if (isActive) {
+                    setAuthError(null);
+                    setUser(currentUser);
+                }
+            } catch (error) {
+                if (!isActive) return;
+                if (error instanceof BackendError && error.status === 401) {
+                    setAuthError(null);
+                    setUser(null);
+                    return;
+                }
+                setAuthError('Unable to check your session. Try refreshing.');
             } finally {
                 if (isActive) setIsLoading(false);
             }
@@ -61,17 +72,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const value: AuthContextValue = {
+        authError,
         isAuthed: user !== null,
         isLoading,
         async login(input) {
             // Login returns the authenticated user after the backend validates
             // the submitted credentials and issues a fresh session cookie.
             const result = await authApi.login(input);
-            if ('user' in result) setUser(result.user);
+            if ('user' in result) {
+                setAuthError(null);
+                setUser(result.user);
+            }
             return result;
         },
         async verifyLoginMfa(input) {
             const nextUser = await authApi.verifyLoginMfa(input);
+            setAuthError(null);
             setUser(nextUser);
             return nextUser;
         },
