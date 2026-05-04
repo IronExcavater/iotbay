@@ -70,7 +70,7 @@ export default function ProductCatalogPage() {
         <section className="grid gap-6">
             <div className="flex flex-wrap items-end justify-between gap-4">
                 <PageHeader
-                    description="Browse connected home devices and accessories."
+                    description="Find devices for monitoring, automation, security, and connected living."
                     title="Catalogue"
                 />
 

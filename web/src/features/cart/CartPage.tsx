@@ -18,6 +18,7 @@ import { useAuth } from '@features/auth/AuthProvider';
 import { useCart } from '@features/cart/CartProvider';
 import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { Button, ButtonLink } from '@shared/ui/form/Button';
+import { Checkbox } from '@shared/ui/form/Checkbox';
 import { TextLink } from '@shared/ui/form/TextLink';
 import { PageHeader } from '@shared/ui/PageHeader';
 import { useToast } from '@shared/ui/toast/ToastProvider';
@@ -102,7 +103,7 @@ export default function CartPage() {
     return (
         <section className="grid gap-6">
             <PageHeader
-                description="Review items, delivery details, and order terms."
+                description="Check the items, delivery address, and total before placing your order."
                 title="Cart"
             />
 
@@ -243,23 +244,14 @@ export default function CartPage() {
                         )}
                     </div>
 
-                    <label className="text-ui-700 flex items-start gap-2 text-sm">
-                        <input
-                            checked={acceptedTerms}
-                            className="accent-ui-900 mt-0.5"
-                            onChange={(event) =>
-                                setAcceptedTerms(event.target.checked)
-                            }
-                            type="checkbox"
-                        />
-                        <span>
-                            I agree to the{' '}
-                            <TextLink to="/terms">
-                                terms and conditions
-                            </TextLink>
-                            .
-                        </span>
-                    </label>
+                    <Checkbox
+                        checked={acceptedTerms}
+                        className="items-start"
+                        onChange={setAcceptedTerms}
+                    >
+                        I agree to the{' '}
+                        <TextLink to="/terms">terms and conditions</TextLink>.
+                    </Checkbox>
 
                     {!hasSelectedAddress && user && isCustomer && (
                         <p className="text-ui-500 text-sm">

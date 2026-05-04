@@ -7,7 +7,7 @@ export default function TermsPage() {
     return (
         <section className="mx-auto grid max-w-3xl gap-6">
             <PageHeader
-                description="The conditions that apply when creating an account or placing an order."
+                description="Read the account, order, product, and privacy terms that apply to IoTBay."
                 title="Terms and conditions"
             />
 
