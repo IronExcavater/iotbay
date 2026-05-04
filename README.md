@@ -192,19 +192,3 @@ npm run -w api seed:dump
 ```
 
 Review the `api/db/seed.sql` diff before committing it.
-
-## API Testing
-
-Postman can be used to test the API with a GUI: https://www.postman.com/
-
-Create a Postman environment such as `IOTBay Local` with:
-
-```text
-baseUrl = http://localhost:5001
-```
-
-Then build requests with `{{baseUrl}}/api/...`, for example:
-
-```text
-GET {{baseUrl}}/api/health
-```
