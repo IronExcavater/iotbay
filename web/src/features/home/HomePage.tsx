@@ -5,8 +5,8 @@ export default function HomePage() {
     const { user } = useAuth();
     const heading = user ? `Welcome, ${user.firstName}` : 'Welcome to IoTBay';
     const subtitle = user
-        ? `Explore the catalogue, manage your orders, and keep your account up to date.`
-        : `Smart devices for a connected home. Sign in to start shopping.`;
+        ? `Continue shopping, check your orders, or update your account details.`
+        : `Shop IoT devices for home monitoring, security, and automation.`;
     useDocumentTitle('Home');
 
     return (
