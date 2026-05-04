@@ -781,7 +781,7 @@ function DetailTab({
     return (
         <button
             aria-selected={active}
-            className={`border-b-2 px-0 pb-2 text-sm font-medium ${
+            className={`focus-visible:ring-ui-900 border-b-2 px-0 pb-2 text-sm font-medium outline-none focus-visible:ring-2 ${
                 active
                     ? 'border-ui-900 text-ui-900'
                     : 'text-ui-500 hover:text-ui-900 border-transparent'

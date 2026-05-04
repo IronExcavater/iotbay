@@ -51,7 +51,7 @@ export function AccountPersonalSection({
             </h3>
             <div className="grid grid-cols-[auto_1fr] items-start gap-4">
                 <div className="relative inline-flex">
-                    <label className="group relative inline-flex cursor-pointer rounded-full">
+                    <label className="group focus-within:ring-ui-900 relative inline-flex cursor-pointer rounded-full focus-within:ring-2 focus-within:ring-offset-2 focus-within:outline-none">
                         <Avatar
                             imageUrl={values.profileImageUrl}
                             name={fullName}
@@ -81,7 +81,7 @@ export function AccountPersonalSection({
                     {values.profileImageUrl && (
                         <button
                             aria-label="Remove profile photo"
-                            className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-red-500 text-white ring-2 ring-white hover:bg-red-600"
+                            className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-red-500 text-white ring-2 ring-white outline-none hover:bg-red-600 focus-visible:ring-red-700"
                             onClick={() => onProfileImageChange('')}
                             type="button"
                         >
