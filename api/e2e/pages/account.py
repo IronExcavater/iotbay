@@ -10,8 +10,8 @@ class AccountPage:
         self.case.wait_for_text("Access Customer")
 
     def open_security_tab(self) -> None:
-        self.case.driver.find_element(
-            "xpath",
+        self.case.click_when_ready(
             "//button[normalize-space()='Security']",
-        ).click()
+            by="xpath",
+        )
         self.case.wait_for_text("Access logs")
