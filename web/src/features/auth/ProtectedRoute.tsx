@@ -24,7 +24,7 @@ export function ProtectedRoute({
     access = 'authenticated',
     children,
 }: ProtectedRouteProps) {
-    const { isLoading, user } = useAuth();
+    const { authError, isLoading, user } = useAuth();
     const location = useLocation();
     const requestedPath = location.pathname + location.search;
     const content = children ?? <Outlet />;
@@ -44,6 +44,17 @@ export function ProtectedRoute({
     }
 
     if (isLoading) return null;
+
+    if (authError && user === null) {
+        return (
+            <section className="mx-auto grid max-w-lg gap-3 px-4 py-12 text-center">
+                <h1 className="text-ui-900 text-2xl font-semibold">
+                    Session check failed
+                </h1>
+                <p className="text-ui-600 text-sm">{authError}</p>
+            </section>
+        );
+    }
 
     if (user === null) {
         return (
