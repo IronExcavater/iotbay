@@ -38,7 +38,7 @@ def render_password_reset_email(
     expires_at: str,
     locale: str,
 ) -> RenderedEmail:
-    subject = "Reset your IOTBay password"
+    subject = "Reset your IoTBay password"
     formatted_expires_at = _format_expiry(expires_at, locale=locale)
     template_data = {
         "email": email,
@@ -50,7 +50,7 @@ def render_password_reset_email(
         html_template=PASSWORD_RESET_HTML_TEMPLATE,
         subject=subject,
         text_body=(
-            "We received a request to reset the password for your IOTBay account.\n\n"
+            "We received a request to reset the password for your IoTBay account.\n\n"
             "Reset your password: {reset_url}\n"
             "Expires: {formatted_expires_at}\n\n"
             "If you did not request this, you can ignore this email."
@@ -67,7 +67,7 @@ def render_registration_verification_email(
     expires_at: str,
     locale: str,
 ) -> RenderedEmail:
-    subject = "Verify your IOTBay email"
+    subject = "Verify your IoTBay email"
     formatted_expires_at = _format_expiry(expires_at, locale=locale)
     template_data = {
         "email": email,
@@ -79,7 +79,7 @@ def render_registration_verification_email(
         html_template=REGISTRATION_VERIFICATION_HTML_TEMPLATE,
         subject=subject,
         text_body=(
-            "Finish creating your IOTBay account by verifying your email address.\n\n"
+            "Finish creating your IoTBay account by verifying your email address.\n\n"
             "Verify your email: {verification_url}\n"
             "Expires: {formatted_expires_at}\n\n"
             "If you did not start this signup, you can ignore this email."
@@ -96,7 +96,7 @@ def render_staff_invitation_email(
     expires_at: str,
     locale: str,
 ) -> RenderedEmail:
-    subject = "Create your IOTBay staff account"
+    subject = "Create your IoTBay staff account"
     formatted_expires_at = _format_expiry(expires_at, locale=locale)
     template_data = {
         "email": email,
@@ -108,7 +108,7 @@ def render_staff_invitation_email(
         html_template=STAFF_INVITATION_HTML_TEMPLATE,
         subject=subject,
         text_body=(
-            "You were invited to create an IOTBay staff account.\n\n"
+            "You were invited to create an IoTBay staff account.\n\n"
             "Create your staff account: {registration_url}\n"
             "Expires: {formatted_expires_at}\n\n"
             "If you were not expecting this invitation, you can ignore this email."
@@ -125,7 +125,7 @@ def render_login_mfa_code_email(
     expires_at: str,
     locale: str,
 ) -> RenderedEmail:
-    subject = "Your IOTBay sign in code"
+    subject = "Your IoTBay sign in code"
     formatted_expires_at = _format_expiry(expires_at, locale=locale)
     template_data = {
         "code": code,
@@ -137,7 +137,7 @@ def render_login_mfa_code_email(
         html_template=LOGIN_MFA_CODE_HTML_TEMPLATE,
         subject=subject,
         text_body=(
-            "Use this code to finish signing in to your IOTBay account: {code}\n"
+            "Use this code to finish signing in to your IoTBay account: {code}\n"
             "Expires: {formatted_expires_at}\n\n"
             "If you did not try to sign in, you can ignore this email."
         ),

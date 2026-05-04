@@ -80,7 +80,6 @@ from src.users.models import (
     UserSessionInfo,
     build_user_details,
     permission_rank,
-    user_has_changes,
     validate_user_password,
 )
 from src.users.repository import DuplicateEmailError, UserRepository
@@ -621,17 +620,7 @@ class AuthService:
         self._require_current_password(
             user,
             data.current_password,
-            user_has_changes(
-                user,
-                email=data.email,
-                first_name=data.first_name,
-                last_name=data.last_name,
-                profile_image_url=data.profile_image_url,
-                staff_id=data.staff_id,
-                designation=data.designation,
-                permission=data.permission,
-                details=details,
-            ),
+            email_changed,
         )
         before = user.snapshot()
         updated_user = self.user_repository.update_user(
@@ -641,10 +630,11 @@ class AuthService:
             last_name=data.last_name,
             address_line_two=details.address_line_two,
             phone_number=details.phone_number,
+            profile_image_url=data.profile_image_url,
             validated_address=details.validated_address,
             staff_id=data.staff_id or None,
             designation=data.designation or None,
-            permission=data.permission or None,
+            permission=(user.permission if user.user_type == USER_TYPE_STAFF else None),
             status=USER_STATUS_UNVERIFIED if email_changed else None,
             updated_at=UtcTime.now().iso,
         )
