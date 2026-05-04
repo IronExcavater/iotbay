@@ -44,7 +44,7 @@ export default function SiteNav() {
                     <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 lg:gap-6">
                         <BrandLink />
 
-                        <div className="-mx-1 -my-0.5 overflow-x-auto px-1 py-0.5">
+                        <div className="-mx-2 -my-1 overflow-x-auto px-2 py-1">
                             <nav className="flex items-center gap-1 text-sm whitespace-nowrap">
                                 <SiteNavLink to="/products">
                                     Catalogue
@@ -188,7 +188,7 @@ function SiteNavLink({ children, to }: { children: ReactNode; to: string }) {
     return (
         <NavLink
             className={({ isActive }) =>
-                `focus-visible:ring-ui-900 rounded px-3 py-1.5 font-medium transition-[background-color,color] outline-none focus-visible:ring-2 ${
+                `focus-visible:ring-ui-900 focus-visible:ring-offset-ui-0 rounded px-3 py-1.5 font-medium transition-[background-color,color] outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
                     isActive
                         ? 'bg-ui-100 text-ui-900'
                         : 'text-ui-600 hover:bg-ui-100 hover:text-ui-900'

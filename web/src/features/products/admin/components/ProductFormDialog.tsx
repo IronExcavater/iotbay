@@ -2,7 +2,10 @@ import type {
     ProductFieldErrors,
     ProductFormValues,
 } from '@features/products/form';
-import { fileToDataUrl, isSupportedImage } from '@shared/services/media';
+import {
+    compressImageToDataUrl,
+    isSupportedImage,
+} from '@shared/services/media';
 import { Button } from '@shared/ui/form/Button';
 import { Field } from '@shared/ui/form/Field';
 import { Input } from '@shared/ui/form/Input';
@@ -61,7 +64,7 @@ export function ProductFormDialog({
 
     async function replaceImage(index: number, file: File | null | undefined) {
         if (!file || !isSupportedImage(file)) return;
-        updateImage(index, await fileToDataUrl(file));
+        updateImage(index, await compressImageToDataUrl(file, 1200, 0.82));
     }
 
     function removeImage(index: number) {
@@ -81,7 +84,11 @@ export function ProductFormDialog({
             .filter(isSupportedImage)
             .slice(0, 6 - values.mediaUrls.length);
         if (selectedFiles.length === 0) return;
-        const urls = await Promise.all(selectedFiles.map(fileToDataUrl));
+        const urls = await Promise.all(
+            selectedFiles.map((file) =>
+                compressImageToDataUrl(file, 1200, 0.82)
+            )
+        );
         onMediaUrlsChange([...values.mediaUrls, ...urls].slice(0, 6));
     }
 

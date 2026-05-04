@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { FaArrowsRotate } from 'react-icons/fa6';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 import { accessLogsApi, type AccessLogEntry } from '@features/access-logs/api';
 import { toErrorMessage } from '@shared/services/http';
@@ -13,12 +13,14 @@ import {
     TableHead,
     TableLoadingRow,
     TableMessageRow,
+    TablePrimaryActionRow,
     TableSingleLineCell,
     TableStackCell,
 } from '@shared/ui/table/Table';
 import { DateTimeValue } from '@shared/value-objects/DateTimeValue';
 
 export function AccessLogsTable({ admin = false }: { admin?: boolean }) {
+    const navigate = useNavigate();
     const [logs, setLogs] = useState<AccessLogEntry[]>([]);
     const [fromDate, setFromDate] = useState('');
     const [search, setSearch] = useState('');
@@ -160,72 +162,94 @@ export function AccessLogsTable({ admin = false }: { admin?: boolean }) {
                             />
                         ) : (
                             filteredLogs.map((log) => (
-                                <tr
-                                    className="border-ui-200 border-t"
+                                <AccessLogRow
+                                    admin={admin}
                                     key={log.id}
-                                >
-                                    {admin && (
-                                        <td className="px-5 py-3">
-                                            <TableStackCell>
-                                                <div className="flex items-center gap-3">
-                                                    <Avatar
-                                                        imageUrl={
-                                                            log.userProfileImageUrl
-                                                        }
-                                                        name={
-                                                            log.userName ??
-                                                            log.userEmail ??
-                                                            'Unknown user'
-                                                        }
-                                                        size="sm"
-                                                    />
-                                                    <div className="grid min-w-0 gap-1">
-                                                        <Link
-                                                            className="text-ui-900 truncate text-sm font-medium hover:underline"
-                                                            to={`/admin/users/${log.userId}`}
-                                                        >
-                                                            {log.userName ??
-                                                                log.userEmail}
-                                                        </Link>
-                                                        {log.userName && (
-                                                            <span className="text-ui-500 truncate text-xs">
-                                                                {log.userEmail}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </TableStackCell>
-                                        </td>
-                                    )}
-                                    <td className="px-5 py-3">
-                                        <TableSingleLineCell className="capitalize">
-                                            {log.eventType.replace(/_/g, ' ')}
-                                        </TableSingleLineCell>
-                                    </td>
-                                    <td className="px-5 py-3">
-                                        <TableSingleLineCell className="text-ui-500">
-                                            {DateTimeValue.format(
-                                                log.occurredAt,
-                                                'short'
-                                            )}
-                                        </TableSingleLineCell>
-                                    </td>
-                                    <td className="px-5 py-3">
-                                        <TableSingleLineCell className="text-ui-500">
-                                            {log.deviceLabel}
-                                        </TableSingleLineCell>
-                                    </td>
-                                    <td className="px-5 py-3">
-                                        <TableSingleLineCell className="text-ui-500 font-mono text-xs">
-                                            {log.ipAddress ?? '-'}
-                                        </TableSingleLineCell>
-                                    </td>
-                                </tr>
+                                    log={log}
+                                    onOpenUser={(userId) => {
+                                        navigate(`/admin/users/${userId}`);
+                                    }}
+                                />
                             ))
                         )}
                     </tbody>
                 </Table>
             </div>
         </section>
+    );
+}
+
+function AccessLogRow({
+    admin,
+    log,
+    onOpenUser,
+}: {
+    admin: boolean;
+    log: AccessLogEntry;
+    onOpenUser: (userId: string) => void;
+}) {
+    const cells = (
+        <>
+            {admin && (
+                <td className="px-5 py-3">
+                    <TableStackCell>
+                        <div className="flex items-center gap-3">
+                            <Avatar
+                                imageUrl={log.userProfileImageUrl}
+                                name={
+                                    log.userName ??
+                                    log.userEmail ??
+                                    'Unknown user'
+                                }
+                                size="sm"
+                            />
+                            <div className="grid min-w-0 gap-1">
+                                <span className="text-ui-900 truncate text-sm font-medium">
+                                    {log.userName ?? log.userEmail}
+                                </span>
+                                {log.userName && (
+                                    <span className="text-ui-500 truncate text-xs">
+                                        {log.userEmail}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </TableStackCell>
+                </td>
+            )}
+            <td className="px-5 py-3">
+                <TableSingleLineCell className="capitalize">
+                    {log.eventType.replace(/_/g, ' ')}
+                </TableSingleLineCell>
+            </td>
+            <td className="px-5 py-3">
+                <TableSingleLineCell className="text-ui-500">
+                    {DateTimeValue.format(log.occurredAt, 'short')}
+                </TableSingleLineCell>
+            </td>
+            <td className="px-5 py-3">
+                <TableSingleLineCell className="text-ui-500">
+                    {log.deviceLabel}
+                </TableSingleLineCell>
+            </td>
+            <td className="px-5 py-3">
+                <TableSingleLineCell className="text-ui-500 font-mono text-xs">
+                    {log.ipAddress ?? '-'}
+                </TableSingleLineCell>
+            </td>
+        </>
+    );
+
+    if (!admin) {
+        return <tr className="border-ui-200 border-t">{cells}</tr>;
+    }
+
+    return (
+        <TablePrimaryActionRow
+            label={`Open ${log.userName ?? log.userEmail ?? 'user'}`}
+            onAction={() => onOpenUser(log.userId)}
+        >
+            {cells}
+        </TablePrimaryActionRow>
     );
 }
