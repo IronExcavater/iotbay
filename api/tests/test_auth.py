@@ -391,7 +391,7 @@ class AuthRouteTestCase(AppTestCase):
 
     def test_update_me_saves_profile_image_without_current_password(self) -> None:
         session = create_test_session(self.client)
-        image_url = "data:image/png;base64,aW90YmF5"
+        image_data_url = "data:image/png;base64,aW90YmF5"
 
         response = self.client.patch(
             "/api/me",
@@ -399,12 +399,17 @@ class AuthRouteTestCase(AppTestCase):
                 "email": session.email,
                 "firstName": "Alex",
                 "lastName": "Nguyen",
-                "profileImageUrl": image_url,
+                "profileImageUrl": image_data_url,
             },
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.get_json()["user"]["profileImageUrl"], image_url)
+        image_url = response.get_json()["user"]["profileImageUrl"]
+        self.assertTrue(image_url.startswith("/api/media/"))
+        image_response = self.client.get(image_url)
+        self.assertEqual(image_response.status_code, 200)
+        self.assertEqual(image_response.content_type, "image/png")
+        self.assertEqual(image_response.data, b"iotbay")
 
         repository = extension_from(
             self.client.application,

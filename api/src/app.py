@@ -14,6 +14,7 @@ from src.config import (
 )
 from src.db import migrate
 from src.health.routes import health_bp
+from src.media.routes import media_bp
 from src.products.routes import products_bp
 
 
@@ -47,6 +48,7 @@ def create_app(config_path: str | None = None) -> Flask:
 
     for blueprint in (
         health_bp,
+        media_bp,
         addresses_bp,
         products_bp,
         auth_bp,

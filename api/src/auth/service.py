@@ -55,6 +55,11 @@ from src.auth.security import (
 from src.common.clock import UtcTime
 from src.common.web import ApiError
 from src.emails.service import DeliveredEmailArtifact, EmailService
+from src.media.repository import (
+    InvalidMediaDataError,
+    MediaRepository,
+    is_data_image_url,
+)
 from src.users.models import (
     AUTH_CHALLENGE_PURPOSE_LOGIN_EMAIL_MFA,
     AUTH_METHOD_PASSWORD,
@@ -282,6 +287,7 @@ class AuthService:
     audit: AuditService
     email_service: EmailService
     login_mfa_lifetime_seconds: int
+    media_repository: MediaRepository
     password_reset_lifetime_seconds: int
     session_lifetime_seconds: int
     trusted_session_lifetime_seconds: int
@@ -623,6 +629,7 @@ class AuthService:
             email_changed,
         )
         before = user.snapshot()
+        profile_image_url = self._stored_media_url(data.profile_image_url)
         updated_user = self.user_repository.update_user(
             user_id=user.user_id,
             email=next_email,
@@ -630,7 +637,7 @@ class AuthService:
             last_name=data.last_name,
             address_line_two=details.address_line_two,
             phone_number=details.phone_number,
-            profile_image_url=data.profile_image_url,
+            profile_image_url=profile_image_url,
             validated_address=details.validated_address,
             staff_id=data.staff_id or None,
             designation=data.designation or None,
@@ -715,12 +722,13 @@ class AuthService:
         else:
             next_permission = None
 
+        profile_image_url = self._stored_media_url(data.profile_image_url)
         updated_user = self.user_repository.admin_update_user(
             user_id=target.user_id,
             email=data.email,
             first_name=data.first_name,
             last_name=data.last_name,
-            profile_image_url=data.profile_image_url,
+            profile_image_url=profile_image_url,
             staff_id=data.staff_id or None,
             designation=data.designation or None,
             permission=next_permission,
@@ -735,6 +743,22 @@ class AuthService:
             after=updated_user.snapshot(),
         )
         return updated_user
+
+    def _stored_media_url(self, value: str) -> str:
+        if not is_data_image_url(value):
+            return value
+        try:
+            with self.user_repository.connect() as connection:
+                return self.media_repository.store_data_url(
+                    connection,
+                    data_url=value,
+                )
+        except InvalidMediaDataError as error:
+            raise ApiError(
+                str(error),
+                HTTPStatus.BAD_REQUEST,
+                code="MEDIA_INVALID",
+            ) from error
 
     def update_managed_user_status(
         self,

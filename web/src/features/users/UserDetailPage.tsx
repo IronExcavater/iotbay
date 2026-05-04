@@ -631,11 +631,17 @@ function UserDetailsSummary({ user }: { user: DetailUser }) {
             {user.userType === 'staff' && (
                 <DetailPanel
                     title="Staff"
-                    value={user.designation || 'No designation'}
+                    value={
+                        <span className="inline-flex flex-wrap items-baseline gap-2">
+                            <span>{user.designation || 'No designation'}</span>
+                            {user.permission && (
+                                <span className="text-ui-500 text-sm font-medium capitalize">
+                                    {user.permission}
+                                </span>
+                            )}
+                        </span>
+                    }
                 >
-                    {user.permission && (
-                        <span className="capitalize">{user.permission}</span>
-                    )}
                     {user.staffId && <span>ID: {user.staffId}</span>}
                 </DetailPanel>
             )}
@@ -855,7 +861,7 @@ function DetailPanel({
     children?: ReactNode;
     prominent?: boolean;
     title: string;
-    value: string;
+    value: ReactNode;
 }) {
     return (
         <section className="grid content-start gap-2">

@@ -30,11 +30,16 @@ class ProductRouteTestCase(AppTestCase):
         self.assertIsNotNone(created)
         self.assertEqual(created["name"], "Smart Sensor")
         self.assertEqual(created["code"], "SNSR-001")
-        self.assertEqual(created["mediaUrls"], media_urls)
+        self.assertEqual(len(created["mediaUrls"]), 1)
+        self.assertTrue(created["mediaUrls"][0].startswith("/api/media/"))
+        media_response = self.client.get(created["mediaUrls"][0])
+        self.assertEqual(media_response.status_code, 200)
+        self.assertEqual(media_response.content_type, "image/png")
+        self.assertEqual(media_response.data, b"iotbay")
         self.assertEqual(created["priceCents"], 12999)
         listed_products = self.client.get("/api/products").get_json()["items"]
         self.assertEqual(len(listed_products), 1)
-        self.assertEqual(listed_products[0]["mediaUrls"], media_urls)
+        self.assertEqual(listed_products[0]["mediaUrls"], created["mediaUrls"])
 
     def test_create_product_requires_staff_access(self) -> None:
         unauthenticated_response = self.client.post(
