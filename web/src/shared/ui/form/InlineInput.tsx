@@ -1,5 +1,6 @@
 import {
     forwardRef,
+    useEffect,
     useCallback,
     useLayoutEffect,
     useRef,
@@ -66,8 +67,7 @@ export const InlineInput = forwardRef<HTMLInputElement, InlineInputProps>(
             },
             [onValueChange]
         );
-
-        useLayoutEffect(() => {
+        const updateWidth = useCallback(() => {
             if (!widthSource) {
                 setWidth(minWidth);
                 return;
@@ -76,13 +76,52 @@ export const InlineInput = forwardRef<HTMLInputElement, InlineInputProps>(
             const measureElement = measureRef.current;
             if (!measureElement) return;
 
-            setWidth(
-                Math.max(
-                    minWidth,
-                    measureElement.getBoundingClientRect().width + widthBuffer
-                )
+            const nextWidth = Math.max(
+                minWidth,
+                measureElement.getBoundingClientRect().width + widthBuffer
+            );
+
+            setWidth((current) =>
+                current === nextWidth ? current : nextWidth
             );
         }, [minWidth, widthBuffer, widthSource]);
+
+        const updateWidthRef = useRef(updateWidth);
+        useLayoutEffect(() => {
+            updateWidthRef.current = updateWidth;
+            updateWidth();
+        }, [updateWidth]);
+
+        useEffect(() => {
+            const measureElement = measureRef.current;
+            if (!measureElement || typeof ResizeObserver === 'undefined')
+                return;
+
+            const resizeObserver = new ResizeObserver(() =>
+                updateWidthRef.current()
+            );
+            resizeObserver.observe(measureElement);
+            return () => resizeObserver.disconnect();
+        }, []);
+
+        useEffect(() => {
+            const fontSet = document.fonts;
+            let isCancelled = false;
+
+            void fontSet.ready.then(() => {
+                if (!isCancelled) updateWidthRef.current();
+            });
+
+            const handleFontEvent = () => updateWidthRef.current();
+            fontSet.addEventListener('loadingdone', handleFontEvent);
+            fontSet.addEventListener('loadingerror', handleFontEvent);
+
+            return () => {
+                isCancelled = true;
+                fontSet.removeEventListener('loadingdone', handleFontEvent);
+                fontSet.removeEventListener('loadingerror', handleFontEvent);
+            };
+        }, []);
 
         return (
             <>
