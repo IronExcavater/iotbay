@@ -1,3 +1,11 @@
+import { useState } from 'react';
+import {
+    FaArrowUpFromBracket,
+    FaImage,
+    FaLink,
+    FaTrashCan,
+} from 'react-icons/fa6';
+
 import type {
     ProductFieldErrors,
     ProductFormValues,
@@ -173,14 +181,25 @@ function ProductImagesEditor({
     onUpdate: (index: number, value: string) => void;
 }) {
     const canAdd = images.length < 6;
+    const [editingUrlIndex, setEditingUrlIndex] = useState<number | null>(null);
 
     return (
         <section className="grid gap-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <span className="text-ui-700 text-sm font-medium">Images</span>
                 <div className="flex flex-wrap gap-2">
-                    <label className="text-ui-700 ring-ui-300 hover:bg-ui-100 relative inline-flex h-9 cursor-pointer items-center rounded px-3 text-sm font-medium ring-1">
-                        Upload
+                    <label
+                        className={`ring-ui-300 hover:bg-ui-100 focus-within:ring-ui-900 relative inline-flex h-9 items-center gap-2 rounded px-3 text-sm font-medium ring-1 transition-[background-color,box-shadow] focus-within:ring-2 ${
+                            canAdd
+                                ? 'text-ui-700 cursor-pointer'
+                                : 'text-ui-400 cursor-not-allowed'
+                        }`}
+                    >
+                        <FaArrowUpFromBracket
+                            aria-hidden="true"
+                            className="size-3.5"
+                        />
+                        Upload images
                         <input
                             accept="image/*"
                             className="sr-only"
@@ -200,23 +219,44 @@ function ProductImagesEditor({
                         type="button"
                         variant="secondary"
                     >
+                        <FaLink aria-hidden="true" className="size-3.5" />
                         Add URL
                     </Button>
                 </div>
             </div>
 
-            <div className="grid gap-3">
-                {images.length === 0 && (
-                    <p className="text-ui-500 text-sm">
-                        Add up to six product images.
-                    </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+                {images.length === 0 && canAdd && (
+                    <label className="border-ui-300 bg-ui-50 hover:bg-ui-100 focus-within:ring-ui-900 flex min-h-36 cursor-pointer flex-col items-center justify-center gap-3 rounded border border-dashed p-4 text-center transition-[background-color,box-shadow] focus-within:ring-2">
+                        <span className="bg-ui-0 text-ui-500 ring-ui-200 inline-flex size-10 items-center justify-center rounded-full ring-1">
+                            <FaImage aria-hidden="true" className="size-4" />
+                        </span>
+                        <span className="grid gap-1">
+                            <span className="text-ui-900 text-sm font-medium">
+                                Upload product images
+                            </span>
+                            <span className="text-ui-500 text-xs">
+                                Up to six images
+                            </span>
+                        </span>
+                        <input
+                            accept="image/*"
+                            className="sr-only"
+                            multiple
+                            onChange={(event) => {
+                                onAddFile(event.target.files);
+                                event.target.value = '';
+                            }}
+                            type="file"
+                        />
+                    </label>
                 )}
                 {images.map((image, index) => (
                     <div
-                        className="grid gap-3 sm:grid-cols-[5rem_minmax(0,1fr)_auto] sm:items-center"
+                        className="border-ui-200 bg-ui-0 overflow-hidden rounded border"
                         key={`${image}-${index}`}
                     >
-                        <div className="bg-ui-100 border-ui-200 flex aspect-square items-center justify-center overflow-hidden rounded border">
+                        <div className="bg-ui-100 flex aspect-video items-center justify-center overflow-hidden">
                             {image ? (
                                 <img
                                     alt=""
@@ -229,35 +269,61 @@ function ProductImagesEditor({
                                 </span>
                             )}
                         </div>
-                        <Input
-                            onChange={(event) =>
-                                onUpdate(index, event.target.value)
-                            }
-                            placeholder="https://example.com/product.jpg"
-                            value={image}
-                        />
-                        <div className="flex gap-3">
-                            <label className="text-ui-600 hover:text-ui-900 relative inline-flex h-9 cursor-pointer items-center text-sm font-medium">
-                                Replace
-                                <input
-                                    accept="image/*"
-                                    className="sr-only"
-                                    onChange={(event) => {
-                                        onReplace(
-                                            index,
-                                            event.target.files?.[0]
-                                        );
-                                        event.target.value = '';
-                                    }}
-                                    type="file"
+                        <div className="grid gap-3 p-3">
+                            {editingUrlIndex === index && (
+                                <Input
+                                    onChange={(event) =>
+                                        onUpdate(index, event.target.value)
+                                    }
+                                    placeholder="https://example.com/product.jpg"
+                                    value={image}
                                 />
-                            </label>
+                            )}
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="text-ui-500 min-w-0 truncate text-xs">
+                                    {image
+                                        ? imageLabel(image)
+                                        : 'No image selected'}
+                                </div>
+                                <div className="flex shrink-0 items-center gap-2">
+                                    <button
+                                        className="text-ui-600 hover:text-ui-900 focus-visible:ring-ui-900 rounded text-sm font-medium outline-none focus-visible:ring-2"
+                                        onClick={() =>
+                                            setEditingUrlIndex((current) =>
+                                                current === index ? null : index
+                                            )
+                                        }
+                                        type="button"
+                                    >
+                                        URL
+                                    </button>
+                                    <label className="text-ui-600 hover:text-ui-900 focus-within:ring-ui-900 relative inline-flex cursor-pointer items-center rounded text-sm font-medium outline-none focus-within:ring-2">
+                                        Replace
+                                        <input
+                                            accept="image/*"
+                                            className="sr-only"
+                                            onChange={(event) => {
+                                                onReplace(
+                                                    index,
+                                                    event.target.files?.[0]
+                                                );
+                                                event.target.value = '';
+                                            }}
+                                            type="file"
+                                        />
+                                    </label>
+                                </div>
+                            </div>
                             <Button
-                                className="text-ui-600 hover:text-ui-900 h-9 px-0 hover:bg-transparent"
+                                className="text-ui-600 justify-self-start px-0 hover:bg-transparent hover:text-red-700"
                                 onClick={() => onRemove(index)}
                                 type="button"
                                 variant="ghost"
                             >
+                                <FaTrashCan
+                                    aria-hidden="true"
+                                    className="size-3.5"
+                                />
                                 Remove
                             </Button>
                         </div>
@@ -266,4 +332,10 @@ function ProductImagesEditor({
             </div>
         </section>
     );
+}
+
+function imageLabel(value: string) {
+    if (value.startsWith('data:')) return 'Uploaded image';
+    if (value.startsWith('/api/media/')) return 'Saved image';
+    return value;
 }
