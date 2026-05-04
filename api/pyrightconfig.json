@@ -2,7 +2,10 @@
     "include": [
         "run.py",
         "src",
-        "tests"
+        "tests",
+        "acceptance",
+        "e2e",
+        "testing"
     ],
     "exclude": [
         ".venv",
