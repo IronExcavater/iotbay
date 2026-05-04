@@ -162,7 +162,7 @@ function ViewButton({
     return (
         <button
             aria-label={label}
-            className={`inline-flex w-10 items-center justify-center transition-[background-color,color] first:rounded-l last:rounded-r ${
+            className={`focus-visible:ring-ui-900 inline-flex w-10 items-center justify-center transition-[background-color,color] outline-none first:rounded-l last:rounded-r focus-visible:ring-2 focus-visible:ring-inset ${
                 active
                     ? 'bg-ui-950 text-ui-0'
                     : 'text-ui-500 hover:bg-ui-100 hover:text-ui-900'

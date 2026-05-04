@@ -192,7 +192,7 @@ export default function ProductDetailPage({
                             <div className="absolute inset-x-3 top-1/2 flex -translate-y-1/2 justify-between">
                                 <button
                                     aria-label="Previous image"
-                                    className="bg-ui-0/90 text-ui-700 hover:bg-ui-0 border-ui-200 inline-flex size-9 items-center justify-center rounded-full border shadow-sm"
+                                    className="bg-ui-0/90 text-ui-700 hover:bg-ui-0 border-ui-200 focus-visible:ring-ui-900 inline-flex size-9 items-center justify-center rounded-full border shadow-sm outline-none focus-visible:ring-2"
                                     onClick={() => {
                                         setSelectedMediaIndex((current) =>
                                             current === 0
@@ -209,7 +209,7 @@ export default function ProductDetailPage({
                                 </button>
                                 <button
                                     aria-label="Next image"
-                                    className="bg-ui-0/90 text-ui-700 hover:bg-ui-0 border-ui-200 inline-flex size-9 items-center justify-center rounded-full border shadow-sm"
+                                    className="bg-ui-0/90 text-ui-700 hover:bg-ui-0 border-ui-200 focus-visible:ring-ui-900 inline-flex size-9 items-center justify-center rounded-full border shadow-sm outline-none focus-visible:ring-2"
                                     onClick={() => {
                                         setSelectedMediaIndex((current) =>
                                             current === media.length - 1
@@ -233,7 +233,7 @@ export default function ProductDetailPage({
                             {media.map((mediaUrl, index) => (
                                 <button
                                     aria-label={`Show image ${index + 1}`}
-                                    className={`focus-visible:ring-ui-400 h-16 w-20 shrink-0 overflow-hidden rounded border focus:outline-none focus-visible:ring-2 ${
+                                    className={`focus-visible:ring-ui-900 h-16 w-20 shrink-0 overflow-hidden rounded border outline-none focus-visible:ring-2 ${
                                         index === selectedMediaIndex
                                             ? 'border-ui-900'
                                             : 'border-ui-200'
