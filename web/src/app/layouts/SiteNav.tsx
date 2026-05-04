@@ -92,6 +92,7 @@ export default function SiteNav() {
                             setIsThemeMenuOpen(false);
                         }}
                         open={isThemeMenuOpen}
+                        zIndex={40}
                     >
                         <MenuPanel>
                             <ThemeMenuItem
