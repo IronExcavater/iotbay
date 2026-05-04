@@ -9,11 +9,13 @@ import { FirstName, LastName } from '@shared/value-objects/Name';
 import { Designation, Permission, StaffId } from '@shared/value-objects/Staff';
 
 export interface ManagedUserFormValues {
+    currentPassword: string;
     designation: string;
     email: string;
     firstName: string;
     lastName: string;
     permission: string;
+    profileImageUrl: string;
     staffId: string;
 }
 
@@ -26,11 +28,13 @@ export function toManagedUserFormValues(
     user: ManagedUser
 ): ManagedUserFormValues {
     return {
+        currentPassword: '',
         designation: user.designation ?? '',
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
         permission: user.permission ?? 'admin',
+        profileImageUrl: user.profileImageUrl ?? '',
         staffId: user.staffId ?? '',
     };
 }
@@ -40,6 +44,8 @@ export function formatManagedUserField(
     value: string
 ) {
     switch (name) {
+        case 'currentPassword':
+            return value;
         case 'designation':
             return Designation.formatInput(value);
         case 'email':
@@ -50,6 +56,8 @@ export function formatManagedUserField(
             return LastName.formatInput(value);
         case 'permission':
             return value;
+        case 'profileImageUrl':
+            return value;
         case 'staffId':
             return StaffId.formatInput(value);
     }
@@ -57,8 +65,13 @@ export function formatManagedUserField(
 
 export function assessManagedUserForm(
     values: ManagedUserFormValues,
-    isStaff: boolean
+    isStaff: boolean,
+    {
+        emailChanged = false,
+        permissionChanged = false,
+    }: { emailChanged?: boolean; permissionChanged?: boolean } = {}
 ) {
+    const requiresPassword = emailChanged || permissionChanged;
     const email = Email.assess(values.email);
     const firstName = FirstName.assess(values.firstName);
     const lastName = LastName.assess(values.lastName);
@@ -66,6 +79,10 @@ export function assessManagedUserForm(
     const permission = Permission.assess(values.permission, isStaff);
     const staffId = StaffId.assess(values.staffId, false);
     const fieldErrors = collectFieldErrors<ManagedUserFieldName>({
+        currentPassword:
+            requiresPassword && !values.currentPassword.trim()
+                ? 'Your password is required'
+                : null,
         designation: isStaff ? designation : null,
         email,
         firstName,
@@ -81,11 +98,15 @@ export function assessManagedUserForm(
     return {
         fieldErrors,
         payload: {
+            currentPassword: requiresPassword
+                ? values.currentPassword
+                : undefined,
             designation: isStaff ? (designation.value ?? '') : '',
             email: email.value ?? '',
             firstName: firstName.value ?? '',
             lastName: lastName.value ?? '',
             permission: isStaff ? (permission.value ?? '') : '',
+            profileImageUrl: values.profileImageUrl,
             staffId: isStaff ? (staffId.value ?? '') : '',
         } satisfies UpdateManagedUserInput,
     };
@@ -98,6 +119,18 @@ export function toManagedUserErrorState(error: unknown) {
     }>(
         error,
         {
+            CURRENT_PASSWORD_INCORRECT: (backendError) => ({
+                fieldErrors: {
+                    currentPassword: backendErrorMessage(backendError.code),
+                },
+                formError: null,
+            }),
+            CURRENT_PASSWORD_REQUIRED: (backendError) => ({
+                fieldErrors: {
+                    currentPassword: backendErrorMessage(backendError.code),
+                },
+                formError: null,
+            }),
             EMAIL_EXISTS: (backendError) => ({
                 fieldErrors: { email: backendErrorMessage(backendError.code) },
                 formError: null,

@@ -10,17 +10,20 @@ export interface ManagedUser {
     lastName: string;
     permission?: string | null;
     phoneNumber?: string | null;
+    profileImageUrl?: string | null;
     staffId?: string | null;
     status: string;
     userType: string;
 }
 
 export interface UpdateManagedUserInput {
+    currentPassword?: string;
     designation?: string;
     email: string;
     firstName: string;
     lastName: string;
     permission?: string;
+    profileImageUrl?: string;
     staffId?: string;
 }
 

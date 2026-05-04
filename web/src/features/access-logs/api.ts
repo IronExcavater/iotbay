@@ -11,6 +11,7 @@ export interface AccessLogEntry {
     userEmail?: string | null;
     userId: string;
     userName?: string | null;
+    userProfileImageUrl?: string | null;
 }
 
 interface AccessLogsResponse {

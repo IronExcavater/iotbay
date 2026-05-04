@@ -13,6 +13,7 @@ class ProductRequest(BaseModel):
 
 class ProductMutationRequest(ProductRequest):
     code: str
+    media_urls: list[str] = []
     name: str
     price_cents: int
 
@@ -30,3 +31,9 @@ class ProductMutationRequest(ProductRequest):
     @classmethod
     def require_price_cents(cls, value: int) -> int:
         return MoneyAmount.validate_request_cents(value)
+
+    @field_validator("media_urls")
+    @classmethod
+    def normalize_media_urls(cls, value: list[str]) -> list[str]:
+        urls = [item.strip() for item in value if item.strip()]
+        return urls[:6]

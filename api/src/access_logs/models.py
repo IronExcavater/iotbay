@@ -60,6 +60,7 @@ class AccessLogEntry(SqliteRowModel, BlobUuidModel):
     user_email: str | None = None
     user_first_name: str | None = None
     user_last_name: str | None = None
+    user_profile_image_url: str | None = None
     access_log_id: bytes = field(default_factory=new_id_bytes)
 
     @classmethod
@@ -78,4 +79,5 @@ class AccessLogEntry(SqliteRowModel, BlobUuidModel):
             "userEmail": self.user_email,
             "userId": id_bytes_to_string(self.user_id),
             "userName": _user_name(self.user_first_name, self.user_last_name),
+            "userProfileImageUrl": self.user_profile_image_url,
         }

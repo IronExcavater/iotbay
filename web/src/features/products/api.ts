@@ -19,6 +19,7 @@ export interface Product {
 export interface CreateProductInput {
     name: string;
     code: string;
+    mediaUrls: string[];
     priceCents: number;
 }
 
