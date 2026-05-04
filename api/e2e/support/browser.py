@@ -78,6 +78,16 @@ class SeleniumE2ETestCase(unittest.TestCase):
             ec.presence_of_element_located((By.XPATH, f"//*[contains(., '{text}')]"))
         )
 
+    def click_when_ready(self, selector: str, *, by: str = "css selector") -> None:
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support import expected_conditions as ec
+        from selenium.webdriver.support.ui import WebDriverWait
+
+        by_value = By.CSS_SELECTOR if by == "css selector" else By.XPATH
+        WebDriverWait(self.driver, 10).until(
+            ec.element_to_be_clickable((by_value, selector))
+        ).click()
+
 
 def _start_vite() -> subprocess.Popen[bytes]:
     npm = shutil.which("npm")
