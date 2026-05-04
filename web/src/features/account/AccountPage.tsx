@@ -63,7 +63,7 @@ export default function AccountPage() {
     const hasChanges = hasProfileChanges(values, initialValues);
     const currentPasswordHint = emailChanged
         ? 'Changing your email will require verification'
-        : 'Required to save changes';
+        : 'Only required when changing email';
 
     function setFieldError(name: keyof FieldErrors, message?: string | null) {
         setFieldErrors((current) => ({

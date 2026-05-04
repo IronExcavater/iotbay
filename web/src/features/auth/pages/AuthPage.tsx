@@ -32,6 +32,7 @@ import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { downloadHtml } from '@shared/services/download';
 import { backendErrorMessage } from '@shared/services/http';
 import { Button } from '@shared/ui/form/Button';
+import { Checkbox } from '@shared/ui/form/Checkbox';
 import { Field } from '@shared/ui/form/Field';
 import { Input } from '@shared/ui/form/Input';
 import { PasswordInput } from '@shared/ui/form/PasswordInput';
@@ -365,17 +366,9 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
                         />
                     </Field>
 
-                    <label className="text-ui-700 flex items-center gap-2 text-sm">
-                        <input
-                            checked={trustBrowser}
-                            className="accent-ui-900"
-                            onChange={(event) => {
-                                setTrustBrowser(event.target.checked);
-                            }}
-                            type="checkbox"
-                        />
-                        <span>Trust this browser</span>
-                    </label>
+                    <Checkbox checked={trustBrowser} onChange={setTrustBrowser}>
+                        Trust this browser
+                    </Checkbox>
 
                     <div className="flex flex-wrap gap-2">
                         <Button

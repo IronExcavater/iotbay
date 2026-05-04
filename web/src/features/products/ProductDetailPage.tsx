@@ -192,7 +192,7 @@ export default function ProductDetailPage({
             <section className="grid gap-4">
                 <div>
                     <Button
-                        className="gap-2"
+                        className="gap-2 focus-visible:ring-0"
                         onClick={() =>
                             navigate(admin ? '/admin/products' : '/products')
                         }
@@ -326,7 +326,8 @@ function MediaCarousel({
     selectedIndex: number;
 }) {
     const carouselRef = useRef<HTMLDivElement>(null);
-    const pauseRef = useRef(false);
+    const autoResumeAtRef = useRef(0);
+    const isHoveringRef = useRef(false);
     const selectedIndexRef = useRef(selectedIndex);
 
     useEffect(() => {
@@ -338,16 +339,24 @@ function MediaCarousel({
 
         const container = carouselRef.current;
         const handleEnter = () => {
-            pauseRef.current = true;
+            isHoveringRef.current = true;
         };
         const handleLeave = () => {
-            pauseRef.current = false;
+            isHoveringRef.current = false;
+            autoResumeAtRef.current = Date.now() + 4000;
+        };
+        const handlePointerDown = () => {
+            autoResumeAtRef.current = Date.now() + 8000;
         };
         container?.addEventListener('mouseenter', handleEnter);
         container?.addEventListener('mouseleave', handleLeave);
+        container?.addEventListener('pointerdown', handlePointerDown);
 
         const timer = setInterval(() => {
-            if (!pauseRef.current) {
+            if (
+                !isHoveringRef.current &&
+                Date.now() >= autoResumeAtRef.current
+            ) {
                 onSelect((selectedIndexRef.current + 1) % media.length);
             }
         }, 4000);
@@ -356,6 +365,7 @@ function MediaCarousel({
             clearInterval(timer);
             container?.removeEventListener('mouseenter', handleEnter);
             container?.removeEventListener('mouseleave', handleLeave);
+            container?.removeEventListener('pointerdown', handlePointerDown);
         };
     }, [media.length, onSelect]);
 
@@ -402,13 +412,14 @@ function MediaCarousel({
                     <IconButton
                         aria-label="Previous image"
                         highContrast
-                        onClick={() =>
+                        onClick={() => {
+                            autoResumeAtRef.current = Date.now() + 8000;
                             onSelect(
                                 selectedIndex === 0
                                     ? media.length - 1
                                     : selectedIndex - 1
-                            )
-                        }
+                            );
+                        }}
                         size="md"
                         type="button"
                         variant="overlay"
@@ -421,9 +432,10 @@ function MediaCarousel({
                     <IconButton
                         aria-label="Next image"
                         highContrast
-                        onClick={() =>
-                            onSelect((selectedIndex + 1) % media.length)
-                        }
+                        onClick={() => {
+                            autoResumeAtRef.current = Date.now() + 8000;
+                            onSelect((selectedIndex + 1) % media.length);
+                        }}
                         size="md"
                         type="button"
                         variant="overlay"
@@ -449,7 +461,10 @@ function MediaCarousel({
                                 ? 'border-ui-900'
                                 : 'border-ui-200 hover:border-ui-400'
                         }`}
-                        onClick={() => onSelect(index)}
+                        onClick={() => {
+                            autoResumeAtRef.current = Date.now() + 8000;
+                            onSelect(index);
+                        }}
                         type="button"
                     >
                         <img
