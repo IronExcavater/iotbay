@@ -26,7 +26,7 @@ dev = [
 [tool.ruff]
 line-length = 88
 target-version = "py314"
-src = ["src", "tests"]
+src = ["src", "test"]
 extend-exclude = [".venv"]
 
 [tool.ruff.lint]

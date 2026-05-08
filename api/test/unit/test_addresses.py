@@ -2,7 +2,7 @@ import unittest
 
 from src.config import load_address_config
 
-from tests.helpers.app_case import AppTestCase
+from test.unit.helpers.app_case import AppTestCase
 
 LIVE_ADDRESS_QUERY = "200 George Street Sydney"
 
