@@ -1,5 +1,5 @@
-from e2e.pages.sign_in import SignInPage
-from e2e.support.browser import SeleniumE2ETestCase
+from test.e2e.pages.sign_in import SignInPage
+from test.e2e.support.browser import SeleniumE2ETestCase
 
 
 class SignInFlow:

@@ -1,4 +1,4 @@
-from e2e.support.browser import WEB_URL, SeleniumE2ETestCase
+from test.e2e.support.browser import WEB_URL, SeleniumE2ETestCase
 
 
 class SignInPage:

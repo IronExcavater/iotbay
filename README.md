@@ -121,6 +121,13 @@ Pull requests and pushes to `main` run the same checks in GitHub Actions.
 
 ## Testing
 
+Backend test infrastructure lives under `api/test`:
+
+- `unit` contains isolated Python unit tests.
+- `api` contains backend HTTP/API acceptance tests.
+- `e2e` contains Selenium browser tests.
+- `shared` contains reusable fixtures and live app helpers used by multiple suites.
+
 ### Unit tests
 
 Run Python unit tests for isolated checks on services, repositories, and database
