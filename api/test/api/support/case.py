@@ -1,9 +1,8 @@
 import unittest
 
-from testing.live_app import JsonHttpClient, LiveAppFixture
-from testing.users import TestCustomer, create_customer
-
-from acceptance.support.clients import AccessLogsApi, AuditApi, AuthApi, SessionsApi
+from test.api.support.clients import AccessLogsApi, AuditApi, AuthApi, SessionsApi
+from test.shared.live_app import JsonHttpClient, LiveAppFixture
+from test.shared.users import TestCustomer, create_customer
 
 
 class ApiAcceptanceTestCase(unittest.TestCase):

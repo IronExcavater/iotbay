@@ -17,9 +17,9 @@
         "check:all": "npm run typecheck && npm run ruff",
         "fix:all": "npm run typecheck && npm run ruff:fix",
         "test": "npm run test:unit && npm run test:api",
-        "test:unit": "uv run python -m unittest discover -s tests",
-        "test:api": "uv run python -m unittest discover -s acceptance",
-        "test:e2e": "uv run python -m unittest discover -s e2e",
+        "test:unit": "uv run python -m unittest discover -s test/unit -t .",
+        "test:api": "uv run python -m unittest discover -s test/api -t .",
+        "test:e2e": "uv run python -m unittest discover -s test/e2e -t .",
         "build": "uv build"
     }
 }

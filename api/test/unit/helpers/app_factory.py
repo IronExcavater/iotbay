@@ -7,7 +7,7 @@ from src.app import create_app
 from src.common.app import services_from
 from src.config import load_app_config
 
-TEST_CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "test.json"
+TEST_CONFIG_PATH = Path(__file__).resolve().parents[3] / "config" / "test.json"
 
 
 def create_test_app_client(

@@ -8,13 +8,13 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from testing.live_app import DEFAULT_TEST_API_KEY, LiveAppFixture
-from testing.users import TestCustomer, create_customer
+from test.shared.live_app import DEFAULT_TEST_API_KEY, LiveAppFixture
+from test.shared.users import TestCustomer, create_customer
 
 WEB_PORT = 5173
 API_PORT = 5001
 WEB_URL = f"http://127.0.0.1:{WEB_PORT}"
-ROOT_DIR = Path(__file__).resolve().parents[3]
+ROOT_DIR = Path(__file__).resolve().parents[4]
 
 
 class SeleniumE2ETestCase(unittest.TestCase):
