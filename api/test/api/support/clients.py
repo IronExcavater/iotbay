@@ -1,6 +1,6 @@
 from urllib.parse import urlencode
 
-from testing.live_app import HttpResponse, JsonHttpClient
+from test.shared.live_app import HttpResponse, JsonHttpClient
 
 
 class AuthApi:
