@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import {
     FaBoxArchive,
+    FaCartShopping,
     FaChevronLeft,
     FaChevronRight,
     FaClipboardList,
@@ -25,6 +26,11 @@ export default function AdminLayout() {
             icon: FaBoxArchive,
             label: 'Products',
             to: '/admin/products',
+        },
+        {
+            icon: FaCartShopping,
+            label: 'Orders',
+            to: '/admin/orders',
         },
         ...(isSuperadmin
             ? [

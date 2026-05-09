@@ -7,6 +7,7 @@ from src.orders.models import ORDER_STATUS_SAVED, Order, OrderItem
 from src.orders.queries import (
     INSERT_ORDER,
     INSERT_ORDER_ITEM,
+    LIST_ALL_ORDERS,
     LIST_ORDERS_BY_USER,
     SELECT_ORDER_BY_ID,
     SELECT_ORDER_ITEMS,
@@ -38,6 +39,16 @@ class OrderRepository(Repository):
                         items=self._select_order_items(connection, order.order_id),
                     )
                 )
+            return orders
+
+    def list_all_orders(self) -> list[Order]:
+        with self.connect() as connection:
+            rows = connection.execute(LIST_ALL_ORDERS).fetchall()
+            orders = []
+            for row in rows:
+                order = Order(**row)
+                items = self._select_order_items(connection, order.order_id)
+                orders.append(replace(order, items=items))
             return orders
 
     def _select_order_items(
