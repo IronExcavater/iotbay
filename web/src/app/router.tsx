@@ -13,6 +13,7 @@ import { ProtectedRoute } from '@features/auth/ProtectedRoute';
 import CartPage from '@features/cart/CartPage';
 import HomePage from '@features/home/HomePage';
 import TermsPage from '@features/legal/TermsPage';
+import AdminOrdersPage from '@features/orders/admin/AdminOrdersPage';
 import OrdersPage from '@features/orders/OrdersPage';
 import AdminProductsPage from '@features/products/admin/AdminProductsPage';
 import ProductCatalogPage from '@features/products/ProductCatalogPage';
@@ -109,6 +110,10 @@ export const router = createBrowserRouter([
                             {
                                 path: 'products',
                                 element: <AdminProductsPage />,
+                            },
+                            {
+                                path: 'orders',
+                                element: <AdminOrdersPage />,
                             },
                             {
                                 path: 'products/:productId',
