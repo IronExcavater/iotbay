@@ -1,6 +1,6 @@
-from e2e.flows.auth import SignInFlow
-from e2e.pages.access_logs import AccessLogsPage
-from e2e.support.browser import SeleniumE2ETestCase
+from test.e2e.flows.auth import SignInFlow
+from test.e2e.pages.access_logs import AccessLogsPage
+from test.e2e.support.browser import SeleniumE2ETestCase
 
 
 class AccessLogsSeleniumAcceptanceTestCase(SeleniumE2ETestCase):

@@ -4,9 +4,9 @@ from src.access_logs.models import ACCESS_EVENT_LOGIN, ACCESS_EVENT_LOGOUT
 from src.common.app import services_from
 from src.db import connect
 
-from tests.helpers.app_case import AppTestCase
-from tests.helpers.session_factory import create_test_session
-from tests.support.access_logs import create_access_log_fixture
+from test.unit.helpers.app_case import AppTestCase
+from test.unit.helpers.session_factory import create_test_session
+from test.unit.support.access_logs import create_access_log_fixture
 
 
 class AccessLogRepositoryTestCase(AppTestCase):

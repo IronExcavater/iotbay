@@ -1,5 +1,5 @@
-from e2e.pages.account import AccountPage
-from e2e.support.browser import SeleniumE2ETestCase
+from test.e2e.pages.account import AccountPage
+from test.e2e.support.browser import SeleniumE2ETestCase
 
 
 class AccessLogsPage:
