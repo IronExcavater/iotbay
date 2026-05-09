@@ -21,5 +21,6 @@
       "name": "local-iotbay"
     }
   ],
-  "svg.preview.background": "transparent"
+  "svg.preview.background": "transparent",
+  "workbench.browser.openLocalhostLinks": false
 }

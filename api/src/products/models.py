@@ -15,17 +15,6 @@ from src.common.types import (
 )
 
 ENTITY_TYPE_PRODUCT = "product"
-PRODUCT_TYPE_SENSOR = "Sensor"
-PRODUCT_TYPE_ACTUATOR = "Actuator"
-PRODUCT_TYPE_GATEWAY = "Gateway"
-PRODUCT_TYPE_CONTROLLER = "Controller"
-DEFAULT_PRODUCT_TYPE = PRODUCT_TYPE_SENSOR
-PRODUCT_TYPES = (
-    PRODUCT_TYPE_SENSOR,
-    PRODUCT_TYPE_ACTUATOR,
-    PRODUCT_TYPE_GATEWAY,
-    PRODUCT_TYPE_CONTROLLER,
-)
 
 PRODUCT_NAME_VALIDATOR = ProductName.VALIDATOR
 PRODUCT_CODE_VALIDATOR = ProductCode.VALIDATOR
@@ -43,6 +32,8 @@ class Product(SqliteRowModel, BlobUuidModel, ApiModel):
         "media_urls",
         "type",
         "stock",
+        "stock_status_message",
+        "stock_status_tone",
         "created_at",
         "updated_at",
     )
@@ -54,7 +45,7 @@ class Product(SqliteRowModel, BlobUuidModel, ApiModel):
     updated_at: str
     description: str = ""
     media_urls_json: str = "[]"
-    type: str = DEFAULT_PRODUCT_TYPE
+    type: str = ""
     stock: int = 0
     product_id: bytes = field(default_factory=new_id_bytes)
 
@@ -148,6 +139,22 @@ class Product(SqliteRowModel, BlobUuidModel, ApiModel):
             "type": self.type,
         }
 
+    @property
+    def stock_status_message(self) -> str | None:
+        if self.stock > 10:
+            return None
+        if self.stock >= 5:
+            return "Selling fast - only a few left"
+        return f"Only {self.stock} left in stock"
+
+    @property
+    def stock_status_tone(self) -> str | None:
+        if self.stock > 10:
+            return None
+        if self.stock >= 5:
+            return "warning"
+        return "critical"
+
 
 def validate_product_name(value: str) -> str:
     return ProductName.validate_domain(value)
@@ -163,8 +170,8 @@ def validate_product_price_cents(value: int) -> int:
 
 def validate_product_type(value: str) -> str:
     normalized_value = value.strip()
-    if normalized_value not in PRODUCT_TYPES:
-        raise ValueError("type is invalid")
+    if not normalized_value:
+        raise ValueError("type is required")
     return normalized_value
 
 
@@ -175,9 +182,7 @@ def validate_product_stock(value: int) -> int:
 
 
 def normalize_product_type(value: object) -> str:
-    return (
-        validate_product_type(value) if isinstance(value, str) else DEFAULT_PRODUCT_TYPE
-    )
+    return validate_product_type(value) if isinstance(value, str) else ""
 
 
 def normalize_product_stock(value: object) -> int:
