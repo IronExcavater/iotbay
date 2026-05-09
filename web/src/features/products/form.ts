@@ -1,5 +1,10 @@
 import type { CreateProductInput, Product } from '@features/products/api';
 import {
+    DEFAULT_PRODUCT_TYPE,
+    normalizeProductType,
+    type ProductType,
+} from '@features/products/types';
+import {
     backendErrorMessage,
     resolveBackendError,
 } from '@shared/services/http';
@@ -12,6 +17,8 @@ export interface ProductFormValues {
     mediaUrls: string[];
     name: string;
     price: string;
+    stock: string;
+    type: ProductType;
 }
 
 export type ProductFieldName = keyof ProductFormValues;
@@ -23,6 +30,8 @@ export function createProductFormValues(): ProductFormValues {
         mediaUrls: [],
         name: '',
         price: '',
+        stock: '0',
+        type: DEFAULT_PRODUCT_TYPE,
     };
 }
 
@@ -32,6 +41,8 @@ export function toProductFormValues(product: Product): ProductFormValues {
         mediaUrls: product.mediaUrls,
         name: product.name,
         price: Money.toInput(product.priceCents),
+        stock: String(product.stock),
+        type: normalizeProductType(product.type),
     };
 }
 
@@ -43,22 +54,37 @@ export function assessProductForm(values: ProductFormValues) {
         .map((value) => value.trim())
         .filter(Boolean)
         .slice(0, 6);
+    const normalizedType = normalizeProductType(values.type.trim());
+    const stockValue = values.stock.trim();
+    const stock =
+        /^\d+$/.test(stockValue) && Number.isSafeInteger(Number(stockValue))
+            ? Number(stockValue)
+            : null;
+    const stockError = stock !== null ? null : 'Stock must be zero or greater';
     const fieldErrors = collectFieldErrors<ProductFieldName>({
         code,
         name,
         price,
+        stock: stockError,
     });
     const hasErrors = hasFieldErrors(fieldErrors);
 
     return {
         fieldErrors,
         payload:
-            !hasErrors && name.value && code.value && price.value !== null
+            !hasErrors &&
+            name.value &&
+            code.value &&
+            price.value !== null &&
+            stock !== null &&
+            normalizedType
                 ? ({
                       code: code.value,
                       mediaUrls,
                       name: name.value,
                       priceCents: price.value,
+                      stock,
+                      type: normalizedType,
                   } satisfies CreateProductInput)
                 : null,
     };

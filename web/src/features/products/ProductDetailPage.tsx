@@ -20,6 +20,7 @@ import {
     type ProductFieldErrors,
     type ProductFormValues,
 } from '@features/products/form';
+import { DEFAULT_PRODUCT_TYPE } from '@features/products/types';
 import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { useFormattedInput } from '@shared/hooks/useFormattedInput';
 import { toErrorMessage } from '@shared/services/http';
@@ -50,6 +51,8 @@ export default function ProductDetailPage({
         mediaUrls: [],
         name: '',
         price: '',
+        stock: '0',
+        type: DEFAULT_PRODUCT_TYPE,
     });
     const audit = useEntityAudit({
         entityId: productId,
@@ -217,6 +220,14 @@ export default function ProductDetailPage({
                             <p className="text-ui-500 font-mono text-sm">
                                 {product.code}
                             </p>
+                            <div className="flex flex-wrap gap-2 text-xs">
+                                <span className="bg-ui-100 text-ui-700 rounded-full px-2.5 py-1">
+                                    {product.type}
+                                </span>
+                                <span className="bg-ui-100 text-ui-700 rounded-full px-2.5 py-1">
+                                    Stock: {product.stock}
+                                </span>
+                            </div>
                             <div className="flex min-w-0 items-center gap-2">
                                 <h1 className="text-ui-900 truncate text-3xl font-semibold tracking-tight">
                                     {product.name}
@@ -305,7 +316,19 @@ export default function ProductDetailPage({
                         mediaUrls,
                     }));
                 }}
+                onStockChange={(stock) => {
+                    setFormValues((current) => ({
+                        ...current,
+                        stock,
+                    }));
+                }}
                 onSubmit={handleSubmit}
+                onTypeChange={(type) => {
+                    setFormValues((current) => ({
+                        ...current,
+                        type,
+                    }));
+                }}
                 priceInput={priceInput}
                 submitLabel="Save product"
                 values={formValues}

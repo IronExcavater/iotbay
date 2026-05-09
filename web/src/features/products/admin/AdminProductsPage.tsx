@@ -42,6 +42,7 @@ export default function AdminProductsPage() {
     const filteredProducts = useSearchFilter(products, search, (product) => [
         product.code,
         product.name,
+        product.type,
     ]);
 
     const nameInput = useFormattedInput({
@@ -217,7 +218,19 @@ export default function AdminProductsPage() {
                         mediaUrls,
                     }));
                 }}
+                onStockChange={(stock) => {
+                    setFormValues((current) => ({
+                        ...current,
+                        stock,
+                    }));
+                }}
                 onSubmit={handleSubmit}
+                onTypeChange={(type) => {
+                    setFormValues((current) => ({
+                        ...current,
+                        type,
+                    }));
+                }}
                 priceInput={priceInput}
                 submitLabel={submitLabel}
                 values={formValues}
