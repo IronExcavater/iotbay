@@ -7,7 +7,7 @@ from unittest.mock import patch
 from flask.testing import FlaskClient
 from src.addresses.service import AddressService
 
-from tests.helpers.app_factory import create_test_app_client
+from test.unit.helpers.app_factory import create_test_app_client
 
 
 class AppTestCase(unittest.TestCase):
