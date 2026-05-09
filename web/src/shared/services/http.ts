@@ -62,6 +62,8 @@ const BACKEND_ERROR_MESSAGES: Record<string, string> = {
     USER_MANAGEMENT_NOT_ALLOWED: 'You cannot manage that user',
     USER_NOT_FOUND: 'User not found',
     USER_PERMISSION_ESCALATION_NOT_ALLOWED: 'You cannot assign that permission',
+    INVALID_STATUS_TRANSITION: 'This status change is not allowed',
+    ORDER_NOT_FOUND: 'Order not found',
 };
 
 export function backendErrorMessage(

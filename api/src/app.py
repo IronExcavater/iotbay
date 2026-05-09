@@ -15,6 +15,7 @@ from src.config import (
 from src.db import migrate
 from src.health.routes import health_bp
 from src.media.routes import media_bp
+from src.orders.routes import orders_bp
 from src.products.routes import products_bp
 
 
@@ -54,6 +55,7 @@ def create_app(config_path: str | None = None) -> Flask:
         auth_bp,
         access_logs_bp,
         audit_bp,
+        orders_bp,
     ):
         app.register_blueprint(blueprint, url_prefix="/api")
     return app
