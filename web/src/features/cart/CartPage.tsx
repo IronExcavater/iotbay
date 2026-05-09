@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FaCartShopping, FaTrashCan } from 'react-icons/fa6';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import {
     DEFAULT_PROFILE_VALUES,
@@ -16,6 +16,7 @@ import {
 } from '@features/addresses/form';
 import { useAuth } from '@features/auth/AuthProvider';
 import { useCart } from '@features/cart/CartProvider';
+import { orderApi } from '@features/orders/api';
 import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { Button, ButtonLink } from '@shared/ui/form/Button';
 import { Checkbox } from '@shared/ui/form/Checkbox';
@@ -70,6 +71,8 @@ export default function CartPage() {
         setAddressValues((current) => setAddressField(current, name, value));
     }
 
+    const navigate = useNavigate();
+
     async function handleOrder() {
         const nextAddressErrors = validateAddressValues(addressValues, true);
         setAddressErrors(nextAddressErrors);
@@ -91,10 +94,20 @@ export default function CartPage() {
                     })
                 );
             }
+
+            await orderApi.create({
+                addressId: null,
+                items: items.map((item) => ({
+                    productId: item.productId,
+                    quantity: 1,
+                })),
+            });
+
             clearCart();
-            showToast('Order details confirmed');
+            showToast('Order placed successfully');
+            navigate('/orders');
         } catch {
-            showToast('Unable to save order details');
+            showToast('Unable to place order');
         } finally {
             setIsOrdering(false);
         }
