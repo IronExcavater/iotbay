@@ -25,6 +25,19 @@ WHERE user_id = ?
 ORDER BY created_at DESC
 """
 
+LIST_ALL_ORDERS = """
+SELECT
+    order_id,
+    user_id,
+    address_id,
+    status,
+    total_cents,
+    created_at,
+    updated_at
+FROM orders
+ORDER BY created_at DESC
+"""
+
 SELECT_ORDER_ITEMS = """
 SELECT
     order_items.order_id,
