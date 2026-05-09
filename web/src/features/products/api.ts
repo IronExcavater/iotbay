@@ -1,3 +1,4 @@
+import type { ProductType } from '@features/products/types';
 import {
     deleteJson,
     getJson,
@@ -12,6 +13,8 @@ export interface Product {
     priceCents: number;
     description: string;
     mediaUrls: string[];
+    type: ProductType;
+    stock: number;
     createdAt: string;
     updatedAt: string;
 }
@@ -21,6 +24,8 @@ export interface CreateProductInput {
     code: string;
     mediaUrls: string[];
     priceCents: number;
+    stock: number;
+    type: ProductType;
 }
 
 interface ProductsResponse {

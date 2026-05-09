@@ -60,7 +60,7 @@ export default function ProductCatalogPage() {
     const filteredProducts = products.filter((product) => {
         const query = search.trim().toLowerCase();
         if (!query) return true;
-        return [product.name, product.code, product.description]
+        return [product.name, product.code, product.description, product.type]
             .join(' ')
             .toLowerCase()
             .includes(query);
@@ -195,6 +195,7 @@ function ProductCard({ product }: { product: Product }) {
                 <span className="text-ui-500 font-mono text-xs">
                     {product.code}
                 </span>
+                <span className="text-ui-600 text-xs">{product.type}</span>
                 <h2 className="text-ui-900 font-semibold">{product.name}</h2>
                 <p className="text-ui-900 text-lg font-semibold">
                     {Money.format(product.priceCents)}
@@ -233,16 +234,20 @@ function ProductList({
             <div className="overflow-x-auto">
                 <Table>
                     <colgroup>
-                        <col className="w-[18%]" />
-                        <col className="w-[42%]" />
-                        <col className="w-[18%]" />
-                        <col className="w-[22%]" />
+                        <col className="w-[16%]" />
+                        <col className="w-[28%]" />
+                        <col className="w-[16%]" />
+                        <col className="w-[14%]" />
+                        <col className="w-[10%]" />
+                        <col className="w-[16%]" />
                     </colgroup>
                     <TableHead>
                         <tr>
                             <th className="px-5 py-3">Code</th>
                             <th className="px-5 py-3">Name</th>
+                            <th className="px-5 py-3">Type</th>
                             <th className="px-5 py-3">Price</th>
+                            <th className="px-5 py-3">Stock</th>
                             <th className="px-5 py-3">Updated</th>
                         </tr>
                     </TableHead>
@@ -250,19 +255,19 @@ function ProductList({
                     <tbody>
                         {isLoading ? (
                             <>
-                                <TableLoadingRow colSpan={4} />
-                                <TableLoadingRow colSpan={4} />
-                                <TableLoadingRow colSpan={4} />
+                                <TableLoadingRow colSpan={6} />
+                                <TableLoadingRow colSpan={6} />
+                                <TableLoadingRow colSpan={6} />
                             </>
                         ) : error ? (
                             <TableMessageRow
-                                colSpan={4}
+                                colSpan={6}
                                 message={error}
                                 tone="error"
                             />
                         ) : products.length === 0 ? (
                             <TableMessageRow
-                                colSpan={4}
+                                colSpan={6}
                                 message="No products yet"
                                 tone="muted"
                             />
@@ -283,8 +288,14 @@ function ProductList({
                                             {product.name}
                                         </span>
                                     </td>
+                                    <td className="text-ui-600 px-5 py-3">
+                                        {product.type}
+                                    </td>
                                     <td className="px-5 py-3">
                                         {Money.format(product.priceCents)}
+                                    </td>
+                                    <td className="text-ui-600 px-5 py-3">
+                                        {product.stock}
                                     </td>
                                     <td className="text-ui-500 px-5 py-3">
                                         <Tooltip

@@ -1,6 +1,11 @@
 from pydantic import BaseModel, ConfigDict, field_validator
 from pydantic.alias_generators import to_camel
 from src.common.types import MoneyAmount, ProductCode, ProductName
+from src.products.models import (
+    PRODUCT_TYPE_SENSOR,
+    validate_product_stock,
+    validate_product_type,
+)
 
 
 class ProductRequest(BaseModel):
@@ -16,6 +21,8 @@ class ProductMutationRequest(ProductRequest):
     media_urls: list[str] = []
     name: str
     price_cents: int
+    stock: int = 0
+    type: str = PRODUCT_TYPE_SENSOR
 
     @field_validator("name")
     @classmethod
@@ -31,6 +38,16 @@ class ProductMutationRequest(ProductRequest):
     @classmethod
     def require_price_cents(cls, value: int) -> int:
         return MoneyAmount.validate_request_cents(value)
+
+    @field_validator("type")
+    @classmethod
+    def require_type(cls, value: str) -> str:
+        return validate_product_type(value)
+
+    @field_validator("stock")
+    @classmethod
+    def require_stock(cls, value: int) -> int:
+        return validate_product_stock(value)
 
     @field_validator("media_urls")
     @classmethod

@@ -11,12 +11,18 @@ import type {
     ProductFormValues,
 } from '@features/products/form';
 import {
+    PRODUCT_TYPE_OPTIONS,
+    normalizeProductType,
+    type ProductType,
+} from '@features/products/types';
+import {
     compressImageToDataUrl,
     isSupportedImage,
 } from '@shared/services/media';
 import { Button } from '@shared/ui/form/Button';
 import { Field } from '@shared/ui/form/Field';
 import { Input } from '@shared/ui/form/Input';
+import { MenuSelect } from '@shared/ui/form/MenuSelect';
 import { MoneyField } from '@shared/ui/form/MoneyField';
 import { OverlayDialog } from '@shared/ui/overlay/OverlayDialog';
 
@@ -35,7 +41,9 @@ interface ProductFormDialogProps {
     };
     onClose: () => void;
     onMediaUrlsChange: (value: string[]) => void;
+    onStockChange: (value: string) => void;
     onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+    onTypeChange: (value: ProductType) => void;
     priceInput: {
         handleChange: React.ChangeEventHandler<HTMLInputElement>;
         inputRef: React.Ref<HTMLInputElement>;
@@ -53,7 +61,9 @@ export function ProductFormDialog({
     nameInput,
     onClose,
     onMediaUrlsChange,
+    onStockChange,
     onSubmit,
+    onTypeChange,
     priceInput,
     submitLabel,
     values,
@@ -136,6 +146,34 @@ export function ProductFormDialog({
                     required
                     value={values.price}
                 />
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <MenuSelect
+                        error={fieldErrors.type}
+                        label="Device type"
+                        onChange={(value) => {
+                            onTypeChange(normalizeProductType(value));
+                        }}
+                        options={PRODUCT_TYPE_OPTIONS.map((option) => ({
+                            ...option,
+                            description: `IoT ${option.label.toLowerCase()} device`,
+                        }))}
+                        required
+                        value={values.type}
+                    />
+
+                    <Field error={fieldErrors.stock} label="Stock" required>
+                        <Input
+                            hasError={Boolean(fieldErrors.stock)}
+                            inputMode="numeric"
+                            onChange={(event) =>
+                                onStockChange(event.target.value)
+                            }
+                            placeholder="0"
+                            value={values.stock}
+                        />
+                    </Field>
+                </div>
 
                 <ProductImagesEditor
                     images={values.mediaUrls}

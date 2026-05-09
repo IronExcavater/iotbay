@@ -34,6 +34,8 @@ class ProductService:
         media_urls: list[str],
         name: str,
         price_cents: int,
+        stock: int,
+        type: str,
     ) -> Product:
         stored_media_urls = self._stored_media_urls(media_urls)
         product = self.repository.insert_product(
@@ -42,6 +44,8 @@ class ProductService:
             media_urls=stored_media_urls,
             name=name,
             price_cents=price_cents,
+            stock=stock,
+            type=type,
         )
         self._record_product_audit(
             action=AUDIT_ACTION_CREATED,
@@ -60,6 +64,8 @@ class ProductService:
         name: str,
         price_cents: int,
         product_id: bytes,
+        stock: int,
+        type: str,
     ) -> Product:
         before = self.repository.select_product_by_id(product_id=product_id)
         stored_media_urls = self._stored_media_urls(media_urls)
@@ -70,6 +76,8 @@ class ProductService:
             name=name,
             price_cents=price_cents,
             product_id=product_id,
+            stock=stock,
+            type=type,
         )
         self._record_product_audit(
             action=AUDIT_ACTION_UPDATED,

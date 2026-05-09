@@ -203,6 +203,32 @@ class AuthRouteTestCase(AppTestCase):
             },
         )
 
+    def test_forgot_password_respects_requested_user_type(self) -> None:
+        staff_session = create_staff_test_session(self.client)
+
+        customer_response = self.client.post(
+            "/api/forgot-password",
+            json={
+                "email": staff_session.email,
+                "userType": USER_TYPE_CUSTOMER,
+            },
+        )
+        self.assertEqual(customer_response.status_code, 204)
+        self.assertEqual(customer_response.data, b"")
+
+        staff_response = self.client.post(
+            "/api/forgot-password",
+            json={
+                "email": staff_session.email,
+                "userType": USER_TYPE_STAFF,
+            },
+        )
+        self.assertEqual(staff_response.status_code, 200)
+        payload = staff_response.get_json()
+        self.assertIsNotNone(payload)
+        self.assertIn("download", payload)
+        self.assertIn("userType=staff", payload["download"]["html"])
+
     def test_superadmin_can_update_managed_user_and_status(self) -> None:
         superadmin_session = create_superadmin_test_session(self.client)
         repository = extension_from(

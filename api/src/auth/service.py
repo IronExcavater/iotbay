@@ -528,6 +528,8 @@ class AuthService:
         user = self.user_repository.select_user_by_email(email=data.email)
         if user is None or not user.is_active:
             return None
+        if data.user_type and user.user_type != data.user_type:
+            return None
 
         token, expires_at = self._issue_user_token(
             user=user,
