@@ -12,6 +12,10 @@ def id_bytes_to_string(value: bytes) -> str:
     return str(uuid.UUID(bytes=value))
 
 
+def id_string_to_bytes(value: str) -> bytes:
+    return uuid.UUID(value).bytes
+
+
 class SqliteRowModel:
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> Self:
