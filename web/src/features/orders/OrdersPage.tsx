@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { orderApi, type Order } from '@features/orders/api';
 import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { PageHeader } from '@shared/ui/PageHeader';
+import { useToast } from '@shared/ui/toast/ToastProvider';
 import { Money } from '@shared/value-objects/Money';
 
 export default function OrdersPage() {
@@ -80,6 +81,7 @@ function OrderCard({
     onStatusChange: () => void;
 }) {
     const [cancelling, setCancelling] = useState(false);
+    const { showToast } = useToast();
 
     async function handleCancel() {
         setCancelling(true);
@@ -87,7 +89,7 @@ function OrderCard({
             await orderApi.updateStatus(order.id, { status: 'cancelled' });
             onStatusChange();
         } catch {
-            // Error handling
+            showToast('Cancellation failed');
         } finally {
             setCancelling(false);
         }

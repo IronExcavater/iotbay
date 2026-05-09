@@ -1,5 +1,8 @@
 from flask import Blueprint
-from src.auth.session import current_authenticated_user
+from src.auth.session import (
+    current_authenticated_staff_user,
+    current_authenticated_user,
+)
 from src.common.app import services
 from src.common.sqlite_model import id_string_to_bytes
 from src.common.web import ApiError, parse_request
@@ -41,6 +44,15 @@ def create_order():
         ],
     )
     return order.to_dict(), 201
+
+
+@orders_bp.get("/staff/all")
+def list_all_orders():
+    current_authenticated_staff_user()
+
+    repo = services().order_repository
+    orders = repo.list_all_orders()
+    return [order.to_dict() for order in orders]
 
 
 @orders_bp.get("/orders/<order_id>")
