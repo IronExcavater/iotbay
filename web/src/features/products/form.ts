@@ -1,10 +1,5 @@
 import type { CreateProductInput, Product } from '@features/products/api';
 import {
-    DEFAULT_PRODUCT_TYPE,
-    normalizeProductType,
-    type ProductType,
-} from '@features/products/types';
-import {
     backendErrorMessage,
     resolveBackendError,
 } from '@shared/services/http';
@@ -18,7 +13,7 @@ export interface ProductFormValues {
     name: string;
     price: string;
     stock: string;
-    type: ProductType;
+    type: string;
 }
 
 export type ProductFieldName = keyof ProductFormValues;
@@ -31,7 +26,7 @@ export function createProductFormValues(): ProductFormValues {
         name: '',
         price: '',
         stock: '0',
-        type: DEFAULT_PRODUCT_TYPE,
+        type: '',
     };
 }
 
@@ -42,7 +37,7 @@ export function toProductFormValues(product: Product): ProductFormValues {
         name: product.name,
         price: Money.toInput(product.priceCents),
         stock: String(product.stock),
-        type: normalizeProductType(product.type),
+        type: product.type,
     };
 }
 
@@ -54,18 +49,20 @@ export function assessProductForm(values: ProductFormValues) {
         .map((value) => value.trim())
         .filter(Boolean)
         .slice(0, 6);
-    const normalizedType = normalizeProductType(values.type.trim());
+    const normalizedType = values.type.trim();
     const stockValue = values.stock.trim();
     const stock =
         /^\d+$/.test(stockValue) && Number.isSafeInteger(Number(stockValue))
             ? Number(stockValue)
             : null;
     const stockError = stock !== null ? null : 'Stock must be zero or greater';
+    const typeError = normalizedType ? null : 'Type is required';
     const fieldErrors = collectFieldErrors<ProductFieldName>({
         code,
         name,
         price,
         stock: stockError,
+        type: typeError,
     });
     const hasErrors = hasFieldErrors(fieldErrors);
 

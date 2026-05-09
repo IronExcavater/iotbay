@@ -178,6 +178,7 @@ function ViewButton({
 
 function ProductCard({ product }: { product: Product }) {
     const image = product.mediaUrls[0] ?? '/iotbay_icon_themed.svg';
+    const stockStatus = stockStatusForProduct(product);
 
     return (
         <Link
@@ -200,6 +201,11 @@ function ProductCard({ product }: { product: Product }) {
                 <p className="text-ui-900 text-lg font-semibold">
                     {Money.format(product.priceCents)}
                 </p>
+                {stockStatus && (
+                    <p className={stockStatus.className}>
+                        {stockStatus.message}
+                    </p>
+                )}
             </div>
         </Link>
     );
@@ -247,7 +253,7 @@ function ProductList({
                             <th className="px-5 py-3">Name</th>
                             <th className="px-5 py-3">Type</th>
                             <th className="px-5 py-3">Price</th>
-                            <th className="px-5 py-3">Stock</th>
+                            <th className="px-5 py-3">Availability</th>
                             <th className="px-5 py-3">Updated</th>
                         </tr>
                     </TableHead>
@@ -273,46 +279,11 @@ function ProductList({
                             />
                         ) : (
                             products.map((product) => (
-                                <TablePrimaryActionRow
+                                <ProductListRow
                                     key={product.id}
-                                    label={`View ${product.name}`}
-                                    onAction={() => {
-                                        onNavigate(`/products/${product.id}`);
-                                    }}
-                                >
-                                    <td className="text-ui-600 px-5 py-3 font-mono text-xs">
-                                        {product.code}
-                                    </td>
-                                    <td className="px-5 py-3">
-                                        <span className="text-ui-900 font-medium">
-                                            {product.name}
-                                        </span>
-                                    </td>
-                                    <td className="text-ui-600 px-5 py-3">
-                                        {product.type}
-                                    </td>
-                                    <td className="px-5 py-3">
-                                        {Money.format(product.priceCents)}
-                                    </td>
-                                    <td className="text-ui-600 px-5 py-3">
-                                        {product.stock}
-                                    </td>
-                                    <td className="text-ui-500 px-5 py-3">
-                                        <Tooltip
-                                            label={DateTimeValue.format(
-                                                product.updatedAt,
-                                                'long'
-                                            )}
-                                        >
-                                            <span>
-                                                {DateTimeValue.format(
-                                                    product.updatedAt,
-                                                    'short'
-                                                )}
-                                            </span>
-                                        </Tooltip>
-                                    </td>
-                                </TablePrimaryActionRow>
+                                    onNavigate={onNavigate}
+                                    product={product}
+                                />
                             ))
                         )}
                     </tbody>
@@ -320,4 +291,65 @@ function ProductList({
             </div>
         </div>
     );
+}
+
+function ProductListRow({
+    onNavigate,
+    product,
+}: {
+    onNavigate: (to: string) => void;
+    product: Product;
+}) {
+    const stockStatus = stockStatusForProduct(product);
+
+    return (
+        <TablePrimaryActionRow
+            label={`View ${product.name}`}
+            onAction={() => {
+                onNavigate(`/products/${product.id}`);
+            }}
+        >
+            <td className="text-ui-600 px-5 py-3 font-mono text-xs">
+                {product.code}
+            </td>
+            <td className="px-5 py-3">
+                <span className="text-ui-900 font-medium">{product.name}</span>
+            </td>
+            <td className="text-ui-600 px-5 py-3">{product.type}</td>
+            <td className="px-5 py-3">{Money.format(product.priceCents)}</td>
+            <td className="px-5 py-3">
+                {stockStatus && (
+                    <span className={stockStatus.className}>
+                        {stockStatus.message}
+                    </span>
+                )}
+            </td>
+            <td className="text-ui-500 px-5 py-3">
+                <Tooltip
+                    label={DateTimeValue.format(product.updatedAt, 'long')}
+                >
+                    <span>
+                        {DateTimeValue.format(product.updatedAt, 'short')}
+                    </span>
+                </Tooltip>
+            </td>
+        </TablePrimaryActionRow>
+    );
+}
+
+function stockStatusForProduct(product: Product): {
+    className: string;
+    message: string;
+} | null {
+    if (!product.stockStatusMessage || !product.stockStatusTone) {
+        return null;
+    }
+
+    return {
+        className:
+            product.stockStatusTone === 'warning'
+                ? 'text-amber-600 text-sm font-medium'
+                : 'text-red-700 text-sm font-medium',
+        message: product.stockStatusMessage,
+    };
 }
