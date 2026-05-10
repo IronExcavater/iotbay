@@ -1,8 +1,8 @@
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel, ConfigDict
-from pydantic.alias_generators import to_camel
+from pydantic import AfterValidator, BaseModel
 from src.audit.models import ENTITY_TYPE_USER
+from src.common.pydantic import camel_case_config
 from src.common.validation import ChoiceValidator, DateValidator, StringValidator
 
 AUDIT_ACTION_VALIDATOR = StringValidator(
@@ -31,9 +31,7 @@ def _optional_date(value: str) -> str:
 
 
 class AuditEventQuery(BaseModel):
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
+    model_config = camel_case_config(
         str_strip_whitespace=True,
     )
 

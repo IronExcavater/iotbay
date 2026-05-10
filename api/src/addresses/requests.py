@@ -1,11 +1,9 @@
-from pydantic import BaseModel, ConfigDict
-from pydantic.alias_generators import to_camel
+from pydantic import BaseModel
+from src.common.pydantic import camel_case_config
 
 
 class AddressQuery(BaseModel):
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
+    model_config = camel_case_config(
         str_strip_whitespace=True,
     )
 

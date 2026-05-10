@@ -1,5 +1,5 @@
-from pydantic import BaseModel, ConfigDict, field_validator
-from pydantic.alias_generators import to_camel
+from pydantic import BaseModel, field_validator
+from src.common.pydantic import camel_case_config
 from src.common.types import MoneyAmount, ProductCode, ProductName
 from src.products.models import (
     validate_product_stock,
@@ -8,9 +8,7 @@ from src.products.models import (
 
 
 class ProductRequest(BaseModel):
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
+    model_config = camel_case_config(
         str_strip_whitespace=True,
     )
 
