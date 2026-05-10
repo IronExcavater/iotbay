@@ -200,3 +200,28 @@ class ProductRepository(Repository):
 
         if deleted_count == 0:
             raise ProductNotFoundError()
+
+    def decrease_stock(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        product_id: bytes,
+        quantity: int,
+    ) -> bool:
+        cursor = connection.execute(
+            "UPDATE products SET stock = stock - ? WHERE product_id = ? AND stock >= ?",
+            (quantity, product_id, quantity),
+        )
+        return cursor.rowcount > 0
+
+    def increase_stock(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        product_id: bytes,
+        quantity: int,
+    ) -> None:
+        connection.execute(
+            "UPDATE products SET stock = stock + ? WHERE product_id = ?",
+            (quantity, product_id),
+        )

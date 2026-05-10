@@ -1,4 +1,5 @@
 from flask import Blueprint
+from flask import request as flask_request
 from src.auth.session import (
     current_authenticated_staff_user,
     current_authenticated_user,
@@ -18,7 +19,24 @@ def list_orders():
         raise ApiError("Authentication required", 401)
 
     repo = services().order_repository
-    orders = repo.list_orders_by_user_id(user.user_id)
+    order_id_param = flask_request.args.get("orderId")
+    date_param = flask_request.args.get("date")
+
+    if order_id_param or date_param:
+        try:
+            order_id_bytes = (
+                id_string_to_bytes(order_id_param) if order_id_param else None
+            )
+        except ValueError:
+            raise ApiError("Invalid order ID format", 400, code="INVALID_ID")
+        orders = repo.search_orders_by_user(
+            user_id=user.user_id,
+            order_id=order_id_bytes,
+            date=date_param,
+        )
+    else:
+        orders = repo.list_orders_by_user_id(user.user_id)
+
     return [order.to_dict() for order in orders]
 
 

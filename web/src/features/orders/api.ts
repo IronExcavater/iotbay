@@ -26,9 +26,19 @@ export interface UpdateOrderStatusInput {
     status: string;
 }
 
+export interface OrderSearchParams {
+    orderId?: string;
+    date?: string;
+}
+
 export const orderApi = {
-    list(signal?: AbortSignal): Promise<Order[]> {
-        return getJson<Order[]>('/api/orders', signal);
+    list(params?: OrderSearchParams, signal?: AbortSignal): Promise<Order[]> {
+        const searchParams = new URLSearchParams();
+        if (params?.orderId) searchParams.set('orderId', params.orderId);
+        if (params?.date) searchParams.set('date', params.date);
+        const query = searchParams.toString();
+        const url = query ? `/api/orders?${query}` : '/api/orders';
+        return getJson<Order[]>(url, signal);
     },
 
     get(orderId: string, signal?: AbortSignal): Promise<Order> {

@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import type { Order } from '@features/orders/api';
 import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { getJson } from '@shared/services/http';
+import { Button } from '@shared/ui/form/Button';
 import { PageHeader } from '@shared/ui/PageHeader';
+import { TableHead } from '@shared/ui/table/Table';
 import { Money } from '@shared/value-objects/Money';
 
 export default function AdminOrdersPage() {
@@ -83,16 +85,16 @@ export default function AdminOrdersPage() {
                         className="border-ui-200 rounded border px-3 py-1.5 text-sm"
                     />
                 </div>
-                <button
+                <Button
                     type="button"
                     onClick={() => {
                         setSearchId('');
                         setSearchDate('');
                     }}
-                    className="text-ui-500 text-sm hover:underline"
+                    variant="secondary"
                 >
                     Clear
-                </button>
+                </Button>
             </form>
 
             {loading && <p className="text-ui-500 text-sm">Loading…</p>}
@@ -101,7 +103,7 @@ export default function AdminOrdersPage() {
             )}
             {!loading && filteredOrders.length > 0 && (
                 <table className="w-full text-sm">
-                    <thead>
+                    <TableHead>
                         <tr className="border-b text-left">
                             <th className="py-2">Order ID</th>
                             <th className="py-2">Date</th>
@@ -109,7 +111,7 @@ export default function AdminOrdersPage() {
                             <th className="py-2">Items</th>
                             <th className="py-2 text-right">Total</th>
                         </tr>
-                    </thead>
+                    </TableHead>
                     <tbody>
                         {filteredOrders.map((order) => (
                             <tr key={order.id} className="border-b">
