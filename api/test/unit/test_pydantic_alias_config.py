@@ -1,12 +1,9 @@
 import unittest
 
-from pydantic import BaseModel
-from src.common.pydantic import camel_case_config
+from src.common.pydantic import ApiRequestModel
 
 
-class ExampleRequest(BaseModel):
-    model_config = camel_case_config(str_strip_whitespace=True)
-
+class ExampleRequest(ApiRequestModel):
     event_type: str
 
 

@@ -1,5 +1,5 @@
-from pydantic import BaseModel, field_validator
-from src.common.pydantic import camel_case_config
+from pydantic import Field, field_validator
+from src.common.pydantic import ApiRequestModel
 from src.common.types import MoneyAmount, ProductCode, ProductName
 from src.products.models import (
     validate_product_stock,
@@ -7,15 +7,9 @@ from src.products.models import (
 )
 
 
-class ProductRequest(BaseModel):
-    model_config = camel_case_config(
-        str_strip_whitespace=True,
-    )
-
-
-class ProductMutationRequest(ProductRequest):
+class ProductMutationRequest(ApiRequestModel):
     code: str
-    media_urls: list[str] = []
+    media_urls: list[str] = Field(default_factory=list)
     name: str
     price_cents: int
     stock: int = 0

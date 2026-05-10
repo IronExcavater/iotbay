@@ -7,6 +7,7 @@ from src.common.sqlite_model import (
     id_bytes_to_string,
     new_id_bytes,
 )
+from src.users.models import UserDisplayProfile
 
 AUDIT_ACTION_LOGOUT_OTHERS = "logout_others"
 AUDIT_ACTION_MANAGED_USER_UPDATED = "managed_user_updated"
@@ -37,11 +38,6 @@ def _safe_json_loads(value: str | None) -> object | None:
         return None
 
 
-def _actor_name(first_name: str | None, last_name: str | None) -> str | None:
-    parts = [part for part in (first_name, last_name) if part]
-    return " ".join(parts) if parts else None
-
-
 @dataclass(slots=True, frozen=True)
 class AuditEvent(SqliteRowModel, BlobUuidModel):
     entity_type: str
@@ -57,22 +53,31 @@ class AuditEvent(SqliteRowModel, BlobUuidModel):
     actor_first_name: str | None = None
     actor_last_name: str | None = None
     actor_email: str | None = None
+    actor_profile_image_url: str | None = None
     audit_event_id: bytes = field(default_factory=new_id_bytes)
 
     @classmethod
     def uuid_field_name(cls) -> str:
         return "audit_event_id"
 
+    @property
+    def actor_profile(self) -> UserDisplayProfile:
+        return UserDisplayProfile(
+            email=self.actor_email,
+            first_name=self.actor_first_name,
+            last_name=self.actor_last_name,
+            profile_image_url=self.actor_profile_image_url,
+        )
+
     def to_dict(self) -> dict[str, object]:
         return {
             "action": self.action,
-            "actorEmail": self.actor_email,
-            "actorName": _actor_name(self.actor_first_name, self.actor_last_name),
             "actorUserId": (
                 id_bytes_to_string(self.actor_user_id)
                 if self.actor_user_id is not None
                 else None
             ),
+            **self.actor_profile.to_prefixed_dict("actor"),
             "after": _safe_json_loads(self.after_json),
             "before": _safe_json_loads(self.before_json),
             "diff": _safe_json_loads(self.diff_json),
