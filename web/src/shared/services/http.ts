@@ -131,6 +131,27 @@ export function getJson<TResponse>(path: string, signal?: AbortSignal) {
     return requestJson<TResponse>(path, { signal });
 }
 
+export function queryString(query: object = {}) {
+    const searchParams = new URLSearchParams();
+
+    for (const [key, value] of Object.entries(query)) {
+        if (!isQueryValue(value)) continue;
+        searchParams.set(key, String(value));
+    }
+
+    const value = searchParams.toString();
+    return value ? `?${value}` : '';
+}
+
+function isQueryValue(value: unknown): value is boolean | number | string {
+    return (
+        (typeof value === 'boolean' ||
+            typeof value === 'number' ||
+            typeof value === 'string') &&
+        value !== ''
+    );
+}
+
 export function postJson<TResponse, TBody = undefined>(
     path: string,
     body?: TBody,

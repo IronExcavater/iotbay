@@ -1,4 +1,4 @@
-import { getJson } from '@shared/services/http';
+import { getJson, queryString } from '@shared/services/http';
 
 export interface AddressSuggestion {
     id: string;
@@ -23,16 +23,12 @@ export const addressApi = {
             signal?: AbortSignal;
         } = {}
     ): Promise<AddressSuggestion[]> {
-        const search = new URLSearchParams({ q: query });
-        if (options.country) {
-            search.set('country', options.country);
-        }
-        if (options.language) {
-            search.set('language', options.language);
-        }
-
         const payload = await getJson<{ items: AddressSuggestion[] }>(
-            `/api/addresses/suggest?${search.toString()}`,
+            `/api/addresses/suggest${queryString({
+                country: options.country,
+                language: options.language,
+                q: query,
+            })}`,
             options.signal
         );
         return payload.items;
@@ -46,16 +42,12 @@ export const addressApi = {
             signal?: AbortSignal;
         } = {}
     ): Promise<ResolvedAddress> {
-        const search = new URLSearchParams({ id });
-        if (options.country) {
-            search.set('country', options.country);
-        }
-        if (options.language) {
-            search.set('language', options.language);
-        }
-
         const payload = await getJson<{ address: ResolvedAddress }>(
-            `/api/addresses/resolve?${search.toString()}`,
+            `/api/addresses/resolve${queryString({
+                country: options.country,
+                id,
+                language: options.language,
+            })}`,
             options.signal
         );
         return payload.address;
