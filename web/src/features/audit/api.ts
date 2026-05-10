@@ -3,7 +3,10 @@ import { getJson } from '@shared/services/http';
 export interface AuditEvent {
     action: string;
     actorEmail?: string | null;
+    actorFirstName?: string | null;
+    actorLastName?: string | null;
     actorName?: string | null;
+    actorProfileImageUrl?: string | null;
     actorUserId?: string | null;
     diff?: Record<string, { after: unknown; before: unknown }> | null;
     entityId: string;

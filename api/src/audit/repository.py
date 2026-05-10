@@ -117,7 +117,8 @@ class AuditRepository(Repository):
                     audit_events.*,
                     actors.email AS actor_email,
                     actors.first_name AS actor_first_name,
-                    actors.last_name AS actor_last_name
+                    actors.last_name AS actor_last_name,
+                    actors.profile_image_url AS actor_profile_image_url
                 FROM audit_events
                 LEFT JOIN users AS actors
                     ON actors.user_id = audit_events.actor_user_id
@@ -160,7 +161,8 @@ class AuditRepository(Repository):
                     audit_events.*,
                     actors.email AS actor_email,
                     actors.first_name AS actor_first_name,
-                    actors.last_name AS actor_last_name
+                    actors.last_name AS actor_last_name,
+                    actors.profile_image_url AS actor_profile_image_url
                 FROM audit_events
                 LEFT JOIN users AS actors
                     ON actors.user_id = audit_events.actor_user_id
@@ -186,7 +188,8 @@ class AuditRepository(Repository):
                     audit_events.*,
                     actors.email AS actor_email,
                     actors.first_name AS actor_first_name,
-                    actors.last_name AS actor_last_name
+                    actors.last_name AS actor_last_name,
+                    actors.profile_image_url AS actor_profile_image_url
                 FROM audit_events
                 LEFT JOIN users AS actors
                     ON actors.user_id = audit_events.actor_user_id

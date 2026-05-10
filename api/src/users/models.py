@@ -101,11 +101,6 @@ USER_STATUS_VALIDATOR = ChoiceValidator(
 )
 
 
-def _user_name(first_name: str | None, last_name: str | None) -> str | None:
-    parts = [part for part in (first_name, last_name) if part]
-    return " ".join(parts) if parts else None
-
-
 @dataclass(slots=True, frozen=True)
 class User(SqliteRowModel, BlobUuidModel, ApiModel):
     public_fields = (
@@ -170,6 +165,18 @@ class User(SqliteRowModel, BlobUuidModel, ApiModel):
             STAFF_PERMISSION_SUPERADMIN,
         )
 
+    @staticmethod
+    def display_name_for(
+        first_name: str | None,
+        last_name: str | None,
+    ) -> str | None:
+        parts = [part for part in (first_name, last_name) if part]
+        return " ".join(parts) if parts else None
+
+    @property
+    def display_name(self) -> str | None:
+        return self.display_name_for(self.first_name, self.last_name)
+
     def snapshot(self) -> dict[str, object]:
         return {
             "designation": self.designation,
@@ -181,6 +188,27 @@ class User(SqliteRowModel, BlobUuidModel, ApiModel):
             "staffId": self.staff_id,
             "status": self.status,
             "userType": self.user_type,
+        }
+
+
+@dataclass(slots=True, frozen=True)
+class UserDisplayProfile:
+    email: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    profile_image_url: str | None = None
+
+    @property
+    def display_name(self) -> str | None:
+        return User.display_name_for(self.first_name, self.last_name)
+
+    def to_prefixed_dict(self, prefix: str) -> dict[str, object]:
+        return {
+            f"{prefix}Email": self.email,
+            f"{prefix}FirstName": self.first_name,
+            f"{prefix}LastName": self.last_name,
+            f"{prefix}Name": self.display_name,
+            f"{prefix}ProfileImageUrl": self.profile_image_url,
         }
 
 
@@ -231,8 +259,17 @@ class UserSessionInfo(SqliteRowModel, BlobUuidModel):
     def uuid_field_name(cls) -> str:
         return "session_id"
 
+    @property
+    def user_profile(self) -> UserDisplayProfile:
+        return UserDisplayProfile(
+            email=self.user_email,
+            first_name=self.user_first_name,
+            last_name=self.user_last_name,
+            profile_image_url=self.user_profile_image_url,
+        )
+
     def to_dict(self) -> dict[str, object]:
-        from src.access_logs.models import device_label_for_user_agent
+        from src.common.user_agents import device_label_for_user_agent
 
         return {
             "authMethod": self.auth_method,
@@ -250,10 +287,8 @@ class UserSessionInfo(SqliteRowModel, BlobUuidModel):
             "latestUserAgent": self.latest_user_agent,
             "mfaVerifiedAt": self.mfa_verified_at,
             "trustedExpiresAt": self.trusted_expires_at,
-            "userEmail": self.user_email,
             "userId": id_bytes_to_string(self.user_id),
-            "userName": _user_name(self.user_first_name, self.user_last_name),
-            "userProfileImageUrl": self.user_profile_image_url,
+            **self.user_profile.to_prefixed_dict("user"),
         }
 
 

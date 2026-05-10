@@ -9,7 +9,9 @@ export interface AccessLogEntry {
     sessionId: string;
     userAgent?: string | null;
     userEmail?: string | null;
+    userFirstName?: string | null;
     userId: string;
+    userLastName?: string | null;
     userName?: string | null;
     userProfileImageUrl?: string | null;
 }

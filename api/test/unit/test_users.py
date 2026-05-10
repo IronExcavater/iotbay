@@ -5,6 +5,8 @@ from src.users.models import (
     USER_STATUS_UNVERIFIED,
     USER_TYPE_CUSTOMER,
     USER_TYPE_STAFF,
+    User,
+    UserDisplayProfile,
 )
 from src.users.repository import UserRepository
 
@@ -80,3 +82,28 @@ class UserRepositoryTestCase(AppTestCase):
         self.assertEqual(loaded.designation, "Store manager")
         self.assertEqual(loaded.permission, STAFF_PERMISSION_ADMIN)
         self.assertTrue(loaded.is_admin)
+
+    def test_user_display_name_handles_partial_names(self) -> None:
+        self.assertEqual(User.display_name_for("Alex", "Nguyen"), "Alex Nguyen")
+        self.assertEqual(User.display_name_for("Alex", None), "Alex")
+        self.assertEqual(User.display_name_for(None, "Nguyen"), "Nguyen")
+        self.assertIsNone(User.display_name_for(None, None))
+
+    def test_user_display_profile_serializes_prefixed_live_user_fields(self) -> None:
+        profile = UserDisplayProfile(
+            email="alex@example.com",
+            first_name="Alex",
+            last_name="Nguyen",
+            profile_image_url="data:image/png;base64,image",
+        )
+
+        self.assertEqual(
+            profile.to_prefixed_dict("user"),
+            {
+                "userEmail": "alex@example.com",
+                "userFirstName": "Alex",
+                "userLastName": "Nguyen",
+                "userName": "Alex Nguyen",
+                "userProfileImageUrl": "data:image/png;base64,image",
+            },
+        )

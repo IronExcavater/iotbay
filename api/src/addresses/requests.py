@@ -1,12 +1,7 @@
-from pydantic import BaseModel
-from src.common.pydantic import camel_case_config
+from src.common.pydantic import ApiRequestModel
 
 
-class AddressQuery(BaseModel):
-    model_config = camel_case_config(
-        str_strip_whitespace=True,
-    )
-
+class AddressQuery(ApiRequestModel):
     country: str = ""
     language: str = ""
 

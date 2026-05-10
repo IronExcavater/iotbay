@@ -1,7 +1,6 @@
 from typing import Annotated
-from uuid import UUID
 
-from pydantic import AfterValidator, BaseModel, model_validator
+from pydantic import AfterValidator, model_validator
 from src.addresses.models import (
     ADDRESS_LINE_ONE_VALIDATOR,
     ADDRESS_LINE_TWO_VALIDATOR,
@@ -11,7 +10,7 @@ from src.addresses.models import (
     SUBURB_VALIDATOR,
     validate_address_fields,
 )
-from src.common.pydantic import camel_case_config
+from src.common.pydantic import ApiRequestModel, uuid_value
 from src.common.types import EmailAddress, FirstName, LastName
 from src.common.validation import (
     TOKEN_MAX_LENGTH,
@@ -61,18 +60,6 @@ def _optional_request_validator(validator: StringValidator):
     return validate
 
 
-def _uuid_value(field_name: str):
-    def validate(value: str) -> str:
-        normalized = value.strip()
-        try:
-            UUID(normalized)
-        except ValueError as error:
-            raise ValueError(f"{field_name} is invalid") from error
-        return normalized
-
-    return validate
-
-
 def _mfa_code_value(value: str) -> str:
     normalized = MFA_CODE_VALIDATOR.validate_request(value)
     if not normalized.isdigit():
@@ -95,7 +82,7 @@ TokenValue = Annotated[str, AfterValidator(TOKEN_VALIDATOR.validate_request)]
 AuthChallengeIdValue = Annotated[
     str,
     AfterValidator(AUTH_CHALLENGE_ID_VALIDATOR.validate_request),
-    AfterValidator(_uuid_value("challengeId")),
+    AfterValidator(uuid_value("challengeId")),
 ]
 MfaCodeValue = Annotated[str, AfterValidator(_mfa_code_value)]
 UserTypeValue = Annotated[
@@ -156,10 +143,8 @@ ProfileImageUrlValue = Annotated[
 ]
 
 
-class AuthRequest(BaseModel):
-    model_config = camel_case_config(
-        str_strip_whitespace=True,
-    )
+class AuthRequest(ApiRequestModel):
+    pass
 
 
 class ProfileRequest(AuthRequest):
@@ -206,6 +191,10 @@ class ResetPasswordRequest(AuthRequest):
 
 
 class VerifyEmailRequest(AuthRequest):
+    token: TokenValue
+
+
+class StaffInvitationQuery(AuthRequest):
     token: TokenValue
 
 
