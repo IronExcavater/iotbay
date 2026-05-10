@@ -1,8 +1,33 @@
 import sqlite3
 from collections.abc import Sequence
 from contextlib import AbstractContextManager
+from dataclasses import dataclass, field
 
 from src.db import connect
+
+
+@dataclass(slots=True)
+class QueryFilters:
+    conditions: list[str] = field(default_factory=list)
+    parameters: list[object] = field(default_factory=list)
+
+    def add(self, condition: str, parameter: object | None) -> None:
+        if parameter is None or parameter == "":
+            return
+        self.conditions.append(condition)
+        self.parameters.append(parameter)
+
+    def add_optional_bytes(self, condition: str, parameter: bytes | None) -> None:
+        if parameter is None:
+            return
+        self.conditions.append(condition)
+        self.parameters.append(parameter)
+
+    @property
+    def where_clause(self) -> str:
+        if not self.conditions:
+            return ""
+        return f"WHERE {' AND '.join(self.conditions)}"
 
 
 class Repository:
