@@ -1,6 +1,6 @@
 import sqlite3
 
-from src.common.audit_log_repository import AuditLogRepository
+from src.audit.repository import AuditRepository
 from src.common.clock import UtcTime
 from src.common.repository import Repository
 from src.common.web import ApiError
@@ -21,7 +21,7 @@ class ProductNotFoundError(ApiError):
 class ProductRepository(Repository):
     def __init__(self, database_path: str) -> None:
         super().__init__(database_path)
-        self._audit_logs = AuditLogRepository(database_path)
+        self._audit = AuditRepository(database_path)
 
     def list_products(self) -> list[Product]:
         with self.connect() as connection:
@@ -79,7 +79,7 @@ class ProductRepository(Repository):
                         "type": product.type,
                     },
                 )
-                self._audit_logs.insert_audit_log(
+                self._audit.insert_entity(
                     connection,
                     entity_type=ENTITY_TYPE_PRODUCT,
                     entity_id=product.product_id,
@@ -136,7 +136,7 @@ class ProductRepository(Repository):
                     where="product_id = ?",
                     where_parameters=(updated_product.product_id,),
                 )
-                self._audit_logs.update_audit_log(
+                self._audit.update_entity(
                     connection,
                     entity_type=ENTITY_TYPE_PRODUCT,
                     entity_id=updated_product.product_id,
@@ -192,7 +192,7 @@ class ProductRepository(Repository):
                 where="product_id = ?",
                 where_parameters=(product_id,),
             )
-            self._audit_logs.delete_audit_log(
+            self._audit.delete_entity(
                 connection,
                 entity_type=ENTITY_TYPE_PRODUCT,
                 entity_id=product_id,
