@@ -45,6 +45,46 @@ class ProductRouteTestCase(AppTestCase):
         self.assertEqual(len(listed_products), 1)
         self.assertEqual(listed_products[0]["mediaUrls"], created["mediaUrls"])
 
+    def test_create_and_update_product_persist_free_text_type(self) -> None:
+        create_staff_test_session(self.client)
+        create_response = self.client.post(
+            "/api/admin/products",
+            json={
+                "name": "Smart Sensor",
+                "code": "SNSR-001",
+                "mediaUrls": [],
+                "priceCents": 12999,
+                "stock": 14,
+                "type": "Environmental Monitor",
+            },
+        )
+
+        self.assertEqual(create_response.status_code, 201)
+        created = create_response.get_json()
+        self.assertIsNotNone(created)
+        self.assertEqual(created["type"], "Environmental Monitor")
+
+        update_response = self.client.patch(
+            f"/api/admin/products/{created['id']}",
+            json={
+                "name": "Smart Sensor Plus",
+                "code": "SNSR-002",
+                "mediaUrls": [],
+                "priceCents": 14999,
+                "stock": 9,
+                "type": "Industrial Control Node",
+            },
+        )
+
+        self.assertEqual(update_response.status_code, 200)
+        updated = update_response.get_json()
+        self.assertIsNotNone(updated)
+        self.assertEqual(updated["type"], "Industrial Control Node")
+
+        listed_products = self.client.get("/api/products").get_json()["items"]
+        self.assertEqual(len(listed_products), 1)
+        self.assertEqual(listed_products[0]["type"], "Industrial Control Node")
+
     def test_create_product_requires_staff_access(self) -> None:
         unauthenticated_response = self.client.post(
             "/api/admin/products",
@@ -99,14 +139,14 @@ class ProductRouteTestCase(AppTestCase):
                 "Field required",
             ),
             (
-                "invalid type",
+                "blank type",
                 {
                     "name": "Unknown Device",
                     "code": "BAD-TYPE",
                     "priceCents": 500,
-                    "type": "Widget",
+                    "type": "   ",
                 },
-                "type is invalid",
+                "type is required",
             ),
             (
                 "invalid stock",

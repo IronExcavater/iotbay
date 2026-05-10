@@ -1,7 +1,7 @@
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel, ConfigDict
-from pydantic.alias_generators import to_camel
+from pydantic import AfterValidator, BaseModel
+from src.common.pydantic import camel_case_config
 from src.common.validation import ChoiceValidator, DateValidator
 
 ACCESS_EVENT_VALIDATOR = ChoiceValidator(
@@ -20,9 +20,7 @@ def _optional_date(value: str) -> str:
 
 
 class AccessLogQuery(BaseModel):
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
+    model_config = camel_case_config(
         str_strip_whitespace=True,
     )
 

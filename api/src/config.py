@@ -1,9 +1,9 @@
 import json
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict
-from pydantic.alias_generators import to_camel
+from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from src.common.pydantic import camel_case_config
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 WORKSPACE_DIR = ROOT_DIR.parent
@@ -38,10 +38,8 @@ class AddressConfig(EnvConfig):
 
 
 class AppConfig(BaseModel):
-    model_config = ConfigDict(
-        alias_generator=to_camel,
+    model_config = camel_case_config(
         frozen=True,
-        populate_by_name=True,
     )
 
     cookie_secure: bool

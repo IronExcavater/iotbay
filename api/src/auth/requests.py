@@ -1,8 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, model_validator
-from pydantic.alias_generators import to_camel
+from pydantic import AfterValidator, BaseModel, model_validator
 from src.addresses.models import (
     ADDRESS_LINE_ONE_VALIDATOR,
     ADDRESS_LINE_TWO_VALIDATOR,
@@ -12,6 +11,7 @@ from src.addresses.models import (
     SUBURB_VALIDATOR,
     validate_address_fields,
 )
+from src.common.pydantic import camel_case_config
 from src.common.types import EmailAddress, FirstName, LastName
 from src.common.validation import (
     TOKEN_MAX_LENGTH,
@@ -157,9 +157,7 @@ ProfileImageUrlValue = Annotated[
 
 
 class AuthRequest(BaseModel):
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
+    model_config = camel_case_config(
         str_strip_whitespace=True,
     )
 
