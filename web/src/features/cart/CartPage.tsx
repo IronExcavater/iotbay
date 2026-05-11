@@ -17,6 +17,7 @@ import {
 import { useAuth } from '@features/auth/AuthProvider';
 import { useCart } from '@features/cart/CartProvider';
 import { orderApi } from '@features/orders/api';
+import { PaymentMethodsSection } from '@features/payment-methods/PaymentMethodsSection';
 import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { Button, ButtonLink } from '@shared/ui/form/Button';
 import { Checkbox } from '@shared/ui/form/Checkbox';
@@ -262,6 +263,8 @@ export default function CartPage() {
                             </p>
                         )}
                     </div>
+
+                    <PaymentMethodsSection />
 
                     <Checkbox
                         checked={acceptedTerms}
