@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 
 
-class CreatePaymentMethodRequest(BaseModel):
+class PaymentMethodRequest(BaseModel):
     type: str
     cardholder_name: str = Field(alias="cardholderName")
     card_number: str = Field(alias="cardNumber")
