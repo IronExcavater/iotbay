@@ -1,21 +1,25 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from src.audit.models import AUDIT_ACTION_CREATED, ENTITY_TYPE_ORDER
 from src.audit.service import AuditService
 from src.common.clock import UtcTime
-from src.common.sqlite_model import id_string_to_bytes
+from src.common.sqlite_model import id_string_to_bytes, new_id_bytes
 from src.common.web import ApiError
 from src.orders.models import (
     ORDER_STATUS_CANCELLED,
     ORDER_STATUS_PAID,
     ORDER_STATUS_SAVED,
     Order,
+    OrderItem,
+)
+from src.orders.queries import (
+    INSERT_ORDER,
+    INSERT_ORDER_ITEM,
 )
 from src.orders.repository import OrderRepository
 from src.products.repository import ProductRepository
 
-# Valid status transitions: current_status -> set of allowed next statuses
 VALID_TRANSITIONS: dict[str, set[str]] = {
     ORDER_STATUS_SAVED: {ORDER_STATUS_PAID, ORDER_STATUS_CANCELLED},
     ORDER_STATUS_PAID: set(),
@@ -36,11 +40,6 @@ class OrderService:
         address_id: bytes | None,
         items: list[dict[str, Any]],
     ) -> Order:
-        """
-        Create an order from a list of items.
-        Each item dict must have 'product_id' (str) and 'quantity' (int).
-        Fetches real product prices from the database.
-        """
         if not items:
             raise ApiError("At least one item is required", 400)
 
@@ -62,10 +61,18 @@ class OrderService:
                     code="PRODUCT_NOT_FOUND",
                 )
 
+            if product.stock < quantity:
+                raise ApiError(
+                    f"Insufficient stock for '{product.name}'. "
+                    f"Available: {product.stock}, requested: {quantity}",
+                    409,
+                    code="INSUFFICIENT_STOCK",
+                )
+
             total_cents += product.price_cents * quantity
             order_items.append((product_id_bytes, quantity))
 
-        order = self.order_repository.insert_order(
+        order = self._insert_order_and_stock(
             user_id=actor_user_id,
             address_id=address_id,
             items=order_items,
@@ -81,6 +88,57 @@ class OrderService:
 
         return order
 
+    def _insert_order_and_stock(
+        self,
+        *,
+        user_id: bytes,
+        address_id: bytes | None,
+        items: list[tuple[bytes, int]],
+        total_cents: int,
+    ) -> Order:
+        now = UtcTime.now().iso
+        order_id_bytes = new_id_bytes()
+
+        with self.order_repository.connect() as connection:
+            for product_id, quantity in items:
+                success = self.product_repository.decrease_stock(
+                    connection,
+                    product_id=product_id,
+                    quantity=quantity,
+                )
+                if not success:
+                    raise ApiError(
+                        "Insufficient stock — another order may have claimed it",
+                        409,
+                        code="INSUFFICIENT_STOCK",
+                    )
+
+            connection.execute(
+                INSERT_ORDER,
+                (
+                    order_id_bytes,
+                    user_id,
+                    address_id,
+                    ORDER_STATUS_SAVED,
+                    total_cents,
+                    now,
+                    now,
+                ),
+            )
+            for product_id, quantity in items:
+                connection.execute(
+                    INSERT_ORDER_ITEM, (order_id_bytes, product_id, quantity)
+                )
+
+            from src.orders.queries import SELECT_ORDER_BY_ID, SELECT_ORDER_ITEMS
+
+            row = connection.execute(SELECT_ORDER_BY_ID, (order_id_bytes,)).fetchone()
+            order = Order(**row)
+            item_rows = connection.execute(
+                SELECT_ORDER_ITEMS, (order_id_bytes,)
+            ).fetchall()
+            return replace(order, items=[OrderItem(**r) for r in item_rows])
+
     def update_status(
         self,
         *,
@@ -88,7 +146,6 @@ class OrderService:
         order_id: bytes,
         new_status: str,
     ) -> Order:
-        """Transition an order to a new status following valid transitions."""
         order = self.order_repository.select_order_by_id(order_id)
         if order is None:
             raise ApiError("Order not found", 404)
@@ -102,6 +159,10 @@ class OrderService:
             )
 
         before_status = order.status
+
+        if new_status == ORDER_STATUS_CANCELLED:
+            self._restore_stock(order)
+
         updated_order = self.order_repository.update_order_status(
             order_id=order_id,
             new_status=new_status,
@@ -116,6 +177,15 @@ class OrderService:
         )
 
         return updated_order
+
+    def _restore_stock(self, order: Order) -> None:
+        with self.order_repository.connect() as connection:
+            for item in order.items:
+                self.product_repository.increase_stock(
+                    connection,
+                    product_id=item.product_id,
+                    quantity=item.quantity,
+                )
 
     def _record_audit(
         self,

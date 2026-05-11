@@ -25,6 +25,22 @@ WHERE user_id = ?
 ORDER BY created_at DESC
 """
 
+SEARCH_ORDERS_BY_USER = """
+SELECT
+    order_id,
+    user_id,
+    address_id,
+    status,
+    total_cents,
+    created_at,
+    updated_at
+FROM orders
+WHERE user_id = ?
+  AND (? IS NULL OR order_id = ?)
+  AND (? IS NULL OR DATE(created_at) = ?)
+ORDER BY created_at DESC
+"""
+
 LIST_ALL_ORDERS = """
 SELECT
     order_id,
@@ -67,4 +83,11 @@ UPDATE_ORDER_STATUS = """
 UPDATE orders
 SET status = ?, updated_at = ?
 WHERE order_id = ?
+"""
+
+AJUST_PRODUCT_STOCK = """
+UPDATE products
+SET stock = stock - ?
+WHERE product_id = ?
+    AND stock >= ?
 """
