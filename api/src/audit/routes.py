@@ -173,4 +173,5 @@ def _public_event(event):
         object.__setattr__(event, "actor_email", None)
         object.__setattr__(event, "actor_first_name", "IoTBay")
         object.__setattr__(event, "actor_last_name", "staff")
+        object.__setattr__(event, "actor_profile_image_url", None)
     return event

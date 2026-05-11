@@ -60,7 +60,7 @@ export default function ProductCatalogPage() {
     const filteredProducts = products.filter((product) => {
         const query = search.trim().toLowerCase();
         if (!query) return true;
-        return [product.name, product.code, product.description]
+        return [product.name, product.code, product.description, product.type]
             .join(' ')
             .toLowerCase()
             .includes(query);
@@ -178,6 +178,7 @@ function ViewButton({
 
 function ProductCard({ product }: { product: Product }) {
     const image = product.mediaUrls[0] ?? '/iotbay_icon_themed.svg';
+    const stockStatus = stockStatusForProduct(product);
 
     return (
         <Link
@@ -195,10 +196,16 @@ function ProductCard({ product }: { product: Product }) {
                 <span className="text-ui-500 font-mono text-xs">
                     {product.code}
                 </span>
+                <span className="text-ui-600 text-xs">{product.type}</span>
                 <h2 className="text-ui-900 font-semibold">{product.name}</h2>
                 <p className="text-ui-900 text-lg font-semibold">
                     {Money.format(product.priceCents)}
                 </p>
+                {stockStatus && (
+                    <p className={stockStatus.className}>
+                        {stockStatus.message}
+                    </p>
+                )}
             </div>
         </Link>
     );
@@ -233,16 +240,20 @@ function ProductList({
             <div className="overflow-x-auto">
                 <Table>
                     <colgroup>
-                        <col className="w-[18%]" />
-                        <col className="w-[42%]" />
-                        <col className="w-[18%]" />
-                        <col className="w-[22%]" />
+                        <col className="w-[16%]" />
+                        <col className="w-[28%]" />
+                        <col className="w-[16%]" />
+                        <col className="w-[14%]" />
+                        <col className="w-[10%]" />
+                        <col className="w-[16%]" />
                     </colgroup>
                     <TableHead>
                         <tr>
                             <th className="px-5 py-3">Code</th>
                             <th className="px-5 py-3">Name</th>
+                            <th className="px-5 py-3">Type</th>
                             <th className="px-5 py-3">Price</th>
+                            <th className="px-5 py-3">Availability</th>
                             <th className="px-5 py-3">Updated</th>
                         </tr>
                     </TableHead>
@@ -250,58 +261,29 @@ function ProductList({
                     <tbody>
                         {isLoading ? (
                             <>
-                                <TableLoadingRow colSpan={4} />
-                                <TableLoadingRow colSpan={4} />
-                                <TableLoadingRow colSpan={4} />
+                                <TableLoadingRow colSpan={6} />
+                                <TableLoadingRow colSpan={6} />
+                                <TableLoadingRow colSpan={6} />
                             </>
                         ) : error ? (
                             <TableMessageRow
-                                colSpan={4}
+                                colSpan={6}
                                 message={error}
                                 tone="error"
                             />
                         ) : products.length === 0 ? (
                             <TableMessageRow
-                                colSpan={4}
+                                colSpan={6}
                                 message="No products yet"
                                 tone="muted"
                             />
                         ) : (
                             products.map((product) => (
-                                <TablePrimaryActionRow
+                                <ProductListRow
                                     key={product.id}
-                                    label={`View ${product.name}`}
-                                    onAction={() => {
-                                        onNavigate(`/products/${product.id}`);
-                                    }}
-                                >
-                                    <td className="text-ui-600 px-5 py-3 font-mono text-xs">
-                                        {product.code}
-                                    </td>
-                                    <td className="px-5 py-3">
-                                        <span className="text-ui-900 font-medium">
-                                            {product.name}
-                                        </span>
-                                    </td>
-                                    <td className="px-5 py-3">
-                                        {Money.format(product.priceCents)}
-                                    </td>
-                                    <td className="text-ui-500 px-5 py-3">
-                                        <Tooltip
-                                            label={DateTimeValue.format(
-                                                product.updatedAt,
-                                                'long'
-                                            )}
-                                        >
-                                            <span>
-                                                {DateTimeValue.format(
-                                                    product.updatedAt,
-                                                    'short'
-                                                )}
-                                            </span>
-                                        </Tooltip>
-                                    </td>
-                                </TablePrimaryActionRow>
+                                    onNavigate={onNavigate}
+                                    product={product}
+                                />
                             ))
                         )}
                     </tbody>
@@ -309,4 +291,65 @@ function ProductList({
             </div>
         </div>
     );
+}
+
+function ProductListRow({
+    onNavigate,
+    product,
+}: {
+    onNavigate: (to: string) => void;
+    product: Product;
+}) {
+    const stockStatus = stockStatusForProduct(product);
+
+    return (
+        <TablePrimaryActionRow
+            label={`View ${product.name}`}
+            onAction={() => {
+                onNavigate(`/products/${product.id}`);
+            }}
+        >
+            <td className="text-ui-600 px-5 py-3 font-mono text-xs">
+                {product.code}
+            </td>
+            <td className="px-5 py-3">
+                <span className="text-ui-900 font-medium">{product.name}</span>
+            </td>
+            <td className="text-ui-600 px-5 py-3">{product.type}</td>
+            <td className="px-5 py-3">{Money.format(product.priceCents)}</td>
+            <td className="px-5 py-3">
+                {stockStatus && (
+                    <span className={stockStatus.className}>
+                        {stockStatus.message}
+                    </span>
+                )}
+            </td>
+            <td className="text-ui-500 px-5 py-3">
+                <Tooltip
+                    label={DateTimeValue.format(product.updatedAt, 'long')}
+                >
+                    <span>
+                        {DateTimeValue.format(product.updatedAt, 'short')}
+                    </span>
+                </Tooltip>
+            </td>
+        </TablePrimaryActionRow>
+    );
+}
+
+function stockStatusForProduct(product: Product): {
+    className: string;
+    message: string;
+} | null {
+    if (!product.stockStatusMessage || !product.stockStatusTone) {
+        return null;
+    }
+
+    return {
+        className:
+            product.stockStatusTone === 'warning'
+                ? 'text-amber-600 text-sm font-medium'
+                : 'text-red-700 text-sm font-medium',
+        message: product.stockStatusMessage,
+    };
 }

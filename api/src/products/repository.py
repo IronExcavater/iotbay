@@ -1,6 +1,6 @@
 import sqlite3
 
-from src.common.audit_log_repository import AuditLogRepository
+from src.audit.repository import AuditRepository
 from src.common.clock import UtcTime
 from src.common.repository import Repository
 from src.common.web import ApiError
@@ -21,7 +21,7 @@ class ProductNotFoundError(ApiError):
 class ProductRepository(Repository):
     def __init__(self, database_path: str) -> None:
         super().__init__(database_path)
-        self._audit_logs = AuditLogRepository(database_path)
+        self._audit = AuditRepository(database_path)
 
     def list_products(self) -> list[Product]:
         with self.connect() as connection:
@@ -49,6 +49,8 @@ class ProductRepository(Repository):
         media_urls: list[str],
         price_cents: int,
         actor_user_id: bytes,
+        stock: int,
+        type: str,
     ) -> Product:
         now_iso = UtcTime.now().iso
         product = Product.create(
@@ -56,6 +58,8 @@ class ProductRepository(Repository):
             code=code,
             media_urls=media_urls,
             price_cents=price_cents,
+            stock=stock,
+            type=type,
             now_iso=now_iso,
         )
 
@@ -71,9 +75,11 @@ class ProductRepository(Repository):
                         "description": product.description,
                         "media_urls_json": product.media_urls_json,
                         "price_cents": product.price_cents,
+                        "stock": product.stock,
+                        "type": product.type,
                     },
                 )
-                self._audit_logs.insert_audit_log(
+                self._audit.insert_entity(
                     connection,
                     entity_type=ENTITY_TYPE_PRODUCT,
                     entity_id=product.product_id,
@@ -96,6 +102,8 @@ class ProductRepository(Repository):
         media_urls: list[str],
         price_cents: int,
         actor_user_id: bytes,
+        stock: int,
+        type: str,
     ) -> Product:
         existing_product = self.select_product_by_id(product_id=product_id)
         if existing_product is None:
@@ -106,6 +114,8 @@ class ProductRepository(Repository):
             code=code,
             media_urls=media_urls,
             price_cents=price_cents,
+            stock=stock,
+            type=type,
             updated_at=UtcTime.now().iso,
         )
 
@@ -120,11 +130,13 @@ class ProductRepository(Repository):
                         "description": updated_product.description,
                         "media_urls_json": updated_product.media_urls_json,
                         "price_cents": updated_product.price_cents,
+                        "stock": updated_product.stock,
+                        "type": updated_product.type,
                     },
                     where="product_id = ?",
                     where_parameters=(updated_product.product_id,),
                 )
-                self._audit_logs.update_audit_log(
+                self._audit.update_entity(
                     connection,
                     entity_type=ENTITY_TYPE_PRODUCT,
                     entity_id=updated_product.product_id,
@@ -159,6 +171,8 @@ class ProductRepository(Repository):
             if isinstance(media_urls_value, list)
             else existing_product.media_urls
         )
+        stock_value = snapshot.get("stock")
+        stock = stock_value if isinstance(stock_value, int) else existing_product.stock
         return self.update_product(
             actor_user_id=actor_user_id,
             code=str(snapshot.get("code") or existing_product.code),
@@ -166,6 +180,8 @@ class ProductRepository(Repository):
             name=str(snapshot.get("name") or existing_product.name),
             price_cents=price_cents,
             product_id=product_id,
+            stock=stock,
+            type=str(snapshot.get("type") or existing_product.type),
         )
 
     def delete_product(self, *, product_id: bytes) -> None:
@@ -176,7 +192,7 @@ class ProductRepository(Repository):
                 where="product_id = ?",
                 where_parameters=(product_id,),
             )
-            self._audit_logs.delete_audit_log(
+            self._audit.delete_entity(
                 connection,
                 entity_type=ENTITY_TYPE_PRODUCT,
                 entity_id=product_id,

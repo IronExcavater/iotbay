@@ -22,6 +22,8 @@ class ProductRouteTestCase(AppTestCase):
                 "code": "snsr-001",
                 "mediaUrls": media_urls,
                 "priceCents": 12999,
+                "stock": 14,
+                "type": "Sensor",
             },
         )
 
@@ -37,9 +39,51 @@ class ProductRouteTestCase(AppTestCase):
         self.assertEqual(media_response.content_type, "image/png")
         self.assertEqual(media_response.data, b"iotbay")
         self.assertEqual(created["priceCents"], 12999)
+        self.assertEqual(created["stock"], 14)
+        self.assertEqual(created["type"], "Sensor")
         listed_products = self.client.get("/api/products").get_json()["items"]
         self.assertEqual(len(listed_products), 1)
         self.assertEqual(listed_products[0]["mediaUrls"], created["mediaUrls"])
+
+    def test_create_and_update_product_persist_free_text_type(self) -> None:
+        create_staff_test_session(self.client)
+        create_response = self.client.post(
+            "/api/admin/products",
+            json={
+                "name": "Smart Sensor",
+                "code": "SNSR-001",
+                "mediaUrls": [],
+                "priceCents": 12999,
+                "stock": 14,
+                "type": "Environmental Monitor",
+            },
+        )
+
+        self.assertEqual(create_response.status_code, 201)
+        created = create_response.get_json()
+        self.assertIsNotNone(created)
+        self.assertEqual(created["type"], "Environmental Monitor")
+
+        update_response = self.client.patch(
+            f"/api/admin/products/{created['id']}",
+            json={
+                "name": "Smart Sensor Plus",
+                "code": "SNSR-002",
+                "mediaUrls": [],
+                "priceCents": 14999,
+                "stock": 9,
+                "type": "Industrial Control Node",
+            },
+        )
+
+        self.assertEqual(update_response.status_code, 200)
+        updated = update_response.get_json()
+        self.assertIsNotNone(updated)
+        self.assertEqual(updated["type"], "Industrial Control Node")
+
+        listed_products = self.client.get("/api/products").get_json()["items"]
+        self.assertEqual(len(listed_products), 1)
+        self.assertEqual(listed_products[0]["type"], "Industrial Control Node")
 
     def test_create_product_requires_staff_access(self) -> None:
         unauthenticated_response = self.client.post(
@@ -94,6 +138,26 @@ class ProductRouteTestCase(AppTestCase):
                 },
                 "Field required",
             ),
+            (
+                "blank type",
+                {
+                    "name": "Unknown Device",
+                    "code": "BAD-TYPE",
+                    "priceCents": 500,
+                    "type": "   ",
+                },
+                "type is required",
+            ),
+            (
+                "invalid stock",
+                {
+                    "name": "Negative Stock",
+                    "code": "BAD-STOCK",
+                    "priceCents": 500,
+                    "stock": -1,
+                },
+                "stock must be zero or greater",
+            ),
         ]
 
         for label, payload, message in cases:
@@ -108,6 +172,8 @@ class ProductRouteTestCase(AppTestCase):
             "name": "Smart Sensor",
             "code": "snsr-001",
             "priceCents": 12999,
+            "stock": 6,
+            "type": "Sensor",
         }
 
         first = self.client.post("/api/admin/products", json=payload)
@@ -131,6 +197,8 @@ class ProductRouteTestCase(AppTestCase):
                 "name": "Smart Sensor Pro",
                 "code": "snsr-002",
                 "priceCents": 14999,
+                "stock": 11,
+                "type": "Gateway",
             },
         )
 
@@ -139,6 +207,8 @@ class ProductRouteTestCase(AppTestCase):
         self.assertEqual(updated["name"], "Smart Sensor Pro")
         self.assertEqual(updated["code"], "SNSR-002")
         self.assertEqual(updated["priceCents"], 14999)
+        self.assertEqual(updated["stock"], 11)
+        self.assertEqual(updated["type"], "Gateway")
 
         delete_response = self.client.delete(f"/api/admin/products/{created['id']}")
         self.assertEqual(delete_response.status_code, 204)

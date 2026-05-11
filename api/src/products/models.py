@@ -1,4 +1,5 @@
 import json
+import sqlite3
 from dataclasses import dataclass, field
 
 from src.common.sqlite_model import (
@@ -29,6 +30,10 @@ class Product(SqliteRowModel, BlobUuidModel, ApiModel):
         "price_cents",
         "description",
         "media_urls",
+        "type",
+        "stock",
+        "stock_status_message",
+        "stock_status_tone",
         "created_at",
         "updated_at",
     )
@@ -40,7 +45,25 @@ class Product(SqliteRowModel, BlobUuidModel, ApiModel):
     updated_at: str
     description: str = ""
     media_urls_json: str = "[]"
+    type: str = ""
+    stock: int = 0
     product_id: bytes = field(default_factory=new_id_bytes)
+
+    @classmethod
+    def from_row(cls, row: sqlite3.Row) -> "Product":
+        product = super().from_row(row)
+        return cls(
+            product_id=product.product_id,
+            name=product.name,
+            code=product.code,
+            price_cents=product.price_cents,
+            created_at=product.created_at,
+            updated_at=product.updated_at,
+            description=product.description,
+            media_urls_json=product.media_urls_json,
+            type=normalize_product_type(product.type),
+            stock=normalize_product_stock(product.stock),
+        )
 
     @classmethod
     def create(
@@ -50,6 +73,8 @@ class Product(SqliteRowModel, BlobUuidModel, ApiModel):
         code: str,
         media_urls: list[str],
         price_cents: int,
+        type: str,
+        stock: int,
         now_iso: str,
     ) -> "Product":
         normalized_name = validate_product_name(name)
@@ -63,6 +88,8 @@ class Product(SqliteRowModel, BlobUuidModel, ApiModel):
             updated_at=now_iso,
             description="",
             media_urls_json=json.dumps(normalize_media_urls(media_urls)),
+            type=normalize_product_type(type),
+            stock=normalize_product_stock(stock),
         )
 
     def updated(
@@ -72,6 +99,8 @@ class Product(SqliteRowModel, BlobUuidModel, ApiModel):
         code: str,
         media_urls: list[str],
         price_cents: int,
+        type: str,
+        stock: int,
         updated_at: str,
     ) -> "Product":
         return Product(
@@ -83,6 +112,8 @@ class Product(SqliteRowModel, BlobUuidModel, ApiModel):
             updated_at=updated_at,
             description=self.description,
             media_urls_json=json.dumps(normalize_media_urls(media_urls)),
+            type=normalize_product_type(type),
+            stock=normalize_product_stock(stock),
         )
 
     @property
@@ -104,7 +135,25 @@ class Product(SqliteRowModel, BlobUuidModel, ApiModel):
             "mediaUrls": self.media_urls,
             "name": self.name,
             "priceCents": self.price_cents,
+            "stock": self.stock,
+            "type": self.type,
         }
+
+    @property
+    def stock_status_message(self) -> str | None:
+        if self.stock > 10:
+            return None
+        if self.stock >= 5:
+            return "Selling fast - only a few left"
+        return f"Only {self.stock} left in stock"
+
+    @property
+    def stock_status_tone(self) -> str | None:
+        if self.stock > 10:
+            return None
+        if self.stock >= 5:
+            return "warning"
+        return "critical"
 
 
 def validate_product_name(value: str) -> str:
@@ -117,6 +166,27 @@ def normalize_product_code(value: str) -> str:
 
 def validate_product_price_cents(value: int) -> int:
     return MoneyAmount.validate_domain_cents(value)
+
+
+def validate_product_type(value: str) -> str:
+    normalized_value = value.strip()
+    if not normalized_value:
+        raise ValueError("type is required")
+    return normalized_value
+
+
+def validate_product_stock(value: int) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError("stock must be zero or greater")
+    return value
+
+
+def normalize_product_type(value: object) -> str:
+    return validate_product_type(value) if isinstance(value, str) else ""
+
+
+def normalize_product_stock(value: object) -> int:
+    return validate_product_stock(value) if isinstance(value, int) else 0
 
 
 def normalize_media_urls(value: list[str]) -> list[str]:

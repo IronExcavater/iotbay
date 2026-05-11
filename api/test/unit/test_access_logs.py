@@ -2,6 +2,7 @@ import unittest
 
 from src.access_logs.models import ACCESS_EVENT_LOGIN, ACCESS_EVENT_LOGOUT
 from src.common.app import services_from
+from src.common.clock import UtcTime
 from src.db import connect
 
 from test.unit.helpers.app_case import AppTestCase
@@ -28,6 +29,37 @@ class AccessLogRepositoryTestCase(AppTestCase):
         self.assertEqual(logs[0].session_id, fixture.session.session_id)
         self.assertEqual(logs[0].user_id, fixture.user.user_id)
         self.assertEqual(logs[0].to_dict()["deviceLabel"], "Chrome on Windows")
+
+    def test_access_log_returns_current_joined_user_profile(self) -> None:
+        """AC: access logs show current user profile data instead of snapshots."""
+        fixture = create_access_log_fixture(
+            self.client,
+            email="old.access@example.com",
+            occurred_at="2026-05-04T09:00:00.000000+00:00",
+        )
+        services = services_from(self.client.application)
+
+        services.user_repository.update_user(
+            user_id=fixture.user.user_id,
+            email="new.access@example.com",
+            first_name="Updated",
+            last_name="Person",
+            profile_image_url="data:image/png;base64,updated",
+            updated_at=UtcTime.now().iso,
+        )
+        logs = services.access_log_repository.list_user_access_logs(
+            user_id=fixture.user.user_id,
+        )
+        payload = logs[0].to_dict()
+
+        self.assertEqual(payload["userEmail"], "new.access@example.com")
+        self.assertEqual(payload["userFirstName"], "Updated")
+        self.assertEqual(payload["userLastName"], "Person")
+        self.assertEqual(payload["userName"], "Updated Person")
+        self.assertEqual(
+            payload["userProfileImageUrl"],
+            "data:image/png;base64,updated",
+        )
 
     def test_access_log_repository_filters_by_date_range(self) -> None:
         """AC: access logs can be searched by date."""

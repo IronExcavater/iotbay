@@ -6,6 +6,7 @@ from src.addresses.service import AddressService
 from src.audit.repository import AuditRepository
 from src.audit.service import AuditService
 from src.auth.service import AuthService
+from src.cart.repository import CartRepository
 from src.config import AddressConfig, AppConfig, EmailConfig
 from src.emails.service import EmailService
 from src.media.repository import MediaRepository
@@ -20,6 +21,7 @@ from src.users.repository import UserRepository
 @dataclass(slots=True)
 class AppServices:
     access_log_repository: AccessLogRepository
+    cart_repository: CartRepository
     address: AddressService
     audit: AuditService
     audit_repository: AuditRepository
@@ -41,6 +43,7 @@ def build_app_services(
 ) -> AppServices:
     address_service = AddressService(GoogleMapsApi(address_config))
     access_log_repository = AccessLogRepository(app_config.database_path)
+    cart_repository = CartRepository(app_config.database_path)
     audit_repository = AuditRepository(app_config.database_path)
     media_repository = MediaRepository(app_config.database_path)
     user_repository = UserRepository(app_config.database_path)
@@ -50,6 +53,7 @@ def build_app_services(
 
     return AppServices(
         access_log_repository=access_log_repository,
+        cart_repository=cart_repository,
         address=address_service,
         audit=AuditService(repository=audit_repository),
         audit_repository=audit_repository,

@@ -12,6 +12,8 @@ export interface ProductFormValues {
     mediaUrls: string[];
     name: string;
     price: string;
+    stock: string;
+    type: string;
 }
 
 export type ProductFieldName = keyof ProductFormValues;
@@ -23,6 +25,8 @@ export function createProductFormValues(): ProductFormValues {
         mediaUrls: [],
         name: '',
         price: '',
+        stock: '0',
+        type: '',
     };
 }
 
@@ -32,6 +36,8 @@ export function toProductFormValues(product: Product): ProductFormValues {
         mediaUrls: product.mediaUrls,
         name: product.name,
         price: Money.toInput(product.priceCents),
+        stock: String(product.stock),
+        type: product.type,
     };
 }
 
@@ -43,22 +49,39 @@ export function assessProductForm(values: ProductFormValues) {
         .map((value) => value.trim())
         .filter(Boolean)
         .slice(0, 6);
+    const normalizedType = values.type.trim();
+    const stockValue = values.stock.trim();
+    const stock =
+        /^\d+$/.test(stockValue) && Number.isSafeInteger(Number(stockValue))
+            ? Number(stockValue)
+            : null;
+    const stockError = stock !== null ? null : 'Stock must be zero or greater';
+    const typeError = normalizedType ? null : 'Type is required';
     const fieldErrors = collectFieldErrors<ProductFieldName>({
         code,
         name,
         price,
+        stock: stockError,
+        type: typeError,
     });
     const hasErrors = hasFieldErrors(fieldErrors);
 
     return {
         fieldErrors,
         payload:
-            !hasErrors && name.value && code.value && price.value !== null
+            !hasErrors &&
+            name.value &&
+            code.value &&
+            price.value !== null &&
+            stock !== null &&
+            normalizedType
                 ? ({
                       code: code.value,
                       mediaUrls,
                       name: name.value,
                       priceCents: price.value,
+                      stock,
+                      type: normalizedType,
                   } satisfies CreateProductInput)
                 : null,
     };

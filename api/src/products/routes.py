@@ -64,6 +64,8 @@ def create_product():
         code=data.code,
         media_urls=data.media_urls,
         price_cents=data.price_cents,
+        stock=data.stock,
+        type=data.type,
         actor_user_id=current_authenticated_staff_user(
             *PRODUCT_WRITE_PERMISSIONS
         ).user_id,
@@ -83,6 +85,8 @@ def update_product(product_id: str):
         code=data.code,
         media_urls=data.media_urls,
         price_cents=data.price_cents,
+        stock=data.stock,
+        type=data.type,
         actor_user_id=current_authenticated_staff_user(
             *PRODUCT_WRITE_PERMISSIONS
         ).user_id,

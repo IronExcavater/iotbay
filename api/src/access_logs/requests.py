@@ -1,7 +1,7 @@
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel, ConfigDict
-from pydantic.alias_generators import to_camel
+from pydantic import AfterValidator
+from src.common.pydantic import ApiRequestModel
 from src.common.validation import ChoiceValidator, DateValidator
 
 ACCESS_EVENT_VALIDATOR = ChoiceValidator(
@@ -19,13 +19,7 @@ def _optional_date(value: str) -> str:
     return value if not value else DATE_VALIDATOR.validate_request(value)
 
 
-class AccessLogQuery(BaseModel):
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
-        str_strip_whitespace=True,
-    )
-
+class AccessLogQuery(ApiRequestModel):
     event_type: Annotated[str, AfterValidator(_optional_event)] = ""
     from_date: Annotated[str, AfterValidator(_optional_date)] = ""
     to_date: Annotated[str, AfterValidator(_optional_date)] = ""

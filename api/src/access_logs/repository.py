@@ -1,7 +1,7 @@
 import sqlite3
 
 from src.access_logs.models import AccessLogEntry
-from src.common.repository import Repository
+from src.common.repository import QueryFilters, Repository
 
 
 class AccessLogRepository(Repository):
@@ -81,23 +81,13 @@ class AccessLogRepository(Repository):
         to_date: str | None,
         user_id: bytes | None,
     ) -> list[AccessLogEntry]:
-        conditions: list[str] = []
-        parameters: list[object] = []
+        filters = _access_log_filters(
+            user_id=user_id,
+            event_type=event_type,
+            from_date=from_date,
+            to_date=to_date,
+        )
 
-        if user_id is not None:
-            conditions.append("access_logs.user_id = ?")
-            parameters.append(user_id)
-        if event_type:
-            conditions.append("access_logs.event_type = ?")
-            parameters.append(event_type)
-        if from_date:
-            conditions.append("substr(access_logs.occurred_at, 1, 10) >= ?")
-            parameters.append(from_date)
-        if to_date:
-            conditions.append("substr(access_logs.occurred_at, 1, 10) <= ?")
-            parameters.append(to_date)
-
-        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         with self.connect() as connection:
             rows = connection.execute(
                 f"""
@@ -109,11 +99,26 @@ class AccessLogRepository(Repository):
                     users.profile_image_url AS user_profile_image_url
                 FROM access_logs
                 JOIN users ON users.user_id = access_logs.user_id
-                {where}
+                {filters.where_clause}
                 ORDER BY access_logs.occurred_at DESC, access_logs.access_log_id DESC
                 LIMIT ?
                 """,
-                (*parameters, limit),
+                (*filters.parameters, limit),
             ).fetchall()
 
         return [AccessLogEntry.from_row(row) for row in rows]
+
+
+def _access_log_filters(
+    *,
+    user_id: bytes | None,
+    event_type: str | None,
+    from_date: str | None,
+    to_date: str | None,
+) -> QueryFilters:
+    filters = QueryFilters()
+    filters.add_optional_bytes("access_logs.user_id = ?", user_id)
+    filters.add("access_logs.event_type = ?", event_type)
+    filters.add("substr(access_logs.occurred_at, 1, 10) >= ?", from_date)
+    filters.add("substr(access_logs.occurred_at, 1, 10) <= ?", to_date)
+    return filters

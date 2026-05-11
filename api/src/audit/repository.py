@@ -1,10 +1,68 @@
 import sqlite3
 
 from src.audit.models import AuditEvent
-from src.common.repository import Repository
+from src.common.repository import QueryFilters, Repository
 
 
 class AuditRepository(Repository):
+    def insert_entity(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        entity_type: str,
+        entity_id: bytes,
+        created_at: str,
+        updated_at: str,
+        created_by_user_id: bytes | None = None,
+        updated_by_user_id: bytes | None = None,
+    ) -> None:
+        self.insert_into(
+            connection,
+            "entity_audit_log",
+            {
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+                "created_at": created_at,
+                "created_by_user_id": created_by_user_id,
+                "updated_at": updated_at,
+                "updated_by_user_id": updated_by_user_id,
+            },
+        )
+
+    def update_entity(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        entity_type: str,
+        entity_id: bytes,
+        updated_at: str,
+        updated_by_user_id: bytes | None = None,
+    ) -> None:
+        self.update_where(
+            connection,
+            "entity_audit_log",
+            {
+                "updated_at": updated_at,
+                "updated_by_user_id": updated_by_user_id,
+            },
+            where="entity_type = ? AND entity_id = ?",
+            where_parameters=(entity_type, entity_id),
+        )
+
+    def delete_entity(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        entity_type: str,
+        entity_id: bytes,
+    ) -> None:
+        self.delete_from(
+            connection,
+            "entity_audit_log",
+            where="entity_type = ? AND entity_id = ?",
+            where_parameters=(entity_type, entity_id),
+        )
+
     def insert_event(
         self,
         connection: sqlite3.Connection,
@@ -59,7 +117,8 @@ class AuditRepository(Repository):
                     audit_events.*,
                     actors.email AS actor_email,
                     actors.first_name AS actor_first_name,
-                    actors.last_name AS actor_last_name
+                    actors.last_name AS actor_last_name,
+                    actors.profile_image_url AS actor_profile_image_url
                 FROM audit_events
                 LEFT JOIN users AS actors
                     ON actors.user_id = audit_events.actor_user_id
@@ -78,23 +137,12 @@ class AuditRepository(Repository):
         to_date: str | None = None,
         limit: int = 250,
     ) -> list[AuditEvent]:
-        conditions: list[str] = []
-        parameters: list[object] = []
-
-        if entity_type:
-            conditions.append("audit_events.entity_type = ?")
-            parameters.append(entity_type)
-        if action:
-            conditions.append("audit_events.action = ?")
-            parameters.append(action)
-        if from_date:
-            conditions.append("substr(audit_events.occurred_at, 1, 10) >= ?")
-            parameters.append(from_date)
-        if to_date:
-            conditions.append("substr(audit_events.occurred_at, 1, 10) <= ?")
-            parameters.append(to_date)
-
-        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        filters = _audit_event_filters(
+            action=action,
+            entity_type=entity_type,
+            from_date=from_date,
+            to_date=to_date,
+        )
         with self.connect() as connection:
             rows = connection.execute(
                 f"""
@@ -102,15 +150,16 @@ class AuditRepository(Repository):
                     audit_events.*,
                     actors.email AS actor_email,
                     actors.first_name AS actor_first_name,
-                    actors.last_name AS actor_last_name
+                    actors.last_name AS actor_last_name,
+                    actors.profile_image_url AS actor_profile_image_url
                 FROM audit_events
                 LEFT JOIN users AS actors
                     ON actors.user_id = audit_events.actor_user_id
-                {where}
+                {filters.where_clause}
                 ORDER BY audit_events.occurred_at DESC, audit_events.audit_event_id DESC
                 LIMIT ?
                 """,
-                (*parameters, limit),
+                (*filters.parameters, limit),
             ).fetchall()
         return [AuditEvent.from_row(row) for row in rows]
 
@@ -128,7 +177,8 @@ class AuditRepository(Repository):
                     audit_events.*,
                     actors.email AS actor_email,
                     actors.first_name AS actor_first_name,
-                    actors.last_name AS actor_last_name
+                    actors.last_name AS actor_last_name,
+                    actors.profile_image_url AS actor_profile_image_url
                 FROM audit_events
                 LEFT JOIN users AS actors
                     ON actors.user_id = audit_events.actor_user_id
@@ -140,3 +190,18 @@ class AuditRepository(Repository):
                 (entity_type, entity_id, limit),
             ).fetchall()
         return [AuditEvent.from_row(row) for row in rows]
+
+
+def _audit_event_filters(
+    *,
+    action: str | None,
+    entity_type: str | None,
+    from_date: str | None,
+    to_date: str | None,
+) -> QueryFilters:
+    filters = QueryFilters()
+    filters.add("audit_events.entity_type = ?", entity_type)
+    filters.add("audit_events.action = ?", action)
+    filters.add("substr(audit_events.occurred_at, 1, 10) >= ?", from_date)
+    filters.add("substr(audit_events.occurred_at, 1, 10) <= ?", to_date)
+    return filters

@@ -83,17 +83,21 @@ export function ProductTable({
             <div className="overflow-x-auto">
                 <Table>
                     <colgroup>
+                        <col className="w-[14%]" />
+                        <col className="w-[24%]" />
+                        <col className="w-[14%]" />
+                        <col className="w-[12%]" />
+                        <col className="w-[10%]" />
                         <col className="w-[18%]" />
-                        <col className="w-[38%]" />
-                        <col className="w-[16%]" />
-                        <col className="w-[22%]" />
-                        <col className="w-[6%]" />
+                        <col className="w-[8%]" />
                     </colgroup>
                     <TableHead>
                         <tr>
                             <th className="px-5 py-3">Code</th>
                             <th className="px-5 py-3">Name</th>
+                            <th className="px-5 py-3">Type</th>
                             <th className="px-5 py-3">Price</th>
+                            <th className="px-5 py-3">Stock</th>
                             <th className="px-5 py-3">Updated</th>
                             <th className="px-2 py-3 text-right">
                                 <span className="sr-only">Actions</span>
@@ -103,25 +107,25 @@ export function ProductTable({
                     <tbody>
                         {isLoading ? (
                             <>
-                                <TableLoadingRow colSpan={5} />
-                                <TableLoadingRow colSpan={5} />
-                                <TableLoadingRow colSpan={5} />
+                                <TableLoadingRow colSpan={7} />
+                                <TableLoadingRow colSpan={7} />
+                                <TableLoadingRow colSpan={7} />
                             </>
                         ) : productsError ? (
                             <TableMessageRow
-                                colSpan={5}
+                                colSpan={7}
                                 message={productsError}
                                 tone="error"
                             />
                         ) : products.length === 0 && !hasSearch ? (
                             <TableMessageRow
-                                colSpan={5}
+                                colSpan={7}
                                 message="No products yet"
                                 tone="muted"
                             />
                         ) : products.length === 0 ? (
                             <TableMessageRow
-                                colSpan={5}
+                                colSpan={7}
                                 message="No products matched your search."
                                 tone="muted"
                             />
@@ -146,9 +150,19 @@ export function ProductTable({
                                             {product.name}
                                         </span>
                                     </td>
+                                    <td className="text-ui-600 px-5 py-3">
+                                        <span className="flex min-h-8 items-center">
+                                            {product.type}
+                                        </span>
+                                    </td>
                                     <td className="px-5 py-3">
                                         <span className="flex min-h-8 items-center">
                                             {Money.format(product.priceCents)}
+                                        </span>
+                                    </td>
+                                    <td className="text-ui-600 px-5 py-3">
+                                        <span className="flex min-h-8 items-center">
+                                            {product.stock}
                                         </span>
                                     </td>
                                     <td className="text-ui-500 px-5 py-3">

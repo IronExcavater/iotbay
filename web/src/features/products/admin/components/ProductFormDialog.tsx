@@ -35,7 +35,9 @@ interface ProductFormDialogProps {
     };
     onClose: () => void;
     onMediaUrlsChange: (value: string[]) => void;
+    onStockChange: (value: string) => void;
     onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+    onTypeChange: (value: string) => void;
     priceInput: {
         handleChange: React.ChangeEventHandler<HTMLInputElement>;
         inputRef: React.Ref<HTMLInputElement>;
@@ -53,7 +55,9 @@ export function ProductFormDialog({
     nameInput,
     onClose,
     onMediaUrlsChange,
+    onStockChange,
     onSubmit,
+    onTypeChange,
     priceInput,
     submitLabel,
     values,
@@ -136,6 +140,35 @@ export function ProductFormDialog({
                     required
                     value={values.price}
                 />
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <Field
+                        error={fieldErrors.type}
+                        label="Device type"
+                        required
+                    >
+                        <Input
+                            hasError={Boolean(fieldErrors.type)}
+                            onChange={(event) =>
+                                onTypeChange(event.target.value)
+                            }
+                            placeholder="Industrial Sensor"
+                            value={values.type}
+                        />
+                    </Field>
+
+                    <Field error={fieldErrors.stock} label="Stock" required>
+                        <Input
+                            hasError={Boolean(fieldErrors.stock)}
+                            inputMode="numeric"
+                            onChange={(event) =>
+                                onStockChange(event.target.value)
+                            }
+                            placeholder="0"
+                            value={values.stock}
+                        />
+                    </Field>
+                </div>
 
                 <ProductImagesEditor
                     images={values.mediaUrls}

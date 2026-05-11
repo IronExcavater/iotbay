@@ -12,6 +12,10 @@ export interface Product {
     priceCents: number;
     description: string;
     mediaUrls: string[];
+    type: string;
+    stock: number;
+    stockStatusMessage: string | null;
+    stockStatusTone: 'warning' | 'critical' | null;
     createdAt: string;
     updatedAt: string;
 }
@@ -21,6 +25,8 @@ export interface CreateProductInput {
     code: string;
     mediaUrls: string[];
     priceCents: number;
+    stock: number;
+    type: string;
 }
 
 interface ProductsResponse {

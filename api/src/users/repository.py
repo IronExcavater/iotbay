@@ -2,7 +2,7 @@ import sqlite3
 
 from src.addresses.models import ValidatedAddress
 from src.addresses.repository import AddressRepository
-from src.common.audit_log_repository import AuditLogRepository
+from src.audit.repository import AuditRepository
 from src.common.clock import UtcTime
 from src.common.repository import Repository
 from src.common.text import stripped_or_none
@@ -44,7 +44,7 @@ class UserRepository(Repository):
     def __init__(self, database_path: str) -> None:
         super().__init__(database_path)
         self._addresses = AddressRepository(database_path)
-        self._audit_logs = AuditLogRepository(database_path)
+        self._audit = AuditRepository(database_path)
 
     def insert_user(
         self,
@@ -77,7 +77,7 @@ class UserRepository(Repository):
         try:
             with self.connect() as connection:
                 self._insert_user_row(connection, user=user)
-                self._audit_logs.insert_audit_log(
+                self._audit.insert_entity(
                     connection,
                     entity_type=ENTITY_TYPE_USER,
                     entity_id=user.user_id,
@@ -155,7 +155,7 @@ class UserRepository(Repository):
                     designation=designation,
                     permission=permission,
                 )
-                self._audit_logs.update_audit_log(
+                self._audit.update_entity(
                     connection,
                     entity_type=ENTITY_TYPE_USER,
                     entity_id=existing_user.user_id,
@@ -817,7 +817,7 @@ class UserRepository(Repository):
                     designation=designation,
                     permission=permission,
                 )
-                self._audit_logs.update_audit_log(
+                self._audit.update_entity(
                     connection,
                     entity_type=ENTITY_TYPE_USER,
                     entity_id=user_id,
@@ -867,7 +867,7 @@ class UserRepository(Repository):
                         permission=permission,
                     )
 
-                self._audit_logs.update_audit_log(
+                self._audit.update_entity(
                     connection,
                     entity_type=ENTITY_TYPE_USER,
                     entity_id=user_id,
@@ -892,7 +892,7 @@ class UserRepository(Repository):
                 user_id=user_id,
                 password_hash=password_hash,
             )
-            self._audit_logs.update_audit_log(
+            self._audit.update_entity(
                 connection,
                 entity_type=ENTITY_TYPE_USER,
                 entity_id=user_id,
@@ -916,7 +916,7 @@ class UserRepository(Repository):
                     email=email,
                     status=status,
                 )
-                self._audit_logs.update_audit_log(
+                self._audit.update_entity(
                     connection,
                     entity_type=ENTITY_TYPE_USER,
                     entity_id=user_id,
@@ -947,7 +947,7 @@ class UserRepository(Repository):
                 where="user_id = ?",
                 where_parameters=(user_id,),
             )
-            self._audit_logs.update_audit_log(
+            self._audit.update_entity(
                 connection,
                 entity_type=ENTITY_TYPE_USER,
                 entity_id=user_id,
@@ -987,7 +987,7 @@ class UserRepository(Repository):
                     designation=_optional_string(snapshot.get("designation")),
                     permission=_optional_string(snapshot.get("permission")),
                 )
-            self._audit_logs.update_audit_log(
+            self._audit.update_entity(
                 connection,
                 entity_type=ENTITY_TYPE_USER,
                 entity_id=user_id,

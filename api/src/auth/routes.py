@@ -16,6 +16,7 @@ from src.auth.requests import (
     RegisterRequest,
     ResendVerificationRequest,
     ResetPasswordRequest,
+    StaffInvitationQuery,
     UpdateMfaSettingsRequest,
     UpdateProfileRequest,
     VerifyEmailRequest,
@@ -31,7 +32,7 @@ from src.auth.session import (
     trusted_session_cookie_name,
 )
 from src.common.app import app_bool, app_int, services
-from src.common.web import ApiError, parse_request, request_locale
+from src.common.web import ApiError, parse_query, parse_request, request_locale
 from src.emails.service import DeliveredEmailArtifact
 from src.users.models import STAFF_PERMISSION_SUPERADMIN, User
 
@@ -249,8 +250,8 @@ def verify_email() -> ResponseReturnValue:
 
 @auth_bp.get("/staff-invitation")
 def staff_invitation() -> ResponseReturnValue:
-    token = request.args.get("token", "").strip()
-    user = services().auth.invited_staff(token)
+    query = parse_query(StaffInvitationQuery)
+    user = services().auth.invited_staff(query.token)
     return _user_payload(user), HTTPStatus.OK
 
 
