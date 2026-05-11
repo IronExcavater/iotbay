@@ -7,8 +7,8 @@ from src.auth.session import (
     staff_permission_required,
 )
 from src.common.app import services
-from src.common.web import ApiError, parse_request
-from src.products.requests import ProductMutationRequest
+from src.common.web import ApiError, parse_query, parse_request
+from src.products.requests import ProductListQuery, ProductMutationRequest
 from src.users.models import STAFF_PERMISSION_ADMIN, STAFF_PERMISSION_SUPERADMIN
 
 products_bp = Blueprint("products", __name__)
@@ -29,7 +29,11 @@ class InvalidProductIdError(ApiError):
 
 @products_bp.get("/products")
 def list_products():
-    products = [product.to_dict() for product in services().products.list_products()]
+    query = parse_query(ProductListQuery)
+    products = [
+        product.to_dict()
+        for product in services().products.list_products(search=query.q or None)
+    ]
     return {"items": products}, HTTPStatus.OK
 
 

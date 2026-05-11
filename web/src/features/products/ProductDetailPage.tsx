@@ -3,7 +3,6 @@ import {
     FaArrowLeft,
     FaChevronLeft,
     FaChevronRight,
-    FaCheck,
     FaPenToSquare,
 } from 'react-icons/fa6';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -37,12 +36,13 @@ export default function ProductDetailPage({
     const navigate = useNavigate();
     const { productId = '' } = useParams();
     const { showToast } = useToast();
-    const { addToCart, isInCart, removeFromCart } = useCart();
+    const { addToCart, isInCart } = useCart();
     const [product, setProduct] = useState<Product | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
+    const [quantity, setQuantity] = useState('1');
     const [pageError, setPageError] = useState<string | null>(null);
     const [fieldErrors, setFieldErrors] = useState<ProductFieldErrors>({});
     const [formValues, setFormValues] = useState<ProductFormValues>({
@@ -91,6 +91,7 @@ export default function ProductDetailPage({
             if (!signal?.aborted) {
                 setProduct(nextProduct);
                 setSelectedMediaIndex(0);
+                setQuantity(nextProduct.stock > 0 ? '1' : '0');
                 setPageError(null);
             }
         } catch (error) {
@@ -148,6 +149,7 @@ export default function ProductDetailPage({
             : ['/iotbay_icon_themed.svg'];
     const inCart = isInCart(product.id);
     const customerStockStatus = !admin ? stockStatusForProduct(product) : null;
+    const selectedQuantity = resolveQuantity(quantity, product.stock);
 
     function openEditDialog() {
         if (!product) return;
@@ -254,36 +256,49 @@ export default function ProductDetailPage({
                                     {Money.format(product.priceCents)}
                                 </p>
                                 {!admin &&
-                                    (inCart ? (
-                                        <Button
-                                            className="gap-2"
-                                            onClick={() =>
-                                                removeFromCart(product.id)
-                                            }
-                                            type="button"
-                                            variant="secondary"
-                                        >
-                                            <FaCheck
-                                                aria-hidden="true"
-                                                className="size-3"
-                                            />
-                                            Remove from cart
-                                        </Button>
+                                    (product.stock > 0 ? (
+                                        <div className="flex flex-wrap items-center gap-3">
+                                            <label className="grid gap-1">
+                                                <span className="text-ui-500 text-xs font-medium">
+                                                    Quantity
+                                                </span>
+                                                <input
+                                                    className="bg-ui-0 ring-ui-300 focus:ring-ui-900 h-10 w-24 rounded border-0 px-3 text-sm ring-1 outline-none focus:ring-2"
+                                                    max={product.stock}
+                                                    min={1}
+                                                    onChange={(event) =>
+                                                        setQuantity(
+                                                            event.target.value
+                                                        )
+                                                    }
+                                                    type="number"
+                                                    value={quantity}
+                                                />
+                                            </label>
+                                            <Button
+                                                className="self-end"
+                                                onClick={() =>
+                                                    addToCart({
+                                                        code: product.code,
+                                                        imageUrl: media[0],
+                                                        name: product.name,
+                                                        priceCents:
+                                                            product.priceCents,
+                                                        productId: product.id,
+                                                        quantity:
+                                                            selectedQuantity,
+                                                    })
+                                                }
+                                                type="button"
+                                            >
+                                                {inCart
+                                                    ? 'Add more to cart'
+                                                    : 'Add to cart'}
+                                            </Button>
+                                        </div>
                                     ) : (
-                                        <Button
-                                            onClick={() =>
-                                                addToCart({
-                                                    code: product.code,
-                                                    imageUrl: media[0],
-                                                    name: product.name,
-                                                    priceCents:
-                                                        product.priceCents,
-                                                    productId: product.id,
-                                                })
-                                            }
-                                            type="button"
-                                        >
-                                            Add to cart
+                                        <Button disabled type="button">
+                                            Out of stock
                                         </Button>
                                     ))}
                             </div>
@@ -359,6 +374,19 @@ function stockStatusForProduct(product: Product): {
                 : 'text-red-700 text-sm font-medium',
         message: product.stockStatusMessage,
     };
+}
+
+function resolveQuantity(value: string, stock: number) {
+    if (stock <= 0) {
+        return 0;
+    }
+
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+        return 1;
+    }
+
+    return Math.min(stock, Math.max(1, Math.trunc(parsed)));
 }
 
 function MediaCarousel({
