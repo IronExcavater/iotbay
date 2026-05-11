@@ -168,6 +168,45 @@ class ProductRouteTestCase(AppTestCase):
                 self.assertEqual(response.status_code, 400)
                 self.assertEqual(response.get_json(), {"error": message})
 
+    def test_list_products_searches_name_and_type(self) -> None:
+        create_staff_test_session(self.client)
+        self.client.post(
+            "/api/admin/products",
+            json={
+                "name": "Thermal Monitor",
+                "code": "SNSR-001",
+                "mediaUrls": [],
+                "priceCents": 12999,
+                "stock": 14,
+                "type": "Sensor",
+            },
+        )
+        self.client.post(
+            "/api/admin/products",
+            json={
+                "name": "Door Relay",
+                "code": "ACTR-001",
+                "mediaUrls": [],
+                "priceCents": 8999,
+                "stock": 6,
+                "type": "Actuator",
+            },
+        )
+
+        search_by_type = self.client.get("/api/products?q=sensor")
+        self.assertEqual(search_by_type.status_code, 200)
+        sensor_items = search_by_type.get_json()["items"]
+        self.assertEqual(len(sensor_items), 1)
+        self.assertEqual(sensor_items[0]["type"], "Sensor")
+        self.assertEqual(sensor_items[0]["name"], "Thermal Monitor")
+
+        search_by_name = self.client.get("/api/products?q=door")
+        self.assertEqual(search_by_name.status_code, 200)
+        door_items = search_by_name.get_json()["items"]
+        self.assertEqual(len(door_items), 1)
+        self.assertEqual(door_items[0]["type"], "Actuator")
+        self.assertEqual(door_items[0]["name"], "Door Relay")
+
     def test_duplicate_update_and_delete_product(self) -> None:
         create_staff_test_session(self.client)
         payload = {
