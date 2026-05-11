@@ -1,7 +1,5 @@
-import re
 import unittest
 
-from src.auth.security import hash_password
 from src.common.app import extension_from
 from src.users.models import (
     USER_STATUS_ACTIVE,
@@ -10,14 +8,15 @@ from src.users.models import (
     USER_TYPE_STAFF,
 )
 from src.users.repository import UserRepository
-from werkzeug.test import TestResponse
 
-from test.unit.helpers.app_case import AppTestCase
-from test.unit.helpers.session_factory import (
+from test.shared.app import AppTestCase
+from test.shared.auth import download_token
+from test.shared.sessions import (
     create_staff_test_session,
     create_superadmin_test_session,
     create_test_session,
 )
+from test.shared.users import create_customer, create_superadmin, create_user
 
 
 def _register_payload(
@@ -38,14 +37,6 @@ def _register_payload(
         "state": "NSW",
         "suburb": "Sydney",
     }
-
-
-def _download_token(response: TestResponse) -> str:
-    payload = response.get_json()
-    assert payload is not None
-    token_match = re.search(r"token=([^\"&]+)", payload["download"]["html"])
-    assert token_match is not None
-    return token_match.group(1)
 
 
 def _assert_user_payload(
@@ -115,7 +106,7 @@ class AuthRouteTestCase(AppTestCase):
         first = self.client.post("/api/register", json=_register_payload())
         verify_response = self.client.post(
             "/api/verify-email",
-            json={"token": _download_token(first)},
+            json={"token": download_token(first)},
         )
         second = self.client.post("/api/register", json=_register_payload())
 
@@ -236,9 +227,10 @@ class AuthRouteTestCase(AppTestCase):
             "user_repository",
             UserRepository,
         )
-        managed_user = repository.insert_user(
+        managed_user = create_user(
+            repository,
             email="managed.staff@example.com",
-            password_hash=hash_password("Harbour84!"),
+            password="Harbour84!",
             first_name="Jordan",
             last_name="Lee",
             user_type=USER_TYPE_STAFF,
@@ -246,7 +238,7 @@ class AuthRouteTestCase(AppTestCase):
             staff_id="STF-010",
             designation="Sales",
             permission="admin",
-        )
+        ).user
 
         update_response = self.client.patch(
             f"/api/admin/users/{managed_user.id}",
@@ -286,16 +278,13 @@ class AuthRouteTestCase(AppTestCase):
             "user_repository",
             UserRepository,
         )
-        peer_superadmin = repository.insert_user(
+        peer_superadmin = create_superadmin(
+            repository,
             email="peer.superadmin@example.com",
-            password_hash=hash_password("Harbour84!"),
             first_name="Casey",
             last_name="Rowe",
-            user_type=USER_TYPE_STAFF,
-            status=USER_STATUS_ACTIVE,
-            designation="Super Admin",
-            permission="superadmin",
-        )
+            password="Harbour84!",
+        ).user
 
         self_response = self.client.patch(
             f"/api/admin/users/{superadmin_session.user.id}/status",
@@ -320,7 +309,7 @@ class AuthRouteTestCase(AppTestCase):
 
         response = self.client.post(
             "/api/verify-email",
-            json={"token": _download_token(register_response)},
+            json={"token": download_token(register_response)},
         )
 
         self.assertEqual(response.status_code, 200)
@@ -345,7 +334,7 @@ class AuthRouteTestCase(AppTestCase):
         self.assertEqual(response.status_code, 200)
         reset_response = self.client.post(
             "/api/reset-password",
-            json={"token": _download_token(response), "password": "HarbourReset9$"},
+            json={"token": download_token(response), "password": "HarbourReset9$"},
         )
         self.assertEqual(reset_response.status_code, 200)
 
@@ -374,7 +363,7 @@ class AuthRouteTestCase(AppTestCase):
 
         reset_response = self.client.post(
             "/api/reset-password",
-            json={"token": _download_token(response), "password": "HarbourReset9$"},
+            json={"token": download_token(response), "password": "HarbourReset9$"},
         )
         self.assertEqual(reset_response.status_code, 200)
 
@@ -505,7 +494,7 @@ class AuthRouteTestCase(AppTestCase):
 
         verify_response = self.client.post(
             "/api/verify-email",
-            json={"token": _download_token(response)},
+            json={"token": download_token(response)},
         )
         self.assertEqual(verify_response.status_code, 200)
         self.assertEqual(
@@ -533,7 +522,7 @@ class AuthRouteTestCase(AppTestCase):
 
         verify_response = self.client.post(
             "/api/verify-email",
-            json={"token": _download_token(response)},
+            json={"token": download_token(response)},
         )
         self.assertEqual(verify_response.status_code, 200)
         self.assertEqual(
@@ -548,13 +537,12 @@ class AuthRouteTestCase(AppTestCase):
             "user_repository",
             UserRepository,
         )
-        repository.insert_user(
+        create_customer(
+            repository,
             email="other.customer@example.com",
-            password_hash=hash_password("OtherSecure9$"),
+            password="OtherSecure9$",
             first_name="Other",
             last_name="Customer",
-            user_type="customer",
-            status=USER_STATUS_ACTIVE,
         )
 
         response = self.client.patch(
@@ -589,13 +577,12 @@ class AuthRouteTestCase(AppTestCase):
             "user_repository",
             UserRepository,
         )
-        repository.insert_user(
+        create_customer(
+            repository,
             email="customer.list@example.com",
-            password_hash=hash_password("CustomerList9$"),
+            password="CustomerList9$",
             first_name="List",
             last_name="Customer",
-            user_type=USER_TYPE_CUSTOMER,
-            status=USER_STATUS_ACTIVE,
         )
 
         response = self.client.get("/api/admin/users")
@@ -673,7 +660,7 @@ class AuthRouteTestCase(AppTestCase):
                 "staffId": "STF-001",
             },
         )
-        token = _download_token(invite_response)
+        token = download_token(invite_response)
         self.client.post("/api/logout")
 
         response = self.client.post(
@@ -703,14 +690,15 @@ class AuthRouteTestCase(AppTestCase):
             "user_repository",
             UserRepository,
         )
-        user = repository.insert_user(
+        user = create_user(
+            repository,
             email="alex.customer@example.com",
-            password_hash=hash_password("OldPassword9$"),
+            password="OldPassword9$",
             first_name="Old",
             last_name="Name",
             user_type=USER_TYPE_CUSTOMER,
             status=USER_STATUS_UNVERIFIED,
-        )
+        ).user
 
         response = self.client.post(
             "/api/register",

@@ -1,5 +1,9 @@
+import os
+import tempfile
+import unittest
 from pathlib import Path
 from shutil import copyfile
+from unittest.mock import patch
 
 from flask.testing import FlaskClient
 from src.addresses.service import AddressService
@@ -7,7 +11,31 @@ from src.app import create_app
 from src.common.app import services_from
 from src.config import load_app_config
 
-TEST_CONFIG_PATH = Path(__file__).resolve().parents[3] / "config" / "test.json"
+TEST_CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "test.json"
+
+
+class AppTestCase(unittest.TestCase):
+    client: FlaskClient
+    database_path: str
+
+    def setUp(self) -> None:
+        super().setUp()
+        environment_overrides = {
+            "IOTBAY_API_KEY": "test-api-key",
+            **self.environment_overrides(),
+        }
+        self.enterContext(patch.dict(os.environ, environment_overrides))
+        temp_dir = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        self.client, self.database_path = create_test_app_client(
+            temp_dir,
+            address_service=self.address_service_override(),
+        )
+
+    def address_service_override(self) -> AddressService | None:
+        return None
+
+    def environment_overrides(self) -> dict[str, str]:
+        return {}
 
 
 def create_test_app_client(

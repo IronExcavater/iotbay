@@ -7,5 +7,5 @@
   "trustedSessionCookieName": "iotbay_test_trusted_session",
   "trustedSessionLifetimeSeconds": 604800,
   "verificationCodeLifetimeSeconds": 900,
-  "webUrl": "http://localhost:4173"
+  "webUrl": "http://localhost:5173"
 }
