@@ -1,6 +1,5 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
-from pydantic import Field, field_validator
 from src.common.pydantic import ApiRequestModel
 from src.common.types import MoneyAmount, ProductCode, ProductName
 from src.products.models import (
