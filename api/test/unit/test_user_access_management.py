@@ -1,33 +1,18 @@
-import re
 import unittest
 
-from src.auth.security import hash_password
 from src.common.app import extension_from
 from src.db import connect
-from src.users.models import USER_STATUS_ACTIVE, USER_TYPE_CUSTOMER
 from src.users.repository import UserRepository
 
-from test.unit.helpers.app_case import AppTestCase
-from test.unit.helpers.session_factory import (
+from test.shared.app import AppTestCase
+from test.shared.auth import mfa_code
+from test.shared.clients import secondary_client
+from test.shared.sessions import (
     create_staff_test_session,
     create_superadmin_test_session,
     create_test_session,
 )
-
-
-def _secondary_client(primary_client):
-    client = primary_client.application.test_client()
-    client.environ_base.update(primary_client.environ_base)
-    return client
-
-
-def _mfa_code(response) -> str:
-    payload = response.get_json()
-    assert payload is not None
-    html = payload["download"]["html"]
-    match = re.search(r">\s*(\d{6})\s*<", html)
-    assert match is not None
-    return match.group(1)
+from test.shared.users import create_customer
 
 
 class UserAccessManagementTestCase(AppTestCase):
@@ -44,14 +29,13 @@ class UserAccessManagementTestCase(AppTestCase):
             "user_repository",
             UserRepository,
         )
-        user = repository.insert_user(
+        user = create_customer(
+            repository,
             email="logs.customer@example.com",
-            password_hash=hash_password("LogPass99$"),
+            password="LogPass99$",
             first_name="Logs",
             last_name="Customer",
-            user_type=USER_TYPE_CUSTOMER,
-            status=USER_STATUS_ACTIVE,
-        )
+        ).user
 
         login_response = self.client.post(
             "/api/login",
@@ -96,13 +80,13 @@ class UserAccessManagementTestCase(AppTestCase):
             [item["userEmail"] for item in admin_logs_response.get_json()["items"]],
         )
 
-        staff_client = _secondary_client(self.client)
+        staff_client = secondary_client(self.client)
         create_staff_test_session(staff_client)
         self.assertEqual(staff_client.get("/api/admin/access-logs").status_code, 403)
 
     def test_session_listing_and_revocation(self) -> None:
         session = create_test_session(self.client)
-        second_client = _secondary_client(self.client)
+        second_client = secondary_client(self.client)
         second_login_response = second_client.post(
             "/api/login",
             json={"email": session.email, "password": session.password},
@@ -176,7 +160,7 @@ class UserAccessManagementTestCase(AppTestCase):
             "/api/login/mfa/verify",
             json={
                 "challengeId": challenge["challengeId"],
-                "code": _mfa_code(login_response),
+                "code": mfa_code(login_response),
                 "trustBrowser": True,
             },
         )

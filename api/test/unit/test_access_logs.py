@@ -5,8 +5,8 @@ from src.common.app import services_from
 from src.common.clock import UtcTime
 from src.db import connect
 
-from test.unit.helpers.app_case import AppTestCase
-from test.unit.helpers.session_factory import create_test_session
+from test.shared.app import AppTestCase
+from test.shared.sessions import create_test_session
 from test.unit.support.access_logs import create_access_log_fixture
 
 

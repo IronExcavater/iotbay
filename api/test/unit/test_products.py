@@ -1,5 +1,5 @@
-from test.unit.helpers.app_case import AppTestCase
-from test.unit.helpers.session_factory import (
+from test.shared.app import AppTestCase
+from test.shared.sessions import (
     create_staff_test_session,
     create_test_session,
 )
@@ -14,13 +14,14 @@ class ProductRouteTestCase(AppTestCase):
 
     def test_create_product_and_list(self) -> None:
         create_staff_test_session(self.client)
-        media_urls = ["data:image/png;base64,aW90YmF5"]
+        remote_url = "https://example.com/router.jpg"
+        uploaded_image = "data:image/png;base64,aW90YmF5"
         create_response = self.client.post(
             "/api/admin/products",
             json={
                 "name": "Smart Sensor",
                 "code": "snsr-001",
-                "mediaUrls": media_urls,
+                "mediaUrls": [remote_url, uploaded_image],
                 "priceCents": 12999,
                 "stock": 14,
                 "type": "Sensor",
@@ -32,9 +33,10 @@ class ProductRouteTestCase(AppTestCase):
         self.assertIsNotNone(created)
         self.assertEqual(created["name"], "Smart Sensor")
         self.assertEqual(created["code"], "SNSR-001")
-        self.assertEqual(len(created["mediaUrls"]), 1)
-        self.assertTrue(created["mediaUrls"][0].startswith("/api/media/"))
-        media_response = self.client.get(created["mediaUrls"][0])
+        self.assertEqual(len(created["mediaUrls"]), 2)
+        self.assertEqual(created["mediaUrls"][0], remote_url)
+        self.assertTrue(created["mediaUrls"][1].startswith("/api/media/"))
+        media_response = self.client.get(created["mediaUrls"][1])
         self.assertEqual(media_response.status_code, 200)
         self.assertEqual(media_response.content_type, "image/png")
         self.assertEqual(media_response.data, b"iotbay")

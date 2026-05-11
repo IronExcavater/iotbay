@@ -1,8 +1,16 @@
+import io
 import unittest
+from email.message import Message
+from unittest.mock import patch
+from urllib.error import HTTPError
 
-from src.config import load_address_config
+from src.addresses.google_maps_api import (
+    AddressServiceUnavailableError,
+    GoogleMapsApi,
+)
+from src.config import AddressConfig, load_address_config
 
-from test.unit.helpers.app_case import AppTestCase
+from test.shared.app import AppTestCase
 
 LIVE_ADDRESS_QUERY = "200 George Street Sydney"
 
@@ -25,6 +33,31 @@ class AddressRouteTestCase(AppTestCase):
             response.get_json(),
             {"code": "ADDRESS_INVALID", "error": "address id is required"},
         )
+
+    def test_google_maps_http_error_response_is_closed(self) -> None:
+        error_body = io.BytesIO(b'{"error": "bad request"}')
+
+        with (
+            patch.dict("os.environ", {"IOTBAY_GOOGLE_MAPS_API_KEY": "test-key"}),
+            patch(
+                "src.addresses.google_maps_api.urlopen",
+                side_effect=HTTPError(
+                    url="https://maps.example.test",
+                    code=400,
+                    msg="Bad Request",
+                    hdrs=Message(),
+                    fp=error_body,
+                ),
+            ),
+        ):
+            api = GoogleMapsApi(AddressConfig())
+            with self.assertRaises(AddressServiceUnavailableError):
+                api._request_json(
+                    "https://maps.example.test",
+                    use_google_headers=True,
+                )
+
+        self.assertTrue(error_body.closed)
 
     def test_suggest_and_resolve_return_address_shape(self) -> None:
         self._skip_if_address_lookup_is_not_configured()

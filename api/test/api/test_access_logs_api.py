@@ -1,6 +1,6 @@
 from test.api.support.case import ApiAcceptanceTestCase
 from test.api.support.clients import AuthApi
-from test.shared.live_app import JsonHttpClient
+from test.shared.http import JsonHttpClient
 
 
 class AccessLogsApiAcceptanceTestCase(ApiAcceptanceTestCase):
