@@ -16,7 +16,7 @@ export interface CartItem {
     name: string;
     priceCents: number;
     productId: string;
-    quantity?: number;
+    quantity: number;
 }
 
 interface CartContextValue {

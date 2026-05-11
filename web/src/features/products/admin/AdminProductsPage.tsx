@@ -80,7 +80,7 @@ export default function AdminProductsPage() {
         setIsLoadingProducts(true);
 
         try {
-            const items = await productApi.list(signal);
+            const items = await productApi.list('', signal);
 
             if (!signal?.aborted) {
                 setProducts(sortProducts(items));
