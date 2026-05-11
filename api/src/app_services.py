@@ -12,6 +12,7 @@ from src.emails.service import EmailService
 from src.media.repository import MediaRepository
 from src.orders.repository import OrderRepository
 from src.orders.service import OrderService
+from src.payment_methods.repository import PaymentMethodRepository
 from src.products.repository import ProductRepository
 from src.products.service import ProductService
 from src.users.repository import UserRepository
@@ -31,6 +32,7 @@ class AppServices:
     user_repository: UserRepository
     orders: OrderService
     order_repository: OrderRepository
+    payment_method_repository: PaymentMethodRepository
 
 
 def build_app_services(
@@ -47,6 +49,7 @@ def build_app_services(
     user_repository = UserRepository(app_config.database_path)
     product_repository = ProductRepository(app_config.database_path)
     order_repository = OrderRepository(app_config.database_path)
+    payment_method_repository = PaymentMethodRepository(app_config.database_path)
 
     return AppServices(
         access_log_repository=access_log_repository,
@@ -83,5 +86,6 @@ def build_app_services(
             product_repository=product_repository,
         ),
         order_repository=order_repository,
+        payment_method_repository=payment_method_repository,
         user_repository=user_repository,
     )
