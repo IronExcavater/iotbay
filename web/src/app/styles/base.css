@@ -78,3 +78,41 @@ body {
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizelegibility;
 }
+
+/* Dual-range slider: pointer events only on thumbs */
+.dual-range {
+    pointer-events: none;
+}
+
+.dual-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 1.125rem;
+    height: 1.125rem;
+    border-radius: 50%;
+    background: var(--ui-950);
+    border: 2px solid white;
+    box-shadow: 0 0 0 1.5px var(--ui-400);
+    cursor: pointer;
+    pointer-events: all;
+    transition: box-shadow 0.15s;
+}
+
+.dual-range:hover::-webkit-slider-thumb {
+    box-shadow: 0 0 0 1.5px var(--ui-700);
+}
+
+.dual-range:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 3px var(--ui-900);
+}
+
+.dual-range::-moz-range-thumb {
+    width: 1.125rem;
+    height: 1.125rem;
+    border-radius: 50%;
+    background: var(--ui-950);
+    border: 2px solid white;
+    box-shadow: 0 0 0 1.5px var(--ui-400);
+    cursor: pointer;
+    pointer-events: all;
+}

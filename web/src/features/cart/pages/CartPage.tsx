@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FaCartShopping, FaTrashCan } from 'react-icons/fa6';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 import {
     DEFAULT_PROFILE_VALUES,
@@ -19,6 +19,7 @@ import { useCart } from '@features/cart/CartProvider';
 import { CartQuantityControl } from '@features/cart/components/CartQuantityControl';
 import { TermsDialog } from '@features/legal/TermsDialog';
 import { orderApi } from '@features/orders/api';
+import { ProductRow } from '@features/products/components/ProductRow';
 import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { Button, ButtonLink } from '@shared/ui/form/Button';
 import { Checkbox } from '@shared/ui/form/Checkbox';
@@ -143,26 +144,6 @@ export default function CartPage() {
 
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_30rem] xl:items-start">
                 <section className="bg-ui-0 border-ui-200 overflow-hidden rounded border">
-                    {items.length > 0 && (
-                        <div className="border-ui-200 flex items-center justify-end border-b px-5 py-3">
-                            <Button
-                                onClick={() => {
-                                    if (
-                                        window.confirm(
-                                            'Remove all items from cart?'
-                                        )
-                                    ) {
-                                        clearCart();
-                                    }
-                                }}
-                                type="button"
-                                variant="danger"
-                            >
-                                Clear cart
-                            </Button>
-                        </div>
-                    )}
-
                     {items.length === 0 ? (
                         <div className="grid justify-items-center gap-3 px-5 py-12 text-center">
                             <FaCartShopping
@@ -177,92 +158,87 @@ export default function CartPage() {
                             </ButtonLink>
                         </div>
                     ) : (
-                        <ul className="divide-ui-200 divide-y">
-                            {items.map((item) => (
-                                <li
-                                    className="grid gap-4 px-5 py-4 md:grid-cols-[4.5rem_minmax(0,1fr)_auto] md:items-center"
-                                    key={item.productId}
-                                >
-                                    <div className="bg-ui-100 border-ui-200 hidden aspect-square overflow-hidden rounded border md:block">
-                                        <img
-                                            alt=""
-                                            className="h-full w-full object-cover"
-                                            src={
+                        <>
+                            <ul className="divide-ui-200 divide-y">
+                                {items.map((item) => (
+                                    <li key={item.productId}>
+                                        <ProductRow
+                                            code={item.code}
+                                            imageUrl={
                                                 item.imageUrl ??
                                                 '/iotbay_icon_themed.svg'
                                             }
-                                        />
-                                    </div>
-                                    <div className="flex min-w-0 items-start gap-3">
-                                        <div className="bg-ui-100 border-ui-200 size-14 shrink-0 overflow-hidden rounded border md:hidden">
-                                            <img
-                                                alt=""
-                                                className="h-full w-full object-cover"
-                                                src={
-                                                    item.imageUrl ??
-                                                    '/iotbay_icon_themed.svg'
-                                                }
-                                            />
-                                        </div>
-                                        <div className="grid min-w-0 gap-0.5">
-                                            {item.code && (
-                                                <span className="text-ui-500 font-mono text-xs">
-                                                    {item.code}
-                                                </span>
-                                            )}
-                                            <Link
-                                                className="text-ui-900 w-fit truncate font-medium underline-offset-4 outline-none hover:underline focus-visible:underline"
-                                                to={`/products/${item.productId}`}
-                                            >
-                                                {item.name}
-                                            </Link>
-                                            <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                                                <span className="text-ui-900 font-semibold">
-                                                    {Money.format(
-                                                        item.priceCents *
-                                                            item.quantity
-                                                    )}
-                                                </span>
-                                                {item.quantity > 1 && (
-                                                    <span className="text-ui-400 text-xs">
-                                                        {item.quantity} &times;{' '}
+                                            name={item.name}
+                                            productId={item.productId}
+                                            middle={
+                                                <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                                                    <span className="text-ui-900 font-semibold">
                                                         {Money.format(
-                                                            item.priceCents
+                                                            item.priceCents *
+                                                                item.quantity
                                                         )}
                                                     </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex shrink-0 items-center gap-2 pl-17 md:pl-0">
-                                        <CartQuantityControl
-                                            label={item.name}
-                                            onChange={(quantity) =>
-                                                setItemQuantity(
-                                                    item.productId,
-                                                    quantity
-                                                )
+                                                    {item.quantity > 1 && (
+                                                        <span className="text-ui-400 text-xs">
+                                                            {item.quantity}{' '}
+                                                            &times;{' '}
+                                                            {Money.format(
+                                                                item.priceCents
+                                                            )}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             }
-                                            value={item.quantity}
+                                            right={
+                                                <div className="flex items-center gap-2">
+                                                    <CartQuantityControl
+                                                        label={item.name}
+                                                        onChange={(q) =>
+                                                            setItemQuantity(
+                                                                item.productId,
+                                                                q
+                                                            )
+                                                        }
+                                                        value={item.quantity}
+                                                    />
+                                                    <button
+                                                        aria-label={`Remove ${item.name}`}
+                                                        className="text-ui-400 flex size-8 items-center justify-center rounded transition-colors outline-none hover:text-red-600 focus-visible:ring-2 focus-visible:ring-red-500"
+                                                        onClick={() =>
+                                                            removeFromCart(
+                                                                item.productId
+                                                            )
+                                                        }
+                                                        type="button"
+                                                    >
+                                                        <FaTrashCan
+                                                            aria-hidden="true"
+                                                            className="size-3.5"
+                                                        />
+                                                    </button>
+                                                </div>
+                                            }
                                         />
-                                        <Button
-                                            aria-label={`Remove ${item.name}`}
-                                            className="inline-flex size-9 rounded-full p-0"
-                                            onClick={() =>
-                                                removeFromCart(item.productId)
-                                            }
-                                            type="button"
-                                            variant="ghost"
-                                        >
-                                            <FaTrashCan
-                                                aria-hidden="true"
-                                                className="size-3.5"
-                                            />
-                                        </Button>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
+                                    </li>
+                                ))}
+                            </ul>
+                            <div className="border-ui-200 flex justify-end border-t px-4 py-2.5">
+                                <button
+                                    className="text-ui-400 text-xs transition-colors outline-none hover:text-red-600 focus-visible:underline"
+                                    onClick={() => {
+                                        if (
+                                            window.confirm(
+                                                'Remove all items from cart?'
+                                            )
+                                        )
+                                            clearCart();
+                                    }}
+                                    type="button"
+                                >
+                                    Clear cart
+                                </button>
+                            </div>
+                        </>
                     )}
                 </section>
 

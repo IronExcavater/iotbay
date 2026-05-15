@@ -17,15 +17,22 @@ import {
     ProductTagRow,
     StockStatus,
 } from '@features/products/components/ProductBadges';
+import { ProductRow } from '@features/products/components/ProductRow';
 import { useDebounce } from '@shared/hooks/useDebounce';
 import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { toErrorMessage } from '@shared/services/http';
+import { Checkbox } from '@shared/ui/form/Checkbox';
 import { SearchInput } from '@shared/ui/form/SearchInput';
 import { PageHeader } from '@shared/ui/PageHeader';
 import { Pagination } from '@shared/ui/Pagination';
 import { Money } from '@shared/value-objects/Money';
 
 type CatalogueView = 'cards' | 'list';
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const PRICE_MAX = 5000;
+const PRICE_STEP = 50;
 
 // ── Type tree ─────────────────────────────────────────────────────────────────
 
@@ -83,6 +90,75 @@ function buildTypeTree(types: ProductTypeCount[]): TypeTreeNode[] {
     root.forEach(bubbleCount);
 
     return root;
+}
+
+// ── Price range slider ────────────────────────────────────────────────────────
+
+function PriceRangeSlider({
+    onChange,
+    range,
+}: {
+    onChange: (range: [number, number]) => void;
+    range: [number, number];
+}) {
+    const [min, max] = range;
+    const leftPct = (min / PRICE_MAX) * 100;
+    const rightPct = (max / PRICE_MAX) * 100;
+    const minIsAtMax = min >= max - PRICE_STEP;
+
+    return (
+        <div className="grid gap-3">
+            <div className="relative h-5">
+                <div className="bg-ui-200 absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full">
+                    <div
+                        className="bg-ui-900 absolute inset-y-0 rounded-full"
+                        style={{
+                            left: `${leftPct}%`,
+                            right: `${100 - rightPct}%`,
+                        }}
+                    />
+                </div>
+                <input
+                    aria-label="Minimum price"
+                    className={`dual-range absolute inset-0 h-full w-full appearance-none bg-transparent ${minIsAtMax ? 'z-2' : 'z-1'}`}
+                    max={PRICE_MAX}
+                    min={0}
+                    onChange={(e) => {
+                        const next = Math.min(
+                            Number(e.target.value),
+                            max - PRICE_STEP
+                        );
+                        onChange([next, max]);
+                    }}
+                    step={PRICE_STEP}
+                    type="range"
+                    value={min}
+                />
+                <input
+                    aria-label="Maximum price"
+                    className={`dual-range absolute inset-0 h-full w-full appearance-none bg-transparent ${minIsAtMax ? 'z-1' : 'z-2'}`}
+                    max={PRICE_MAX}
+                    min={0}
+                    onChange={(e) => {
+                        const next = Math.max(
+                            Number(e.target.value),
+                            min + PRICE_STEP
+                        );
+                        onChange([min, next]);
+                    }}
+                    step={PRICE_STEP}
+                    type="range"
+                    value={max}
+                />
+            </div>
+            <div className="text-ui-600 flex justify-between text-xs">
+                <span>{min === 0 ? 'Any' : Money.format(min * 100)}</span>
+                <span>
+                    {max === PRICE_MAX ? 'Any' : Money.format(max * 100)}
+                </span>
+            </div>
+        </div>
+    );
 }
 
 // ── Sidebar components ─────────────────────────────────────────────────────────
@@ -215,9 +291,9 @@ function TypeBreadcrumb({
     );
 }
 
-// ── Hover overlay ──────────────────────────────────────────────────────────────
+// ── Card overlay ───────────────────────────────────────────────────────────────
 
-function ProductOverlay({ product }: { product: Product }) {
+function ProductCardOverlay({ product }: { product: Product }) {
     const image = product.mediaUrls[0] ?? '/iotbay_icon_themed.svg';
     const cartItem = {
         code: product.code,
@@ -229,15 +305,40 @@ function ProductOverlay({ product }: { product: Product }) {
     const media = product.mediaUrls;
 
     return (
-        <div className="pointer-events-none absolute top-[calc(100%-1px)] right-0 left-0 z-20 translate-y-1 opacity-0 transition-[opacity,transform] duration-150 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100">
-            <div className="border-ui-200 group-hover:border-ui-300 bg-ui-0 overflow-hidden rounded-b-lg border border-t-0 shadow-[0_6px_20px_rgba(0,0,0,0.10)]">
-                <div className="grid gap-2.5 p-3">
+        <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded opacity-0 transition-opacity duration-200 group-hover:pointer-events-auto group-hover:opacity-100">
+            <div className="border-ui-300 bg-ui-0 flex h-full flex-col overflow-hidden rounded border shadow-xl">
+                <Link
+                    className="focus-visible:ring-ui-900 block shrink-0 overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset"
+                    to={`/products/${product.id}`}
+                >
+                    <div className="bg-ui-100 h-32 overflow-hidden">
+                        <img
+                            alt={product.name}
+                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                            src={image}
+                        />
+                    </div>
+                </Link>
+                <div className="flex flex-1 flex-col gap-2 overflow-y-auto p-4">
+                    <h2 className="text-ui-900 leading-snug font-semibold">
+                        <Link
+                            className="underline-offset-4 outline-none hover:underline focus-visible:underline"
+                            to={`/products/${product.id}`}
+                        >
+                            {product.name}
+                        </Link>
+                    </h2>
+                    {product.description && (
+                        <p className="text-ui-500 line-clamp-3 text-xs leading-5">
+                            {product.description}
+                        </p>
+                    )}
                     {media.length > 1 && (
                         <div className="-mx-0.5 flex gap-1.5 overflow-x-auto px-0.5 py-0.5">
                             {media.map((url) => (
                                 <Link
                                     key={url}
-                                    className="border-ui-200 focus-visible:ring-ui-900 block size-11 shrink-0 overflow-hidden rounded border outline-none focus-visible:ring-2"
+                                    className="border-ui-200 focus-visible:ring-ui-900 block size-9 shrink-0 overflow-hidden rounded border outline-none focus-visible:ring-2"
                                     to={`/products/${product.id}`}
                                 >
                                     <img
@@ -249,12 +350,10 @@ function ProductOverlay({ product }: { product: Product }) {
                             ))}
                         </div>
                     )}
-                    {product.description && (
-                        <p className="text-ui-600 line-clamp-4 text-xs leading-5">
-                            {product.description}
+                    <div className="mt-auto flex items-center justify-between gap-2 pt-1">
+                        <p className="text-ui-900 text-lg leading-none font-semibold">
+                            {Money.format(product.priceCents)}
                         </p>
-                    )}
-                    <div className="flex justify-end">
                         <AddToCartControl
                             item={cartItem}
                             stock={product.stock}
@@ -273,7 +372,7 @@ function ProductCard({ product }: { product: Product }) {
 
     return (
         <article className="group relative z-0 hover:z-10">
-            <div className="border-ui-200 bg-ui-0 group-hover:border-ui-300 grid overflow-hidden rounded border transition-[border-color,box-shadow] group-hover:shadow-md">
+            <div className="border-ui-200 bg-ui-0 grid overflow-hidden rounded border">
                 <Link
                     className="focus-visible:ring-ui-900 focus-visible:ring-offset-ui-0 block overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                     to={`/products/${product.id}`}
@@ -281,12 +380,11 @@ function ProductCard({ product }: { product: Product }) {
                     <div className="bg-ui-100 aspect-4/3 overflow-hidden">
                         <img
                             alt={product.name}
-                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                            className="h-full w-full object-cover"
                             src={image}
                         />
                     </div>
                 </Link>
-
                 <div className="grid content-start gap-2 p-4">
                     <h2 className="text-ui-900 leading-snug font-semibold">
                         <Link
@@ -305,8 +403,7 @@ function ProductCard({ product }: { product: Product }) {
                     </div>
                 </div>
             </div>
-
-            <ProductOverlay product={product} />
+            <ProductCardOverlay product={product} />
         </article>
     );
 }
@@ -319,7 +416,6 @@ function ProductCardSkeleton() {
                 <div className="bg-ui-200 h-4 w-44 max-w-full animate-pulse rounded-full" />
                 <div className="flex items-center justify-between">
                     <div className="bg-ui-100 h-5 w-20 animate-pulse rounded-full" />
-                    <div className="bg-ui-100 h-9 w-16 animate-pulse rounded" />
                 </div>
                 <div className="bg-ui-100 h-3 w-24 animate-pulse rounded-full" />
             </div>
@@ -346,79 +442,70 @@ function ProductListRow({
     };
 
     return (
-        <article className="group hover:bg-ui-50 relative z-0 grid grid-cols-[5rem_minmax(0,1fr)] items-stretch transition-colors hover:z-10">
-            <button
-                aria-label={`View ${product.name}`}
-                className="focus-visible:ring-ui-900 overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset"
-                onClick={() => onNavigate(`/products/${product.id}`)}
-                type="button"
-            >
-                <img
-                    alt=""
-                    className="h-full w-full object-cover"
-                    src={image}
-                />
-            </button>
-
-            <div className="grid min-w-0 content-start gap-1 px-4 py-3.5">
-                <Link
-                    className="text-ui-900 w-fit font-medium underline-offset-4 outline-none hover:underline focus-visible:underline"
-                    to={`/products/${product.id}`}
-                >
-                    {product.name}
-                </Link>
-
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="text-ui-900 font-semibold">
-                        {Money.format(product.priceCents)}
-                    </span>
-                    <ProductTagRow product={product} />
-                    <StockStatus product={product} />
-                </div>
-
-                {product.description && (
-                    <div className="grid grid-rows-[0fr] transition-[grid-template-rows] duration-200 group-hover:grid-rows-[1fr]">
-                        <p className="text-ui-500 mt-1 line-clamp-2 overflow-hidden text-xs leading-5">
-                            {product.description}
-                        </p>
+        <article className="group hover:bg-ui-50 relative z-0 transition-colors hover:z-20">
+            <ProductRow
+                imageUrl={image}
+                name={product.name}
+                onImageClick={() => onNavigate(`/products/${product.id}`)}
+                productId={product.id}
+                middle={
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span className="text-ui-900 font-semibold">
+                            {Money.format(product.priceCents)}
+                        </span>
+                        <ProductTagRow product={product} />
+                        <StockStatus product={product} />
                     </div>
-                )}
-            </div>
+                }
+            />
 
-            {/* Row overlay: media gallery + add-to-cart */}
-            <div className="pointer-events-none absolute top-[calc(100%-1px)] right-0 left-0 z-20 translate-y-0.5 opacity-0 transition-[opacity,transform] duration-150 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100">
-                <div className="border-ui-200 bg-ui-0 overflow-hidden border border-t-0 shadow-[0_4px_16px_rgba(0,0,0,0.08)]">
-                    <div className="flex items-center gap-4 px-4 py-2.5">
-                        {product.mediaUrls.length > 1 && (
-                            <div className="-mx-0.5 flex flex-1 gap-1.5 overflow-x-auto px-0.5 py-0.5">
-                                {product.mediaUrls.map((url) => (
-                                    <Link
-                                        key={url}
-                                        className="border-ui-200 focus-visible:ring-ui-900 block size-12 shrink-0 overflow-hidden rounded border outline-none focus-visible:ring-2"
-                                        to={`/products/${product.id}`}
-                                    >
-                                        <img
-                                            alt=""
-                                            className="h-full w-full object-cover"
-                                            src={url}
-                                        />
-                                    </Link>
-                                ))}
-                            </div>
-                        )}
-                        <div
-                            className={
-                                product.mediaUrls.length > 1
-                                    ? 'shrink-0'
-                                    : 'ml-auto'
-                            }
-                        >
+            {/* Full overlay */}
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-20 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
+                <div className="border-ui-300 bg-ui-0 overflow-hidden rounded border shadow-xl">
+                    <ProductRow
+                        imageUrl={image}
+                        name={product.name}
+                        productId={product.id}
+                        middle={
+                            <>
+                                <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                                    <span className="text-ui-900 font-semibold">
+                                        {Money.format(product.priceCents)}
+                                    </span>
+                                    <ProductTagRow product={product} />
+                                    <StockStatus product={product} />
+                                </div>
+                                {product.description && (
+                                    <p className="text-ui-500 mt-1.5 line-clamp-2 text-xs leading-5">
+                                        {product.description}
+                                    </p>
+                                )}
+                                {product.mediaUrls.length > 1 && (
+                                    <div className="-mx-0.5 mt-2 flex gap-1.5 overflow-x-auto px-0.5 py-0.5">
+                                        {product.mediaUrls.map((url) => (
+                                            <Link
+                                                key={url}
+                                                className="border-ui-200 focus-visible:ring-ui-900 block size-10 shrink-0 overflow-hidden rounded border outline-none focus-visible:ring-2"
+                                                to={`/products/${product.id}`}
+                                            >
+                                                <img
+                                                    alt=""
+                                                    className="h-full w-full object-cover"
+                                                    src={url}
+                                                />
+                                            </Link>
+                                        ))}
+                                    </div>
+                                )}
+                            </>
+                        }
+                        right={
                             <AddToCartControl
                                 item={cartItem}
                                 stock={product.stock}
                             />
-                        </div>
-                    </div>
+                        }
+                    />
                 </div>
             </div>
         </article>
@@ -427,14 +514,11 @@ function ProductListRow({
 
 function ProductListRowSkeleton() {
     return (
-        <div className="grid grid-cols-[5rem_minmax(0,1fr)_auto] items-center">
+        <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-center">
             <div className="bg-ui-100 h-16 animate-pulse" />
             <div className="grid gap-2 px-4 py-3.5">
                 <div className="bg-ui-200 h-4 w-44 max-w-full animate-pulse rounded-full" />
                 <div className="bg-ui-100 h-3 w-24 animate-pulse rounded-full" />
-            </div>
-            <div className="px-4 py-3.5">
-                <div className="bg-ui-100 h-9 w-16 animate-pulse rounded" />
             </div>
         </div>
     );
@@ -491,10 +575,11 @@ export default function ProductCatalogPage() {
 
     const [search, setSearch] = useState('');
     const debouncedSearch = useDebounce(search, 350);
-    const [minPrice, setMinPrice] = useState('');
-    const [maxPrice, setMaxPrice] = useState('');
-    const debouncedMinPrice = useDebounce(minPrice, 500);
-    const debouncedMaxPrice = useDebounce(maxPrice, 500);
+    const [priceRange, setPriceRange] = useState<[number, number]>([
+        0,
+        PRICE_MAX,
+    ]);
+    const debouncedPriceRange = useDebounce(priceRange, 300);
     const [inStock, setInStock] = useState(false);
     const [view, setView] = useState<CatalogueView>('cards');
 
@@ -506,21 +591,16 @@ export default function ProductCatalogPage() {
 
     const [types, setTypes] = useState<ProductTypeCount[]>([]);
 
-    // Keep the last completed load's page count so the pagination control
-    // doesn't flicker to 0 while a new request is in-flight.
     const stablePages = useRef(totalPages);
     if (!isLoading) stablePages.current = totalPages;
 
     const minPriceCents =
-        debouncedMinPrice.trim() && !isNaN(parseFloat(debouncedMinPrice))
-            ? Math.round(parseFloat(debouncedMinPrice) * 100)
-            : undefined;
+        debouncedPriceRange[0] > 0 ? debouncedPriceRange[0] * 100 : undefined;
     const maxPriceCents =
-        debouncedMaxPrice.trim() && !isNaN(parseFloat(debouncedMaxPrice))
-            ? Math.round(parseFloat(debouncedMaxPrice) * 100)
+        debouncedPriceRange[1] < PRICE_MAX
+            ? debouncedPriceRange[1] * 100
             : undefined;
 
-    // Load products whenever filters/page change
     useEffect(() => {
         const ac = new AbortController();
         setIsLoading(true);
@@ -566,7 +646,6 @@ export default function ProductCatalogPage() {
         inStock,
     ]);
 
-    // Load types sidebar once
     useEffect(() => {
         const ac = new AbortController();
         productApi
@@ -597,12 +676,9 @@ export default function ProductCatalogPage() {
     }
 
     const typeTree = buildTypeTree(types);
+    const priceFiltered = priceRange[0] > 0 || priceRange[1] < PRICE_MAX;
     const hasFilters = Boolean(
-        debouncedSearch.trim() ||
-        selectedType ||
-        minPrice.trim() ||
-        maxPrice.trim() ||
-        inStock
+        debouncedSearch.trim() || selectedType || priceFiltered || inStock
     );
 
     return (
@@ -614,7 +690,7 @@ export default function ProductCatalogPage() {
 
             <div className="grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start">
                 {/* ── Sidebar ────────────────────────────────────────────── */}
-                <aside className="grid gap-5 lg:sticky lg:top-6 lg:self-start">
+                <aside className="grid gap-4 lg:sticky lg:top-6 lg:self-start">
                     <SearchInput
                         className="w-full"
                         onChange={setSearch}
@@ -622,18 +698,18 @@ export default function ProductCatalogPage() {
                         value={search}
                     />
 
-                    {/* Price filter */}
+                    {/* Unified filter panel */}
                     <div className="bg-ui-0 border-ui-200 overflow-hidden rounded border">
                         <div className="border-ui-200 flex items-center justify-between border-b px-3 py-2.5">
                             <span className="text-ui-700 text-xs font-semibold tracking-[0.08em] uppercase">
-                                Price
+                                Filters
                             </span>
-                            {(minPrice || maxPrice) && (
+                            {(priceFiltered || inStock) && (
                                 <button
                                     className="text-ui-500 hover:text-ui-900 text-xs transition-colors"
                                     onClick={() => {
-                                        setMinPrice('');
-                                        setMaxPrice('');
+                                        setPriceRange([0, PRICE_MAX]);
+                                        setInStock(false);
                                     }}
                                     type="button"
                                 >
@@ -641,92 +717,56 @@ export default function ProductCatalogPage() {
                                 </button>
                             )}
                         </div>
-                        <div className="grid grid-cols-2 gap-2 p-3">
-                            <label className="grid gap-1">
-                                <span className="text-ui-500 text-xs">Min</span>
-                                <div className="ring-ui-300 focus-within:ring-ui-900 flex items-center gap-1 rounded px-2 py-1.5 ring-1 transition-shadow">
-                                    <span className="text-ui-400 text-sm">
-                                        $
-                                    </span>
-                                    <input
-                                        className="text-ui-900 w-full bg-transparent text-sm outline-none"
-                                        min="0"
-                                        onChange={(e) =>
-                                            setMinPrice(e.target.value)
-                                        }
-                                        placeholder="0"
-                                        step="0.01"
-                                        type="number"
-                                        value={minPrice}
-                                    />
-                                </div>
-                            </label>
-                            <label className="grid gap-1">
-                                <span className="text-ui-500 text-xs">Max</span>
-                                <div className="ring-ui-300 focus-within:ring-ui-900 flex items-center gap-1 rounded px-2 py-1.5 ring-1 transition-shadow">
-                                    <span className="text-ui-400 text-sm">
-                                        $
-                                    </span>
-                                    <input
-                                        className="text-ui-900 w-full bg-transparent text-sm outline-none"
-                                        min="0"
-                                        onChange={(e) =>
-                                            setMaxPrice(e.target.value)
-                                        }
-                                        placeholder="Any"
-                                        step="0.01"
-                                        type="number"
-                                        value={maxPrice}
-                                    />
-                                </div>
-                            </label>
-                        </div>
-                    </div>
 
-                    {/* In-stock filter */}
-                    <div className="bg-ui-0 border-ui-200 overflow-hidden rounded border">
-                        <label className="flex cursor-pointer items-center gap-3 px-3 py-3">
-                            <input
-                                checked={inStock}
-                                className="accent-ui-900 size-4 cursor-pointer"
-                                onChange={(e) => setInStock(e.target.checked)}
-                                type="checkbox"
+                        {/* Price range */}
+                        <div className="border-ui-100 border-b px-3 py-3.5">
+                            <p className="text-ui-600 mb-3 text-xs font-medium">
+                                Price
+                            </p>
+                            <PriceRangeSlider
+                                onChange={setPriceRange}
+                                range={priceRange}
                             />
-                            <span className="text-ui-700 text-sm">
-                                In stock only
-                            </span>
-                        </label>
-                    </div>
-
-                    {typeTree.length > 0 && (
-                        <div className="bg-ui-0 border-ui-200 overflow-hidden rounded border">
-                            <div className="border-ui-200 flex items-center justify-between border-b px-3 py-2.5">
-                                <span className="text-ui-700 text-xs font-semibold tracking-[0.08em] uppercase">
-                                    Category
-                                </span>
-                                {selectedType && (
-                                    <button
-                                        className="text-ui-500 hover:text-ui-900 text-xs transition-colors"
-                                        onClick={() => selectType('')}
-                                        type="button"
-                                    >
-                                        Clear
-                                    </button>
-                                )}
-                            </div>
-                            <ul className="grid gap-0.5 p-1.5">
-                                {typeTree.map((node) => (
-                                    <TypeTreeNode
-                                        key={node.path}
-                                        depth={0}
-                                        node={node}
-                                        onSelect={selectType}
-                                        selected={selectedType}
-                                    />
-                                ))}
-                            </ul>
                         </div>
-                    )}
+
+                        {/* In stock */}
+                        <div className="px-3 py-3">
+                            <Checkbox checked={inStock} onChange={setInStock}>
+                                In stock only
+                            </Checkbox>
+                        </div>
+
+                        {/* Category */}
+                        {typeTree.length > 0 && (
+                            <div className="border-ui-100 border-t">
+                                <div className="border-ui-100 flex items-center justify-between border-b px-3 py-2">
+                                    <p className="text-ui-600 text-xs font-medium">
+                                        Category
+                                    </p>
+                                    {selectedType && (
+                                        <button
+                                            className="text-ui-500 hover:text-ui-900 text-xs transition-colors"
+                                            onClick={() => selectType('')}
+                                            type="button"
+                                        >
+                                            Clear
+                                        </button>
+                                    )}
+                                </div>
+                                <ul className="grid gap-0.5 p-1.5">
+                                    {typeTree.map((node) => (
+                                        <TypeTreeNode
+                                            key={node.path}
+                                            depth={0}
+                                            node={node}
+                                            onSelect={selectType}
+                                            selected={selectedType}
+                                        />
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                    </div>
                 </aside>
 
                 {/* ── Main ───────────────────────────────────────────────── */}

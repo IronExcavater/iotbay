@@ -67,7 +67,7 @@ export function AddToCartControl({
             type="button"
         >
             <FaPlus aria-hidden="true" className="size-2.5" />
-            Add
+            Add to cart
         </button>
     );
 }

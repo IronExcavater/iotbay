@@ -1,8 +1,5 @@
 import { FaMinus, FaPlus } from 'react-icons/fa6';
 
-import { Button } from '@shared/ui/form/Button';
-import { Input } from '@shared/ui/form/Input';
-
 const MAX_CART_QUANTITY = 99;
 
 export function CartQuantityControl({
@@ -16,53 +13,33 @@ export function CartQuantityControl({
     onChange: (quantity: number) => void;
     value: number;
 }) {
-    function commitQuantity(nextValue: number) {
-        onChange(clampQuantity(nextValue));
+    function commit(next: number) {
+        onChange(clampQuantity(next));
     }
 
     return (
-        <div className="ring-ui-300 flex w-fit items-center rounded ring-1">
-            <Button
+        <div className="bg-ui-950 inline-flex h-9 items-center overflow-hidden rounded">
+            <button
                 aria-label={`Decrease ${label} quantity`}
-                className="size-9 rounded-r-none p-0 ring-0 focus-visible:ring-2"
+                className="text-ui-0 hover:bg-ui-800 disabled:text-ui-0/30 flex h-full w-9 shrink-0 items-center justify-center transition-colors outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-inset disabled:cursor-not-allowed"
                 disabled={disabled || value <= 1}
-                onClick={() => commitQuantity(value - 1)}
+                onClick={() => commit(value - 1)}
                 type="button"
-                variant="ghost"
             >
-                <FaMinus aria-hidden="true" className="size-3" />
-            </Button>
-            <Input
-                aria-label={`${label} quantity`}
-                className="h-9 w-12 rounded-none text-center ring-0 focus:ring-0"
-                disabled={disabled}
-                inputMode="numeric"
-                max={MAX_CART_QUANTITY}
-                min={1}
-                onBlur={(event) => {
-                    commitQuantity(Number(event.target.value));
-                }}
-                onChange={(event) => {
-                    const digits = event.target.value.replace(/\D/g, '');
-                    if (!digits) {
-                        onChange(1);
-                        return;
-                    }
-                    commitQuantity(Number(digits));
-                }}
-                type="text"
-                value={String(value)}
-            />
-            <Button
+                <FaMinus aria-hidden="true" className="size-2.5" />
+            </button>
+            <span className="text-ui-0 flex min-w-8 items-center justify-center border-x border-white/20 px-2 text-sm font-semibold tabular-nums">
+                {value}
+            </span>
+            <button
                 aria-label={`Increase ${label} quantity`}
-                className="size-9 rounded-l-none p-0 ring-0 focus-visible:ring-2"
+                className="text-ui-0 hover:bg-ui-800 disabled:text-ui-0/30 flex h-full w-9 shrink-0 items-center justify-center transition-colors outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-inset disabled:cursor-not-allowed"
                 disabled={disabled || value >= MAX_CART_QUANTITY}
-                onClick={() => commitQuantity(value + 1)}
+                onClick={() => commit(value + 1)}
                 type="button"
-                variant="ghost"
             >
-                <FaPlus aria-hidden="true" className="size-3" />
-            </Button>
+                <FaPlus aria-hidden="true" className="size-2.5" />
+            </button>
         </div>
     );
 }
