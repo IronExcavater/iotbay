@@ -31,6 +31,18 @@ export interface OrderSearchParams {
     date?: string;
 }
 
+export interface AdminOrderListParams {
+    orderId?: string;
+    date?: string;
+    page?: number;
+}
+
+export interface OrdersPage {
+    items: Order[];
+    total: number;
+    pages: number;
+}
+
 export const orderApi = {
     list(params?: OrderSearchParams, signal?: AbortSignal): Promise<Order[]> {
         const searchParams = new URLSearchParams();
@@ -47,6 +59,22 @@ export const orderApi = {
 
     create(input: CreateOrderInput, signal?: AbortSignal): Promise<Order> {
         return postJson<Order, CreateOrderInput>('/api/orders', input, signal);
+    },
+
+    listAll(
+        params: AdminOrderListParams = {},
+        signal?: AbortSignal
+    ): Promise<OrdersPage> {
+        const query = new URLSearchParams();
+        if (params.orderId) query.set('orderId', params.orderId);
+        if (params.date) query.set('date', params.date);
+        if (params.page && params.page > 1)
+            query.set('page', String(params.page));
+        const qs = query.toString();
+        return getJson<OrdersPage>(
+            `/api/staff/all${qs ? `?${qs}` : ''}`,
+            signal
+        );
     },
 
     updateStatus(

@@ -16,6 +16,9 @@ from src.orders.models import (
 from src.orders.queries import (
     INSERT_ORDER,
     INSERT_ORDER_ITEM,
+    SELECT_ORDER_BY_ID,
+    SELECT_ORDER_ITEMS,
+    UPDATE_ORDER_STATUS,
 )
 from src.orders.repository import OrderRepository
 from src.products.repository import ProductRepository
@@ -44,11 +47,13 @@ class OrderService:
             raise ApiError("At least one item is required", 400)
 
         total_cents = 0
-        order_items: list[tuple[bytes, int]] = []
+        order_items: list[tuple[bytes, int, int]] = []
 
         for item in items:
             product_id_str = str(item["product_id"])
             quantity = int(item["quantity"])
+            if quantity < 1:
+                raise ApiError("Quantity must be at least 1", 400)
 
             product_id_bytes = id_string_to_bytes(product_id_str)
             product = self.product_repository.select_product_by_id(
@@ -70,7 +75,7 @@ class OrderService:
                 )
 
             total_cents += product.price_cents * quantity
-            order_items.append((product_id_bytes, quantity))
+            order_items.append((product_id_bytes, quantity, product.price_cents))
 
         order = self._insert_order_and_stock(
             user_id=actor_user_id,
@@ -93,14 +98,14 @@ class OrderService:
         *,
         user_id: bytes,
         address_id: bytes | None,
-        items: list[tuple[bytes, int]],
+        items: list[tuple[bytes, int, int]],
         total_cents: int,
     ) -> Order:
         now = UtcTime.now().iso
         order_id_bytes = new_id_bytes()
 
         with self.order_repository.connect() as connection:
-            for product_id, quantity in items:
+            for product_id, quantity, _ in items:
                 success = self.product_repository.decrease_stock(
                     connection,
                     product_id=product_id,
@@ -125,12 +130,11 @@ class OrderService:
                     now,
                 ),
             )
-            for product_id, quantity in items:
+            for product_id, quantity, price_cents in items:
                 connection.execute(
-                    INSERT_ORDER_ITEM, (order_id_bytes, product_id, quantity)
+                    INSERT_ORDER_ITEM,
+                    (order_id_bytes, product_id, quantity, price_cents),
                 )
-
-            from src.orders.queries import SELECT_ORDER_BY_ID, SELECT_ORDER_ITEMS
 
             row = connection.execute(SELECT_ORDER_BY_ID, (order_id_bytes,)).fetchone()
             order = Order(**row)
@@ -159,14 +163,28 @@ class OrderService:
             )
 
         before_status = order.status
+        now = UtcTime.now().iso
 
-        if new_status == ORDER_STATUS_CANCELLED:
-            self._restore_stock(order)
+        with self.order_repository.connect() as connection:
+            if new_status == ORDER_STATUS_CANCELLED:
+                for item in order.items:
+                    self.product_repository.increase_stock(
+                        connection,
+                        product_id=item.product_id,
+                        quantity=item.quantity,
+                    )
 
-        updated_order = self.order_repository.update_order_status(
-            order_id=order_id,
-            new_status=new_status,
-        )
+            connection.execute(UPDATE_ORDER_STATUS, (new_status, now, order_id))
+            row = connection.execute(SELECT_ORDER_BY_ID, (order_id,)).fetchone()
+            updated_order = replace(
+                Order(**row),
+                items=[
+                    OrderItem(**r)
+                    for r in connection.execute(
+                        SELECT_ORDER_ITEMS, (order_id,)
+                    ).fetchall()
+                ],
+            )
 
         self._record_audit(
             action="status_changed",
@@ -177,15 +195,6 @@ class OrderService:
         )
 
         return updated_order
-
-    def _restore_stock(self, order: Order) -> None:
-        with self.order_repository.connect() as connection:
-            for item in order.items:
-                self.product_repository.increase_stock(
-                    connection,
-                    product_id=item.product_id,
-                    quantity=item.quantity,
-                )
 
     def _record_audit(
         self,

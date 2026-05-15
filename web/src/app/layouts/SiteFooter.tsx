@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { FaGithub } from 'react-icons/fa6';
 
 import { useAuth } from '@features/auth/AuthProvider';
+import { TermsDialog } from '@features/legal/TermsDialog';
 import { getJson } from '@shared/services/http';
-import { TextAnchor, TextLink } from '@shared/ui/form/TextLink';
+import { TextAnchor, TextButton, TextLink } from '@shared/ui/form/TextLink';
 
 const DEFAULT_CONTACT_EMAIL = 'support@iotbay.com';
 const UTS_ISD_SUBJECT_URL =
@@ -14,6 +15,7 @@ const GITHUB_REPOSITORY_URL =
 export default function SiteFooter() {
     const { user } = useAuth();
     const [contactEmail, setContactEmail] = useState(DEFAULT_CONTACT_EMAIL);
+    const [isTermsOpen, setIsTermsOpen] = useState(false);
 
     useEffect(() => {
         const abortController = new AbortController();
@@ -53,7 +55,9 @@ export default function SiteFooter() {
                             <TextLink to="/cart">Cart</TextLink>
                             <TextLink to="/orders">Orders</TextLink>
                             <TextLink to="/account">Account</TextLink>
-                            <TextLink to="/terms">Terms</TextLink>
+                            <TextButton onClick={() => setIsTermsOpen(true)}>
+                                Terms
+                            </TextButton>
                             {showStaffPortal && (
                                 <TextAnchor href={staffPortalHref}>
                                     Staff portal
@@ -99,6 +103,9 @@ export default function SiteFooter() {
                     </div>
                 </section>
             </div>
+            {isTermsOpen && (
+                <TermsDialog onClose={() => setIsTermsOpen(false)} />
+            )}
         </footer>
     );
 }

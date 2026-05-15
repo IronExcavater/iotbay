@@ -8,6 +8,7 @@ import {
 import { authApi } from '@features/auth/api';
 import { useAuth } from '@features/auth/AuthProvider';
 import { AuthSignUpFields } from '@features/auth/components/AuthSignUpFields';
+import { PasswordRuleList } from '@features/auth/components/PasswordRuleList';
 import {
     toAuthErrorState,
     toRegisterInput,
@@ -15,7 +16,6 @@ import {
     type AuthFormValues as FormValues,
     validateAuthForm,
 } from '@features/auth/form';
-import { PasswordRuleList } from '@features/auth/PasswordRuleList';
 import {
     getBrowserPhoneCountry,
     validatePhoneNumber,
@@ -28,6 +28,7 @@ import {
     normalizeNextPath,
     resolvePostAuthPath,
 } from '@features/auth/redirects';
+import { TermsDialog } from '@features/legal/TermsDialog';
 import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { downloadHtml } from '@shared/services/download';
 import { backendErrorMessage } from '@shared/services/http';
@@ -36,7 +37,7 @@ import { Checkbox } from '@shared/ui/form/Checkbox';
 import { Field } from '@shared/ui/form/Field';
 import { Input } from '@shared/ui/form/Input';
 import { PasswordInput } from '@shared/ui/form/PasswordInput';
-import { TextLink } from '@shared/ui/form/TextLink';
+import { TextButton, TextLink } from '@shared/ui/form/TextLink';
 import { PageHeader } from '@shared/ui/PageHeader';
 import { useToast } from '@shared/ui/toast/ToastProvider';
 import { Email } from '@shared/value-objects/Email';
@@ -86,6 +87,7 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
     const [trustBrowser, setTrustBrowser] = useState(false);
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [termsError, setTermsError] = useState<string | null>(null);
+    const [isTermsOpen, setIsTermsOpen] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -531,14 +533,18 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
                             checked={acceptedTerms}
                             className="items-start pt-1"
                             onChange={(checked) => {
-                                setAcceptedTerms(checked);
-                                setTermsError(null);
+                                if (checked) {
+                                    setIsTermsOpen(true);
+                                } else {
+                                    setAcceptedTerms(false);
+                                    setTermsError(null);
+                                }
                             }}
                         >
                             I agree to the{' '}
-                            <TextLink to="/terms">
+                            <TextButton onClick={() => setIsTermsOpen(true)}>
                                 terms and conditions
-                            </TextLink>
+                            </TextButton>
                             .
                             {termsError && (
                                 <span className="mt-1 block text-red-700">
@@ -568,6 +574,15 @@ export default function AuthPage({ mode = 'signin' }: { mode?: AuthPageMode }) {
                         </TextLink>
                     </div>
                 </form>
+            )}
+            {isTermsOpen && (
+                <TermsDialog
+                    onAccept={() => {
+                        setAcceptedTerms(true);
+                        setTermsError(null);
+                    }}
+                    onClose={() => setIsTermsOpen(false)}
+                />
             )}
         </section>
     );

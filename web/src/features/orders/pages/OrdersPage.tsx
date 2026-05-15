@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 
 import {
     orderApi,
     type Order,
     type OrderSearchParams,
 } from '@features/orders/api';
+import { OrderStatusBadge } from '@features/orders/components/OrderStatusBadge';
 import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
-import { Button } from '@shared/ui/form/Button';
+import { Button, ButtonLink } from '@shared/ui/form/Button';
 import { PageHeader } from '@shared/ui/PageHeader';
 import { useToast } from '@shared/ui/toast/ToastProvider';
+import { DateTimeValue } from '@shared/value-objects/DateTimeValue';
 import { Money } from '@shared/value-objects/Money';
 
 export default function OrdersPage() {
@@ -40,11 +41,11 @@ export default function OrdersPage() {
 
     useEffect(() => {
         const controller = new AbortController();
-        fetchOrders(controller.signal);
+        void fetchOrders(controller.signal);
         return () => controller.abort();
     }, []);
 
-    function handleSearch(e: React.ChangeEvent) {
+    function handleSearch(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
         const params: OrderSearchParams = {};
         if (searchId.trim()) params.orderId = searchId.trim();
@@ -105,19 +106,18 @@ export default function OrdersPage() {
                 </Button>
             </form>
 
-            {loading && <p className="text-ui-500 text-sm">Loading orders…</p>}
+            {loading && (
+                <p className="text-ui-500 text-sm">Loading orders...</p>
+            )}
 
             {error && <p className="text-sm text-red-600">{error}</p>}
 
             {!loading && !error && orders.length === 0 && (
                 <div className="bg-ui-0 border-ui-200 grid justify-items-center gap-3 rounded border px-5 py-12 text-center">
                     <p className="text-ui-500 text-sm">No orders yet.</p>
-                    <Link
-                        className="text-sm font-medium text-blue-600 hover:underline"
-                        to="/products"
-                    >
+                    <ButtonLink to="/products" variant="secondary">
                         Browse catalogue
-                    </Link>
+                    </ButtonLink>
                 </div>
             )}
 
@@ -127,7 +127,7 @@ export default function OrdersPage() {
                         <OrderCard
                             key={order.id}
                             order={order}
-                            onStatusChange={() => fetchOrders()}
+                            onStatusChange={() => void fetchOrders()}
                         />
                     ))}
                 </ul>
@@ -162,7 +162,11 @@ function OrderCard({
 
     return (
         <li
-            className={`${order.status === 'cancelled' ? 'bg-red-50 opacity-60 grayscale' : 'bg-ui-0'} bg-ui-0 border-ui-200 grid gap-4 rounded border p-5`}
+            className={`border-ui-200 grid gap-4 rounded border p-5 ${
+                order.status === 'cancelled'
+                    ? 'bg-red-50 opacity-70 grayscale'
+                    : 'bg-ui-0'
+            }`}
         >
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="grid gap-1">
@@ -173,13 +177,17 @@ function OrderCard({
                         </span>
                     </div>
                     <span className="text-ui-500 text-xs">
-                        {new Date(order.createdAt).toLocaleDateString()}
+                        {DateTimeValue.format(order.createdAt, 'long')}
+                    </span>
+                    <span className="text-ui-900 font-mono text-sm">
+                        Order {order.id.slice(0, 8)}
                     </span>
                 </div>
                 <div className="flex items-center gap-2">
                     <OrderStatusBadge status={order.status} />
                     {canCancel && (
                         <Button
+                            className="h-8 px-2 text-xs"
                             disabled={cancelling}
                             onClick={handleCancel}
                             type="button"
@@ -195,25 +203,29 @@ function OrderCard({
                 <ul className="divide-ui-200 divide-y text-sm">
                     {order.items.map((item) => (
                         <li
-                            className="flex items-center justify-between gap-3 py-2"
+                            className="grid gap-3 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
                             key={item.productId}
                         >
-                            <div className="flex items-center gap-3">
-                                {item.imageUrl && (
-                                    <img
-                                        alt=""
-                                        className="bg-ui-100 size-8 rounded object-cover"
-                                        src={item.imageUrl}
-                                    />
-                                )}
-                                <span className="text-ui-900">{item.name}</span>
-                                {item.quantity > 0 && (
-                                    <span className="text-ui-500">
-                                        ×{item.quantity}
+                            <div className="flex min-w-0 items-center gap-3">
+                                <img
+                                    alt=""
+                                    className="bg-ui-100 size-10 rounded object-cover"
+                                    src={
+                                        item.imageUrl ||
+                                        '/iotbay_icon_themed.svg'
+                                    }
+                                />
+                                <span className="grid min-w-0 gap-0.5">
+                                    <span className="text-ui-900 truncate font-medium">
+                                        {item.name}
                                     </span>
-                                )}
+                                    <span className="text-ui-500">
+                                        {Money.format(item.priceCents)} x{' '}
+                                        {item.quantity}
+                                    </span>
+                                </span>
                             </div>
-                            <span className="text-ui-700">
+                            <span className="text-ui-900 font-semibold sm:text-right">
                                 {Money.format(item.priceCents * item.quantity)}
                             </span>
                         </li>
@@ -226,22 +238,5 @@ function OrderCard({
                 </span>
             </div>
         </li>
-    );
-}
-
-const STATUS_STYLES: Record<string, string> = {
-    cancelled: 'bg-red-100 text-red-700',
-    paid: 'bg-blue-100 text-blue-700',
-    saved: 'bg-green-100 text-green-700',
-};
-
-function OrderStatusBadge({ status }: { status: string }) {
-    const style = STATUS_STYLES[status] ?? 'bg-gray-100 text-gray-700';
-    return (
-        <span
-            className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${style}`}
-        >
-            {status}
-        </span>
     );
 }

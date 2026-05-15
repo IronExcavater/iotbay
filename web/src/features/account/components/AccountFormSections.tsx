@@ -2,7 +2,7 @@ import clsx from 'clsx';
 import { FaPen, FaXmark } from 'react-icons/fa6';
 
 import type { ProfileValues } from '@features/account/types';
-import { AddressFields } from '@features/addresses/AddressFields';
+import { AddressFields } from '@features/addresses/components/AddressFields';
 import type { AddressFieldName } from '@features/addresses/form';
 import {
     compressImageToDataUrl,

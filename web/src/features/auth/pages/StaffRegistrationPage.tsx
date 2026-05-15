@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { authApi, type User } from '@features/auth/api';
-import { PasswordRuleList } from '@features/auth/PasswordRuleList';
+import { PasswordRuleList } from '@features/auth/components/PasswordRuleList';
 import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { normalizeMessage, toErrorMessage } from '@shared/services/http';
 import { Button } from '@shared/ui/form/Button';

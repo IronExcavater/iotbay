@@ -64,13 +64,40 @@ def create_order():
     return order.to_dict(), 201
 
 
+_ADMIN_PAGE_LIMIT = 20
+
+
 @orders_bp.get("/staff/all")
 def list_all_orders():
     current_authenticated_staff_user()
 
+    order_id_param = flask_request.args.get("orderId")
+    date_param = flask_request.args.get("date")
+    try:
+        page = max(1, int(flask_request.args.get("page", 1)))
+    except ValueError:
+        page = 1
+
+    order_id_bytes = None
+    if order_id_param:
+        try:
+            order_id_bytes = id_string_to_bytes(order_id_param)
+        except ValueError:
+            raise ApiError("Invalid order ID format", 400, code="INVALID_ID")
+
     repo = services().order_repository
-    orders = repo.list_all_orders()
-    return [order.to_dict() for order in orders]
+    orders, total = repo.list_all_orders(
+        order_id=order_id_bytes,
+        date=date_param or None,
+        page=page,
+        limit=_ADMIN_PAGE_LIMIT,
+    )
+    pages = max(1, -(-total // _ADMIN_PAGE_LIMIT))
+    return {
+        "items": [order.to_dict() for order in orders],
+        "total": total,
+        "pages": pages,
+    }
 
 
 @orders_bp.get("/orders/<order_id>")
@@ -102,6 +129,10 @@ def update_order_status(order_id: str):
         raise ApiError("Order not found", 404)
 
     req = parse_request(UpdateOrderStatusRequest)
+
+    if user.user_type == "customer" and req.status != "cancelled":
+        raise ApiError("Customers may only cancel orders", 403)
+
     order_service = services().orders
     order = order_service.update_status(
         actor_user_id=user.user_id,

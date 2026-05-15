@@ -5,6 +5,7 @@ import type { Product } from '@features/products/api';
 import { Button } from '@shared/ui/form/Button';
 import { SearchInput } from '@shared/ui/form/SearchInput';
 import { ActionMenu } from '@shared/ui/overlay/ActionMenu';
+import { Pagination } from '@shared/ui/Pagination';
 import {
     Table,
     TableActionCell,
@@ -22,12 +23,14 @@ interface ProductTableProps {
     isLoading: boolean;
     onCreate: () => void;
     onDelete: (product: Product) => void;
-    onEdit: (product: Product) => void;
+    onPageChange: (page: number) => void;
     onRefresh: () => void;
+    page: number;
     products: Product[];
     productsError: string | null;
     search: string;
     setSearch: (value: string) => void;
+    totalPages: number;
 }
 
 export function ProductTable({
@@ -35,12 +38,14 @@ export function ProductTable({
     isLoading,
     onCreate,
     onDelete,
-    onEdit,
+    onPageChange,
     onRefresh,
+    page,
     products,
     productsError,
     search,
     setSearch,
+    totalPages,
 }: ProductTableProps) {
     const navigate = useNavigate();
 
@@ -192,7 +197,9 @@ export function ProductTable({
                                                         icon: FaPenToSquare,
                                                         label: 'Edit',
                                                         onSelect: () =>
-                                                            onEdit(product),
+                                                            navigate(
+                                                                `/admin/products/${product.id}`
+                                                            ),
                                                     },
                                                     {
                                                         icon: FaTrashCan,
@@ -212,6 +219,16 @@ export function ProductTable({
                     </tbody>
                 </Table>
             </div>
+
+            {totalPages > 1 && (
+                <div className="border-ui-200 border-t px-5 py-3">
+                    <Pagination
+                        onChange={onPageChange}
+                        page={page}
+                        totalPages={totalPages}
+                    />
+                </div>
+            )}
         </section>
     );
 }

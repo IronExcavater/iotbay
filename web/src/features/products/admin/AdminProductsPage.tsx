@@ -7,13 +7,12 @@ import {
     assessProductForm,
     createProductFormValues,
     toProductErrorState,
-    toProductFormValues,
     type ProductFieldErrors,
     type ProductFormValues,
 } from '@features/products/form';
+import { useDebounce } from '@shared/hooks/useDebounce';
 import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { useFormattedInput } from '@shared/hooks/useFormattedInput';
-import { useSearchFilter } from '@shared/hooks/useSearchFilter';
 import { toErrorMessage } from '@shared/services/http';
 import { useToast } from '@shared/ui/toast/ToastProvider';
 import { Money } from '@shared/value-objects/Money';
@@ -26,132 +25,88 @@ export default function AdminProductsPage() {
     const [isLoadingProducts, setIsLoadingProducts] = useState(true);
     const [productsError, setProductsError] = useState<string | null>(null);
     const [search, setSearch] = useState('');
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const debouncedSearch = useDebounce(search, 350);
+
     const [formValues, setFormValues] = useState<ProductFormValues>(() =>
         createProductFormValues()
     );
     const [fieldErrors, setFieldErrors] = useState<ProductFieldErrors>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [editingProductId, setEditingProductId] = useState<string | null>(
-        null
-    );
     const [isFormOpen, setIsFormOpen] = useState(false);
 
-    const isEditing = Boolean(editingProductId);
-    const formTitle = isEditing ? 'Edit product' : 'Create product';
-    const submitLabel = isEditing ? 'Save product' : 'Create product';
-    const filteredProducts = useSearchFilter(products, search, (product) => [
-        product.code,
-        product.name,
-        product.type,
-    ]);
-
     const nameInput = useFormattedInput({
-        onChange: (value) => {
-            setFormValues((current) => ({
-                ...current,
-                name: value,
-            }));
-        },
+        onChange: (value) => setFormValues((c) => ({ ...c, name: value })),
         value: formValues.name,
         valueType: ProductName,
     });
     const codeInput = useFormattedInput({
-        onChange: (value) => {
-            setFormValues((current) => ({
-                ...current,
-                code: value,
-            }));
-        },
+        onChange: (value) => setFormValues((c) => ({ ...c, code: value })),
         value: formValues.code,
         valueType: ProductCode,
     });
     const priceInput = useFormattedInput({
-        onChange: (value) => {
-            setFormValues((current) => ({
-                ...current,
-                price: value,
-            }));
-        },
+        onChange: (value) => setFormValues((c) => ({ ...c, price: value })),
         value: formValues.price,
         valueType: Money,
     });
 
-    async function loadProducts(signal?: AbortSignal) {
+    useEffect(() => {
+        const ac = new AbortController();
         setIsLoadingProducts(true);
 
-        try {
-            const items = await productApi.list('', signal);
+        void productApi
+            .list(
+                { page, search: debouncedSearch.trim() || undefined },
+                ac.signal
+            )
+            .then(({ items, pages }) => {
+                if (!ac.signal.aborted) {
+                    setProducts(sortProducts(items));
+                    setTotalPages(pages);
+                    setProductsError(null);
+                }
+            })
+            .catch((error) => {
+                if (!ac.signal.aborted) {
+                    setProductsError(
+                        toErrorMessage(error, 'Unable to load products')
+                    );
+                }
+            })
+            .finally(() => {
+                if (!ac.signal.aborted) setIsLoadingProducts(false);
+            });
 
-            if (!signal?.aborted) {
-                setProducts(sortProducts(items));
-                setProductsError(null);
-            }
-        } catch (error) {
-            if (!signal?.aborted) {
-                setProductsError(
-                    toErrorMessage(error, 'Unable to load products')
-                );
-            }
-        } finally {
-            if (!signal?.aborted) {
-                setIsLoadingProducts(false);
-            }
-        }
+        return () => ac.abort();
+    }, [debouncedSearch, page]);
+
+    function handleSearchChange(value: string) {
+        setSearch(value);
+        setPage(1);
     }
 
-    useEffect(() => {
-        const abortController = new AbortController();
-        void loadProducts(abortController.signal);
-        return () => abortController.abort();
-    }, []);
+    function openCreateForm() {
+        setFieldErrors({});
+        setFormValues(createProductFormValues());
+        setIsFormOpen(true);
+    }
 
     function closeForm() {
-        setEditingProductId(null);
         setFieldErrors({});
         setFormValues(createProductFormValues());
         setIsFormOpen(false);
     }
 
-    function handleCreate() {
-        setEditingProductId(null);
-        setFieldErrors({});
-        setFormValues(createProductFormValues());
-        setIsFormOpen(true);
-    }
-
-    function handleEdit(product: Product) {
-        setEditingProductId(product.id);
-        setFieldErrors({});
-        setFormValues(toProductFormValues(product));
-        setIsFormOpen(true);
-    }
-
-    function upsertProduct(product: Product) {
-        setProducts((current) =>
-            sortProducts(
-                editingProductId
-                    ? current.map((item) =>
-                          item.id === editingProductId ? product : item
-                      )
-                    : [...current, product]
-            )
-        );
-    }
-
     async function handleDelete(product: Product) {
-        if (!window.confirm(`Delete ${product.name}?`)) {
-            return;
-        }
+        if (!window.confirm(`Delete ${product.name}?`)) return;
 
         try {
             await productApi.remove(product.id);
             setProducts((current) =>
                 current.filter((item) => item.id !== product.id)
             );
-
-            if (editingProductId === product.id) {
-                closeForm();
-            }
         } catch (error) {
             setProductsError(toErrorMessage(error, 'Unable to delete product'));
         }
@@ -162,19 +117,12 @@ export default function AdminProductsPage() {
 
         const assessment = assessProductForm(formValues);
         setFieldErrors(assessment.fieldErrors);
-
-        if (!assessment.payload) {
-            return;
-        }
+        if (!assessment.payload) return;
 
         setIsSubmitting(true);
-
         try {
-            const product = editingProductId
-                ? await productApi.update(editingProductId, assessment.payload)
-                : await productApi.create(assessment.payload);
-
-            upsertProduct(product);
+            const product = await productApi.create(assessment.payload);
+            setProducts((current) => sortProducts([...current, product]));
             closeForm();
         } catch (error) {
             const nextState = toProductErrorState(error);
@@ -190,49 +138,40 @@ export default function AdminProductsPage() {
             <ProductTable
                 hasSearch={Boolean(search.trim())}
                 isLoading={isLoadingProducts}
-                onCreate={handleCreate}
+                onCreate={openCreateForm}
                 onDelete={(product) => {
                     void handleDelete(product);
                 }}
-                onEdit={handleEdit}
-                onRefresh={() => {
-                    void loadProducts();
-                }}
-                products={filteredProducts}
+                onPageChange={setPage}
+                onRefresh={() => setPage((p) => p)}
+                page={page}
+                products={products}
                 productsError={productsError}
                 search={search}
-                setSearch={setSearch}
+                setSearch={handleSearchChange}
+                totalPages={totalPages}
             />
 
             <ProductFormDialog
                 codeInput={codeInput}
                 fieldErrors={fieldErrors}
-                formTitle={formTitle}
+                formTitle="Create product"
                 isOpen={isFormOpen}
                 isSubmitting={isSubmitting}
                 nameInput={nameInput}
                 onClose={closeForm}
                 onMediaUrlsChange={(mediaUrls) => {
-                    setFormValues((current) => ({
-                        ...current,
-                        mediaUrls,
-                    }));
+                    setFormValues((c) => ({ ...c, mediaUrls }));
                 }}
                 onStockChange={(stock) => {
-                    setFormValues((current) => ({
-                        ...current,
-                        stock,
-                    }));
+                    setFormValues((c) => ({ ...c, stock }));
                 }}
                 onSubmit={handleSubmit}
                 onTypeChange={(type) => {
-                    setFormValues((current) => ({
-                        ...current,
-                        type,
-                    }));
+                    setFormValues((c) => ({ ...c, type }));
                 }}
                 priceInput={priceInput}
-                submitLabel={submitLabel}
+                submitLabel="Create product"
                 values={formValues}
             />
         </>

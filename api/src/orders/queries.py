@@ -59,9 +59,9 @@ SELECT
     order_items.order_id,
     order_items.product_id,
     order_items.quantity,
+    order_items.price_cents,
     products.name,
     products.code,
-    products.price_cents,
     products.media_urls_json
 FROM order_items
 JOIN products ON products.product_id = order_items.product_id
@@ -75,8 +75,8 @@ VALUES (?, ?, ?, ?, ?, ?, ?)
 """
 
 INSERT_ORDER_ITEM = """
-INSERT INTO order_items (order_id, product_id, quantity)
-VALUES (?, ?, ?)
+INSERT INTO order_items (order_id, product_id, quantity, price_cents)
+VALUES (?, ?, ?, ?)
 """
 
 UPDATE_ORDER_STATUS = """

@@ -2,7 +2,7 @@ import { useEffect, useState, type SubmitEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { authApi } from '@features/auth/api';
-import { PasswordRuleList } from '@features/auth/PasswordRuleList';
+import { PasswordRuleList } from '@features/auth/components/PasswordRuleList';
 import { buildSignInPath, normalizeNextPath } from '@features/auth/redirects';
 import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { downloadHtmlAndNotify } from '@shared/services/download';

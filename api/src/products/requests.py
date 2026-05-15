@@ -18,6 +18,8 @@ class ProductRequest(BaseModel):
 
 class ProductListQuery(ProductRequest):
     q: str = ""
+    type: str = ""
+    page: int = 1
 
 
 class ProductMutationRequest(ApiRequestModel):

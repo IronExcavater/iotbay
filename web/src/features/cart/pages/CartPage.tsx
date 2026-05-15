@@ -1,0 +1,577 @@
+import { useEffect, useMemo, useState } from 'react';
+import { FaCartShopping, FaTrashCan } from 'react-icons/fa6';
+import { Link, useNavigate } from 'react-router-dom';
+
+import {
+    DEFAULT_PROFILE_VALUES,
+    toProfileUpdateInput,
+    toProfileValues,
+} from '@features/account/form';
+import { AddressFields } from '@features/addresses/components/AddressFields';
+import {
+    setAddressField,
+    validateAddressValues,
+    type AddressFieldErrors,
+    type AddressFieldName,
+} from '@features/addresses/form';
+import { useAuth } from '@features/auth/AuthProvider';
+import { useCart } from '@features/cart/CartProvider';
+import { CartQuantityControl } from '@features/cart/components/CartQuantityControl';
+import { TermsDialog } from '@features/legal/TermsDialog';
+import { orderApi } from '@features/orders/api';
+import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
+import { Button, ButtonLink } from '@shared/ui/form/Button';
+import { Checkbox } from '@shared/ui/form/Checkbox';
+import { Field } from '@shared/ui/form/Field';
+import { Input } from '@shared/ui/form/Input';
+import { TextButton } from '@shared/ui/form/TextLink';
+import { PageHeader } from '@shared/ui/PageHeader';
+import { useToast } from '@shared/ui/toast/ToastProvider';
+import { AddressText } from '@shared/value-objects/AddressText';
+import { Money } from '@shared/value-objects/Money';
+
+export default function CartPage() {
+    useDocumentTitle('Cart');
+    const { updateMe, user } = useAuth();
+    const { clearCart, items, removeFromCart, setItemQuantity } = useCart();
+    const { showToast } = useToast();
+    const [addressValues, setAddressValues] = useState(DEFAULT_PROFILE_VALUES);
+    const [initialAddressValues, setInitialAddressValues] = useState(
+        DEFAULT_PROFILE_VALUES
+    );
+    const [addressErrors, setAddressErrors] = useState<AddressFieldErrors>({});
+    const [acceptedTerms, setAcceptedTerms] = useState(false);
+    const [isTermsOpen, setIsTermsOpen] = useState(false);
+    const [isOrdering, setIsOrdering] = useState(false);
+    const [paymentValues, setPaymentValues] = useState({
+        cardholderName: '',
+        cardNumber: '',
+        cvc: '',
+        expiry: '',
+    });
+    const [paymentErrors, setPaymentErrors] = useState<
+        Partial<Record<keyof typeof paymentValues, string>>
+    >({});
+
+    useEffect(() => {
+        const nextValues = user
+            ? toProfileValues(user)
+            : DEFAULT_PROFILE_VALUES;
+        setAddressValues(nextValues);
+        setInitialAddressValues(nextValues);
+        setAddressErrors({});
+    }, [user]);
+
+    const subtotalCents = useMemo(
+        () =>
+            items.reduce(
+                (sum, item) => sum + item.priceCents * item.quantity,
+                0
+            ),
+        [items]
+    );
+    const deliveryCents = items.length > 0 ? 1200 : 0;
+    const totalCents = subtotalCents + deliveryCents;
+    const hasSelectedAddress = AddressText.hasSelectedAddress(addressValues);
+    const isCustomer = user?.userType === 'customer';
+    const addressChanged = hasAddressChanged(
+        addressValues,
+        initialAddressValues
+    );
+    const canOrder =
+        items.length > 0 &&
+        Boolean(user) &&
+        isCustomer &&
+        hasSelectedAddress &&
+        acceptedTerms;
+
+    function handleAddressFieldChange(name: AddressFieldName, value: string) {
+        setAddressValues((current) => setAddressField(current, name, value));
+    }
+
+    const navigate = useNavigate();
+
+    async function handleOrder() {
+        const nextAddressErrors = validateAddressValues(addressValues, true);
+        const nextPaymentErrors = validatePaymentValues(paymentValues);
+        setAddressErrors(nextAddressErrors);
+        setPaymentErrors(nextPaymentErrors);
+        if (
+            !canOrder ||
+            Object.values(nextAddressErrors).some(Boolean) ||
+            Object.values(nextPaymentErrors).some(Boolean) ||
+            !user
+        )
+            return;
+
+        setIsOrdering(true);
+        try {
+            if (addressChanged) {
+                await updateMe(
+                    toProfileUpdateInput(addressValues, {
+                        emailChanged: false,
+                        isCustomer: true,
+                        isStaff: false,
+                    })
+                );
+            }
+
+            await orderApi.create({
+                addressId: null,
+                items: items.map((item) => ({
+                    productId: item.productId,
+                    quantity: item.quantity,
+                })),
+            });
+
+            clearCart();
+            showToast('Order placed successfully');
+            navigate('/orders');
+        } catch {
+            showToast('Unable to place order');
+        } finally {
+            setIsOrdering(false);
+        }
+    }
+
+    return (
+        <section className="grid gap-6">
+            <PageHeader
+                description="Check the items, delivery address, and total before placing your order."
+                title="Cart"
+            />
+
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_30rem] xl:items-start">
+                <section className="bg-ui-0 border-ui-200 overflow-hidden rounded border">
+                    {items.length > 0 && (
+                        <div className="border-ui-200 flex items-center justify-end border-b px-5 py-3">
+                            <Button
+                                onClick={() => {
+                                    if (
+                                        window.confirm(
+                                            'Remove all items from cart?'
+                                        )
+                                    ) {
+                                        clearCart();
+                                    }
+                                }}
+                                type="button"
+                                variant="danger"
+                            >
+                                Clear cart
+                            </Button>
+                        </div>
+                    )}
+
+                    {items.length === 0 ? (
+                        <div className="grid justify-items-center gap-3 px-5 py-12 text-center">
+                            <FaCartShopping
+                                aria-hidden="true"
+                                className="text-ui-300 size-8"
+                            />
+                            <p className="text-ui-500 text-sm">
+                                Your cart is empty.
+                            </p>
+                            <ButtonLink to="/products" variant="secondary">
+                                Browse catalogue
+                            </ButtonLink>
+                        </div>
+                    ) : (
+                        <ul className="divide-ui-200 divide-y">
+                            {items.map((item) => (
+                                <li
+                                    className="grid gap-4 px-5 py-4 md:grid-cols-[4.5rem_minmax(0,1fr)_auto] md:items-center"
+                                    key={item.productId}
+                                >
+                                    <div className="bg-ui-100 border-ui-200 hidden aspect-square overflow-hidden rounded border md:block">
+                                        <img
+                                            alt=""
+                                            className="h-full w-full object-cover"
+                                            src={
+                                                item.imageUrl ??
+                                                '/iotbay_icon_themed.svg'
+                                            }
+                                        />
+                                    </div>
+                                    <div className="flex min-w-0 items-start gap-3">
+                                        <div className="bg-ui-100 border-ui-200 size-14 shrink-0 overflow-hidden rounded border md:hidden">
+                                            <img
+                                                alt=""
+                                                className="h-full w-full object-cover"
+                                                src={
+                                                    item.imageUrl ??
+                                                    '/iotbay_icon_themed.svg'
+                                                }
+                                            />
+                                        </div>
+                                        <div className="grid min-w-0 gap-0.5">
+                                            {item.code && (
+                                                <span className="text-ui-500 font-mono text-xs">
+                                                    {item.code}
+                                                </span>
+                                            )}
+                                            <Link
+                                                className="text-ui-900 w-fit truncate font-medium underline-offset-4 outline-none hover:underline focus-visible:underline"
+                                                to={`/products/${item.productId}`}
+                                            >
+                                                {item.name}
+                                            </Link>
+                                            <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                                                <span className="text-ui-900 font-semibold">
+                                                    {Money.format(
+                                                        item.priceCents *
+                                                            item.quantity
+                                                    )}
+                                                </span>
+                                                {item.quantity > 1 && (
+                                                    <span className="text-ui-400 text-xs">
+                                                        {item.quantity} &times;{' '}
+                                                        {Money.format(
+                                                            item.priceCents
+                                                        )}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex shrink-0 items-center gap-2 pl-17 md:pl-0">
+                                        <CartQuantityControl
+                                            label={item.name}
+                                            onChange={(quantity) =>
+                                                setItemQuantity(
+                                                    item.productId,
+                                                    quantity
+                                                )
+                                            }
+                                            value={item.quantity}
+                                        />
+                                        <Button
+                                            aria-label={`Remove ${item.name}`}
+                                            className="inline-flex size-9 rounded-full p-0"
+                                            onClick={() =>
+                                                removeFromCart(item.productId)
+                                            }
+                                            type="button"
+                                            variant="ghost"
+                                        >
+                                            <FaTrashCan
+                                                aria-hidden="true"
+                                                className="size-3.5"
+                                            />
+                                        </Button>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </section>
+
+                <aside className="bg-ui-0 border-ui-200 grid gap-5 rounded border p-5 xl:sticky xl:top-6">
+                    <div className="grid gap-3">
+                        <h2 className="text-ui-900 text-xl font-semibold">
+                            Order
+                        </h2>
+                        <div className="grid gap-2 text-sm">
+                            <SummaryRow
+                                label="Subtotal"
+                                value={Money.format(subtotalCents)}
+                            />
+                            <SummaryRow
+                                label="Delivery"
+                                value={
+                                    items.length > 0
+                                        ? Money.format(deliveryCents)
+                                        : Money.format(0)
+                                }
+                            />
+                            <div className="border-ui-200 mt-1 flex justify-between border-t pt-3 text-base font-semibold">
+                                <span>Total</span>
+                                <span>{Money.format(totalCents)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {user && isCustomer ? (
+                        <>
+                            <div className="grid gap-2">
+                                <h3 className="text-ui-700 text-sm font-semibold tracking-[0.08em] uppercase">
+                                    Delivery address
+                                </h3>
+                                <AddressFields
+                                    countryCode={addressValues.phoneCountry}
+                                    errors={addressErrors}
+                                    onFieldChange={handleAddressFieldChange}
+                                    values={addressValues}
+                                />
+                            </div>
+
+                            <PaymentFields
+                                errors={paymentErrors}
+                                onChange={(name, value) => {
+                                    setPaymentValues((current) => ({
+                                        ...current,
+                                        [name]: value,
+                                    }));
+                                    setPaymentErrors((current) => ({
+                                        ...current,
+                                        [name]: undefined,
+                                    }));
+                                }}
+                                values={paymentValues}
+                            />
+
+                            <Checkbox
+                                checked={acceptedTerms}
+                                className="items-start"
+                                onChange={(checked) => {
+                                    if (checked) {
+                                        setIsTermsOpen(true);
+                                    } else {
+                                        setAcceptedTerms(false);
+                                    }
+                                }}
+                            >
+                                I agree to the{' '}
+                                <TextButton
+                                    onClick={() => setIsTermsOpen(true)}
+                                >
+                                    terms and conditions
+                                </TextButton>
+                                .
+                            </Checkbox>
+
+                            {!hasSelectedAddress && (
+                                <p className="text-ui-500 text-sm">
+                                    Enter a delivery address before ordering.
+                                </p>
+                            )}
+                        </>
+                    ) : user ? (
+                        <p className="text-ui-500 text-sm">
+                            Orders can only be placed from a customer account.
+                        </p>
+                    ) : null}
+
+                    {user ? (
+                        <Button
+                            disabled={!canOrder || isOrdering}
+                            loading={isOrdering}
+                            onClick={() => void handleOrder()}
+                            type="button"
+                            variant="primary"
+                        >
+                            Place order
+                        </Button>
+                    ) : (
+                        <ButtonLink to="/sign-in?next=/cart">
+                            Sign in to order
+                        </ButtonLink>
+                    )}
+                </aside>
+            </div>
+            {isTermsOpen && (
+                <TermsDialog
+                    onAccept={() => setAcceptedTerms(true)}
+                    onClose={() => setIsTermsOpen(false)}
+                />
+            )}
+        </section>
+    );
+}
+
+function PaymentFields({
+    errors,
+    onChange,
+    values,
+}: {
+    errors: Partial<Record<keyof PaymentValues, string>>;
+    onChange: (name: keyof PaymentValues, value: string) => void;
+    values: PaymentValues;
+}) {
+    return (
+        <section className="grid gap-3">
+            <h3 className="text-ui-700 text-sm font-semibold tracking-[0.08em] uppercase">
+                Payment method
+            </h3>
+            <Field
+                error={errors.cardholderName}
+                label="Name on card"
+                metaPlacement="below"
+                required
+            >
+                <Input
+                    autoComplete="cc-name"
+                    hasError={Boolean(errors.cardholderName)}
+                    onChange={(event) =>
+                        onChange('cardholderName', event.target.value)
+                    }
+                    placeholder="Jane Doe"
+                    value={values.cardholderName}
+                />
+            </Field>
+            <Field
+                error={errors.cardNumber}
+                label="Card number"
+                metaPlacement="below"
+                required
+            >
+                <Input
+                    autoComplete="cc-number"
+                    hasError={Boolean(errors.cardNumber)}
+                    inputMode="numeric"
+                    maxLength={19}
+                    onChange={(event) =>
+                        onChange(
+                            'cardNumber',
+                            formatCardNumber(event.target.value)
+                        )
+                    }
+                    placeholder="4242 4242 4242 4242"
+                    value={values.cardNumber}
+                />
+            </Field>
+            <div className="grid gap-3 sm:grid-cols-2">
+                <Field
+                    error={errors.expiry}
+                    label="Expiry"
+                    metaPlacement="below"
+                    required
+                >
+                    <Input
+                        autoComplete="cc-exp"
+                        hasError={Boolean(errors.expiry)}
+                        inputMode="numeric"
+                        maxLength={5}
+                        onChange={(event) =>
+                            onChange('expiry', formatExpiry(event.target.value))
+                        }
+                        placeholder="MM/YY"
+                        value={values.expiry}
+                    />
+                </Field>
+                <Field
+                    error={errors.cvc}
+                    label="Security code"
+                    metaPlacement="below"
+                    required
+                >
+                    <Input
+                        autoComplete="cc-csc"
+                        hasError={Boolean(errors.cvc)}
+                        inputMode="numeric"
+                        maxLength={4}
+                        onChange={(event) =>
+                            onChange(
+                                'cvc',
+                                event.target.value
+                                    .replace(/\D/g, '')
+                                    .slice(0, 4)
+                            )
+                        }
+                        placeholder="123"
+                        value={values.cvc}
+                    />
+                </Field>
+            </div>
+        </section>
+    );
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="text-ui-600 flex justify-between gap-3">
+            <span>{label}</span>
+            <span className="text-ui-900">{value}</span>
+        </div>
+    );
+}
+
+type PaymentValues = {
+    cardholderName: string;
+    cardNumber: string;
+    cvc: string;
+    expiry: string;
+};
+
+function formatCardNumber(value: string) {
+    return value
+        .replace(/\D/g, '')
+        .slice(0, 16)
+        .replace(/(\d{4})(?=\d)/g, '$1 ')
+        .trim();
+}
+
+function formatExpiry(value: string) {
+    const digits = value.replace(/\D/g, '').slice(0, 4);
+    if (digits.length <= 2) return digits;
+    return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+}
+
+function validatePaymentValues(values: PaymentValues) {
+    const errors: Partial<Record<keyof PaymentValues, string>> = {};
+    const cardDigits = values.cardNumber.replace(/\D/g, '');
+    const expiryMatch = /^(\d{2})\/(\d{2})$/.exec(values.expiry);
+
+    if (values.cardholderName.trim().length < 2) {
+        errors.cardholderName = 'Enter the name printed on the card';
+    }
+
+    if (cardDigits.length < 13 || cardDigits.length > 16) {
+        errors.cardNumber = 'Enter a valid card number';
+    } else if (!passesLuhnCheck(cardDigits)) {
+        errors.cardNumber = 'Check the card number';
+    }
+
+    if (!expiryMatch) {
+        errors.expiry = 'Use MM/YY';
+    } else {
+        const month = Number(expiryMatch[1]);
+        const year = 2000 + Number(expiryMatch[2]);
+        const expiresAt = new Date(year, month);
+        const now = new Date();
+        const currentMonth = new Date(now.getFullYear(), now.getMonth());
+
+        if (month < 1 || month > 12) {
+            errors.expiry = 'Enter a valid month';
+        } else if (expiresAt <= currentMonth) {
+            errors.expiry = 'Card has expired';
+        }
+    }
+
+    if (!/^\d{3,4}$/.test(values.cvc)) {
+        errors.cvc = 'Enter the 3 or 4 digit code';
+    }
+
+    return errors;
+}
+
+function passesLuhnCheck(value: string) {
+    let sum = 0;
+    let shouldDouble = false;
+
+    for (let index = value.length - 1; index >= 0; index -= 1) {
+        let digit = Number(value[index]);
+        if (shouldDouble) {
+            digit *= 2;
+            if (digit > 9) digit -= 9;
+        }
+        sum += digit;
+        shouldDouble = !shouldDouble;
+    }
+
+    return sum % 10 === 0;
+}
+
+function hasAddressChanged(
+    current: typeof DEFAULT_PROFILE_VALUES,
+    initial: typeof DEFAULT_PROFILE_VALUES
+) {
+    return (
+        current.addressLineOne !== initial.addressLineOne ||
+        current.addressLineTwo !== initial.addressLineTwo ||
+        current.suburb !== initial.suburb ||
+        current.state !== initial.state ||
+        current.postcode !== initial.postcode ||
+        current.country !== initial.country
+    );
+}
