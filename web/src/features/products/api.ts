@@ -33,6 +33,9 @@ export interface ProductListParams {
     search?: string;
     type?: string;
     page?: number;
+    minPriceCents?: number;
+    maxPriceCents?: number;
+    inStock?: boolean;
 }
 
 export interface ProductsPage {
@@ -56,6 +59,11 @@ export const productApi = {
         if (params.type) query.set('type', params.type);
         if (params.page && params.page > 1)
             query.set('page', String(params.page));
+        if (params.minPriceCents !== undefined)
+            query.set('minPriceCents', String(params.minPriceCents));
+        if (params.maxPriceCents !== undefined)
+            query.set('maxPriceCents', String(params.maxPriceCents));
+        if (params.inStock) query.set('inStock', 'true');
         const qs = query.toString();
         return getJson<ProductsPage>(
             `/api/products${qs ? `?${qs}` : ''}`,

@@ -36,6 +36,9 @@ def list_products():
     items, total = services().products.list_products(
         search=query.q or None,
         type_filter=query.type or None,
+        min_price_cents=query.min_price_cents,
+        max_price_cents=query.max_price_cents,
+        in_stock=query.in_stock,
         page=max(1, query.page),
         limit=_PAGE_LIMIT,
     )

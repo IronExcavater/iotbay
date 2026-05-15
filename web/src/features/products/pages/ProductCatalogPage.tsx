@@ -87,7 +87,7 @@ function buildTypeTree(types: ProductTypeCount[]): TypeTreeNode[] {
 
 // ── Sidebar components ─────────────────────────────────────────────────────────
 
-const DEPTH_PADDING = ['pl-2', 'pl-5', 'pl-8', 'pl-11'] as const;
+const DEPTH_PADDING = ['', 'pl-4', 'pl-8', 'pl-12'] as const;
 
 function TypeTreeNode({
     depth,
@@ -104,34 +104,49 @@ function TypeTreeNode({
     const isAncestor = selected.startsWith(`${node.path}/`) && !isSelected;
     const [expanded, setExpanded] = useState(isSelected || isAncestor);
     const hasChildren = node.children.length > 0;
+    const pad = DEPTH_PADDING[Math.min(depth, DEPTH_PADDING.length - 1)];
 
     return (
         <li>
-            <button
-                className={`focus-visible:ring-ui-900 flex w-full items-center gap-1.5 rounded py-1.5 pr-2 text-sm transition-colors outline-none focus-visible:ring-2 ${DEPTH_PADDING[Math.min(depth, DEPTH_PADDING.length - 1)]} ${
-                    isSelected
-                        ? 'bg-ui-950 text-ui-0'
-                        : 'text-ui-700 hover:bg-ui-100 hover:text-ui-900'
-                }`}
-                onClick={() => {
-                    if (hasChildren) setExpanded((e) => !e);
-                    onSelect(isSelected ? '' : node.path);
-                }}
-                type="button"
-            >
-                {hasChildren && (
-                    <FaChevronRight
-                        aria-hidden="true"
-                        className={`size-2.5 shrink-0 transition-transform ${expanded ? 'rotate-90' : ''} ${isSelected ? 'text-ui-0/60' : 'text-ui-400'}`}
-                    />
+            <div className={`flex items-center ${pad}`}>
+                {hasChildren ? (
+                    <button
+                        aria-label={
+                            expanded
+                                ? `Collapse ${node.label}`
+                                : `Expand ${node.label}`
+                        }
+                        className="focus-visible:ring-ui-900 text-ui-400 hover:text-ui-700 flex h-7 w-6 shrink-0 items-center justify-center rounded transition-colors outline-none focus-visible:ring-2"
+                        onClick={() => setExpanded((e) => !e)}
+                        type="button"
+                    >
+                        <FaChevronRight
+                            aria-hidden="true"
+                            className={`size-2.5 transition-transform ${expanded ? 'rotate-90' : ''}`}
+                        />
+                    </button>
+                ) : (
+                    <span aria-hidden="true" className="w-6 shrink-0" />
                 )}
-                <span className="flex-1 truncate text-left">{node.label}</span>
-                <span
-                    className={`shrink-0 text-xs tabular-nums ${isSelected ? 'text-ui-0/60' : 'text-ui-400'}`}
+                <button
+                    className={`focus-visible:ring-ui-900 flex flex-1 items-center gap-1.5 rounded py-1.5 pr-2 pl-1 text-sm transition-colors outline-none focus-visible:ring-2 ${
+                        isSelected
+                            ? 'bg-ui-950 text-ui-0'
+                            : 'text-ui-700 hover:bg-ui-100 hover:text-ui-900'
+                    }`}
+                    onClick={() => onSelect(isSelected ? '' : node.path)}
+                    type="button"
                 >
-                    {node.count}
-                </span>
-            </button>
+                    <span className="flex-1 truncate text-left">
+                        {node.label}
+                    </span>
+                    <span
+                        className={`shrink-0 text-xs tabular-nums ${isSelected ? 'text-ui-0/60' : 'text-ui-400'}`}
+                    >
+                        {node.count}
+                    </span>
+                </button>
+            </div>
             {hasChildren && expanded && (
                 <ul className="mt-0.5 grid gap-0.5">
                     {node.children.map((child) => (
@@ -203,9 +218,15 @@ function TypeBreadcrumb({
 // ── Hover overlay ──────────────────────────────────────────────────────────────
 
 function ProductOverlay({ product }: { product: Product }) {
+    const image = product.mediaUrls[0] ?? '/iotbay_icon_themed.svg';
+    const cartItem = {
+        code: product.code,
+        imageUrl: image,
+        name: product.name,
+        priceCents: product.priceCents,
+        productId: product.id,
+    };
     const media = product.mediaUrls;
-
-    if (!product.description && media.length <= 1) return null;
 
     return (
         <div className="pointer-events-none absolute top-[calc(100%-1px)] right-0 left-0 z-20 translate-y-1 opacity-0 transition-[opacity,transform] duration-150 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100">
@@ -214,16 +235,17 @@ function ProductOverlay({ product }: { product: Product }) {
                     {media.length > 1 && (
                         <div className="-mx-0.5 flex gap-1.5 overflow-x-auto px-0.5 py-0.5">
                             {media.map((url) => (
-                                <div
+                                <Link
                                     key={url}
-                                    className="border-ui-200 size-11 shrink-0 overflow-hidden rounded border"
+                                    className="border-ui-200 focus-visible:ring-ui-900 block size-11 shrink-0 overflow-hidden rounded border outline-none focus-visible:ring-2"
+                                    to={`/products/${product.id}`}
                                 >
                                     <img
                                         alt=""
                                         className="h-full w-full object-cover"
                                         src={url}
                                     />
-                                </div>
+                                </Link>
                             ))}
                         </div>
                     )}
@@ -232,6 +254,12 @@ function ProductOverlay({ product }: { product: Product }) {
                             {product.description}
                         </p>
                     )}
+                    <div className="flex justify-end">
+                        <AddToCartControl
+                            item={cartItem}
+                            stock={product.stock}
+                        />
+                    </div>
                 </div>
             </div>
         </div>
@@ -242,13 +270,6 @@ function ProductOverlay({ product }: { product: Product }) {
 
 function ProductCard({ product }: { product: Product }) {
     const image = product.mediaUrls[0] ?? '/iotbay_icon_themed.svg';
-    const cartItem = {
-        code: product.code,
-        imageUrl: image,
-        name: product.name,
-        priceCents: product.priceCents,
-        productId: product.id,
-    };
 
     return (
         <article className="group relative z-0 hover:z-10">
@@ -275,17 +296,9 @@ function ProductCard({ product }: { product: Product }) {
                             {product.name}
                         </Link>
                     </h2>
-
-                    <div className="flex items-center justify-between gap-2">
-                        <p className="text-ui-900 text-lg leading-none font-semibold">
-                            {Money.format(product.priceCents)}
-                        </p>
-                        <AddToCartControl
-                            item={cartItem}
-                            stock={product.stock}
-                        />
-                    </div>
-
+                    <p className="text-ui-900 text-lg leading-none font-semibold">
+                        {Money.format(product.priceCents)}
+                    </p>
                     <div className="flex flex-wrap items-center gap-1.5">
                         <ProductTagRow product={product} />
                         <StockStatus product={product} />
@@ -333,7 +346,7 @@ function ProductListRow({
     };
 
     return (
-        <article className="group hover:bg-ui-50 relative z-0 grid grid-cols-[5rem_minmax(0,1fr)_auto] items-stretch transition-colors hover:z-10">
+        <article className="group hover:bg-ui-50 relative z-0 grid grid-cols-[5rem_minmax(0,1fr)] items-stretch transition-colors hover:z-10">
             <button
                 aria-label={`View ${product.name}`}
                 className="focus-visible:ring-ui-900 overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset"
@@ -372,34 +385,42 @@ function ProductListRow({
                 )}
             </div>
 
-            <div
-                className="flex items-start justify-end px-4 py-3.5"
-                onClick={(event) => event.stopPropagation()}
-            >
-                <AddToCartControl item={cartItem} stock={product.stock} />
-            </div>
-
-            {/* Row overlay with all media */}
-            {product.mediaUrls.length > 1 && (
-                <div className="pointer-events-none absolute top-[calc(100%-1px)] right-0 left-0 z-20 translate-y-0.5 opacity-0 transition-[opacity,transform] duration-150 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100">
-                    <div className="border-ui-200 bg-ui-0 overflow-hidden border border-t-0 shadow-[0_4px_16px_rgba(0,0,0,0.08)]">
-                        <div className="-mx-0.5 flex gap-1.5 overflow-x-auto px-4 py-2.5">
-                            {product.mediaUrls.map((url) => (
-                                <div
-                                    key={url}
-                                    className="border-ui-200 size-12 shrink-0 overflow-hidden rounded border"
-                                >
-                                    <img
-                                        alt=""
-                                        className="h-full w-full object-cover"
-                                        src={url}
-                                    />
-                                </div>
-                            ))}
+            {/* Row overlay: media gallery + add-to-cart */}
+            <div className="pointer-events-none absolute top-[calc(100%-1px)] right-0 left-0 z-20 translate-y-0.5 opacity-0 transition-[opacity,transform] duration-150 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100">
+                <div className="border-ui-200 bg-ui-0 overflow-hidden border border-t-0 shadow-[0_4px_16px_rgba(0,0,0,0.08)]">
+                    <div className="flex items-center gap-4 px-4 py-2.5">
+                        {product.mediaUrls.length > 1 && (
+                            <div className="-mx-0.5 flex flex-1 gap-1.5 overflow-x-auto px-0.5 py-0.5">
+                                {product.mediaUrls.map((url) => (
+                                    <Link
+                                        key={url}
+                                        className="border-ui-200 focus-visible:ring-ui-900 block size-12 shrink-0 overflow-hidden rounded border outline-none focus-visible:ring-2"
+                                        to={`/products/${product.id}`}
+                                    >
+                                        <img
+                                            alt=""
+                                            className="h-full w-full object-cover"
+                                            src={url}
+                                        />
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
+                        <div
+                            className={
+                                product.mediaUrls.length > 1
+                                    ? 'shrink-0'
+                                    : 'ml-auto'
+                            }
+                        >
+                            <AddToCartControl
+                                item={cartItem}
+                                stock={product.stock}
+                            />
                         </div>
                     </div>
                 </div>
-            )}
+            </div>
         </article>
     );
 }
@@ -470,6 +491,11 @@ export default function ProductCatalogPage() {
 
     const [search, setSearch] = useState('');
     const debouncedSearch = useDebounce(search, 350);
+    const [minPrice, setMinPrice] = useState('');
+    const [maxPrice, setMaxPrice] = useState('');
+    const debouncedMinPrice = useDebounce(minPrice, 500);
+    const debouncedMaxPrice = useDebounce(maxPrice, 500);
+    const [inStock, setInStock] = useState(false);
     const [view, setView] = useState<CatalogueView>('cards');
 
     const [products, setProducts] = useState<Product[]>([]);
@@ -485,6 +511,15 @@ export default function ProductCatalogPage() {
     const stablePages = useRef(totalPages);
     if (!isLoading) stablePages.current = totalPages;
 
+    const minPriceCents =
+        debouncedMinPrice.trim() && !isNaN(parseFloat(debouncedMinPrice))
+            ? Math.round(parseFloat(debouncedMinPrice) * 100)
+            : undefined;
+    const maxPriceCents =
+        debouncedMaxPrice.trim() && !isNaN(parseFloat(debouncedMaxPrice))
+            ? Math.round(parseFloat(debouncedMaxPrice) * 100)
+            : undefined;
+
     // Load products whenever filters/page change
     useEffect(() => {
         const ac = new AbortController();
@@ -496,6 +531,9 @@ export default function ProductCatalogPage() {
                     page,
                     search: debouncedSearch.trim() || undefined,
                     type: selectedType || undefined,
+                    minPriceCents,
+                    maxPriceCents,
+                    inStock: inStock || undefined,
                 },
                 ac.signal
             )
@@ -519,7 +557,14 @@ export default function ProductCatalogPage() {
             });
 
         return () => ac.abort();
-    }, [debouncedSearch, selectedType, page]);
+    }, [
+        debouncedSearch,
+        selectedType,
+        page,
+        minPriceCents,
+        maxPriceCents,
+        inStock,
+    ]);
 
     // Load types sidebar once
     useEffect(() => {
@@ -552,7 +597,13 @@ export default function ProductCatalogPage() {
     }
 
     const typeTree = buildTypeTree(types);
-    const hasFilters = Boolean(debouncedSearch.trim() || selectedType);
+    const hasFilters = Boolean(
+        debouncedSearch.trim() ||
+        selectedType ||
+        minPrice.trim() ||
+        maxPrice.trim() ||
+        inStock
+    );
 
     return (
         <section className="grid gap-6">
@@ -563,13 +614,89 @@ export default function ProductCatalogPage() {
 
             <div className="grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start">
                 {/* ── Sidebar ────────────────────────────────────────────── */}
-                <aside className="grid gap-5">
+                <aside className="grid gap-5 lg:sticky lg:top-6 lg:self-start">
                     <SearchInput
                         className="w-full"
                         onChange={setSearch}
                         placeholder="Search catalogue"
                         value={search}
                     />
+
+                    {/* Price filter */}
+                    <div className="bg-ui-0 border-ui-200 overflow-hidden rounded border">
+                        <div className="border-ui-200 flex items-center justify-between border-b px-3 py-2.5">
+                            <span className="text-ui-700 text-xs font-semibold tracking-[0.08em] uppercase">
+                                Price
+                            </span>
+                            {(minPrice || maxPrice) && (
+                                <button
+                                    className="text-ui-500 hover:text-ui-900 text-xs transition-colors"
+                                    onClick={() => {
+                                        setMinPrice('');
+                                        setMaxPrice('');
+                                    }}
+                                    type="button"
+                                >
+                                    Clear
+                                </button>
+                            )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 p-3">
+                            <label className="grid gap-1">
+                                <span className="text-ui-500 text-xs">Min</span>
+                                <div className="ring-ui-300 focus-within:ring-ui-900 flex items-center gap-1 rounded px-2 py-1.5 ring-1 transition-shadow">
+                                    <span className="text-ui-400 text-sm">
+                                        $
+                                    </span>
+                                    <input
+                                        className="text-ui-900 w-full bg-transparent text-sm outline-none"
+                                        min="0"
+                                        onChange={(e) =>
+                                            setMinPrice(e.target.value)
+                                        }
+                                        placeholder="0"
+                                        step="0.01"
+                                        type="number"
+                                        value={minPrice}
+                                    />
+                                </div>
+                            </label>
+                            <label className="grid gap-1">
+                                <span className="text-ui-500 text-xs">Max</span>
+                                <div className="ring-ui-300 focus-within:ring-ui-900 flex items-center gap-1 rounded px-2 py-1.5 ring-1 transition-shadow">
+                                    <span className="text-ui-400 text-sm">
+                                        $
+                                    </span>
+                                    <input
+                                        className="text-ui-900 w-full bg-transparent text-sm outline-none"
+                                        min="0"
+                                        onChange={(e) =>
+                                            setMaxPrice(e.target.value)
+                                        }
+                                        placeholder="Any"
+                                        step="0.01"
+                                        type="number"
+                                        value={maxPrice}
+                                    />
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* In-stock filter */}
+                    <div className="bg-ui-0 border-ui-200 overflow-hidden rounded border">
+                        <label className="flex cursor-pointer items-center gap-3 px-3 py-3">
+                            <input
+                                checked={inStock}
+                                className="accent-ui-900 size-4 cursor-pointer"
+                                onChange={(e) => setInStock(e.target.checked)}
+                                type="checkbox"
+                            />
+                            <span className="text-ui-700 text-sm">
+                                In stock only
+                            </span>
+                        </label>
+                    </div>
 
                     {typeTree.length > 0 && (
                         <div className="bg-ui-0 border-ui-200 overflow-hidden rounded border">

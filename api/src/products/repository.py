@@ -28,6 +28,9 @@ class ProductRepository(Repository):
         *,
         search: str | None = None,
         type_filter: str | None = None,
+        min_price_cents: int | None = None,
+        max_price_cents: int | None = None,
+        in_stock: bool = False,
         page: int = 1,
         limit: int = 24,
     ) -> tuple[list[Product], int]:
@@ -44,6 +47,17 @@ class ProductRepository(Repository):
         if type_filter:
             conditions.append("(products.type = ? OR products.type LIKE ?)")
             params.extend([type_filter, f"{type_filter}/%"])
+
+        if min_price_cents is not None:
+            conditions.append("products.price_cents >= ?")
+            params.append(min_price_cents)
+
+        if max_price_cents is not None:
+            conditions.append("products.price_cents <= ?")
+            params.append(max_price_cents)
+
+        if in_stock:
+            conditions.append("products.stock > 0")
 
         where = " AND ".join(conditions)
         base = (

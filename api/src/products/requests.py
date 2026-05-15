@@ -20,6 +20,9 @@ class ProductListQuery(ProductRequest):
     q: str = ""
     type: str = ""
     page: int = 1
+    min_price_cents: int | None = None
+    max_price_cents: int | None = None
+    in_stock: bool = False
 
 
 class ProductMutationRequest(ApiRequestModel):
