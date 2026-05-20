@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { FaPenToSquare } from 'react-icons/fa6';
 import { AddressFields } from '@features/addresses/components/AddressFields';
@@ -50,7 +50,6 @@ export default function OrdersPage() {
     function handleSearch(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
         const params: OrderSearchParams = {};
-        if (searchId.trim()) params.orderId = searchId.trim();
         if (searchDate) params.date = searchDate;
         fetchOrders(undefined, params);
     }
@@ -60,6 +59,12 @@ export default function OrdersPage() {
         setSearchDate('');
         fetchOrders();
     }
+
+    const filteredOrders = useMemo(() => {
+        if (!searchId.trim()) return orders;
+        const query = searchId.trim().toLowerCase();
+        return orders.filter((order) => order.id.toLowerCase().includes(query));
+    }, [orders, searchId]);
 
     return (
         <section className="grid gap-6">
@@ -125,7 +130,7 @@ export default function OrdersPage() {
 
             {!loading && orders.length > 0 && (
                 <ul className="grid gap-4">
-                    {orders.map((order) => (
+                    {filteredOrders.map((order) => (
                         <OrderCard
                             key={order.id}
                             order={order}

@@ -26,19 +26,11 @@ def list_orders():
         raise ApiError("Authentication required", 401)
 
     repo = services().order_repository
-    order_id_param = flask_request.args.get("orderId")
     date_param = flask_request.args.get("date")
 
-    if order_id_param or date_param:
-        try:
-            order_id_bytes = (
-                id_string_to_bytes(order_id_param) if order_id_param else None
-            )
-        except ValueError:
-            raise ApiError("Invalid order ID format", 400, code="INVALID_ID")
+    if date_param:
         orders = repo.search_orders_by_user(
             user_id=user.user_id,
-            order_id=order_id_bytes,
             date=date_param,
         )
     else:
