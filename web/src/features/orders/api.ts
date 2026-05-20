@@ -13,6 +13,13 @@ export interface Order {
     id: string;
     createdAt: string;
     items: OrderItem[];
+    shippingAddress: string | null;
+    shippingAddressLineOne: string | null;
+    addressLineTwo: string | null;
+    shippingSuburb: string | null;
+    shippingState: string | null;
+    shippingPostcode: string | null;
+    shippingCountry: string | null;
     status: string;
     totalCents: number;
 }
@@ -24,6 +31,15 @@ export interface CreateOrderInput {
 
 export interface UpdateOrderStatusInput {
     status: string;
+}
+
+export interface UpdateOrderAddressInput {
+    addressLineOne?: string | null;
+    addressLineTwo?: string | null;
+    suburb?: string | null;
+    state?: string | null;
+    postcode?: string | null;
+    country?: string | null;
 }
 
 export interface OrderSearchParams {
@@ -84,6 +100,18 @@ export const orderApi = {
     ): Promise<Order> {
         return patchJson<Order, UpdateOrderStatusInput>(
             `/api/orders/${orderId}/status`,
+            input,
+            signal
+        );
+    },
+
+    updateAddress(
+        orderId: string,
+        input: UpdateOrderAddressInput,
+        signal?: AbortSignal
+    ): Promise<Order> {
+        return patchJson<Order, UpdateOrderAddressInput>(
+            `/api/orders/${orderId}/address`,
             input,
             signal
         );

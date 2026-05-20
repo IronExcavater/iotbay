@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import { FaPenToSquare } from 'react-icons/fa6';
+import { AddressFields } from '@features/addresses/components/AddressFields';
 import {
     orderApi,
     type Order,
@@ -144,6 +146,18 @@ function OrderCard({
     onStatusChange: () => void;
 }) {
     const [cancelling, setCancelling] = useState(false);
+    const [isEditingAddress, setIsEditingAddress] = useState(false);
+    const [addressValues, setAddressValues] = useState({
+        addressLineOne: order.shippingAddressLineOne ?? '',
+        addressLineTwo: order.addressLineTwo ?? '',
+        suburb: order.shippingSuburb ?? '',
+        state: order.shippingState ?? '',
+        postcode: order.shippingPostcode ?? '',
+        country: order.shippingCountry ?? '',
+    });
+    const [addressErrors, setAddressErrors] = useState<Record<string, string>>(
+        {}
+    );
     const { showToast } = useToast();
 
     async function handleCancel() {
@@ -156,6 +170,70 @@ function OrderCard({
         } finally {
             setCancelling(false);
         }
+    }
+
+    function handleAddressFieldChange(
+        name: keyof typeof addressValues,
+        value: string
+    ) {
+        setAddressValues((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
+        setAddressErrors((prev) => ({
+            ...prev,
+            [name]: '',
+        }));
+    }
+
+    async function handleSaveAddress() {
+        const errors: Record<string, string> = {};
+        if (!addressValues.addressLineOne?.trim()) {
+            errors.addressLineOne = 'Address line 1 is required';
+        }
+        if (!addressValues.addressLineTwo?.trim()) {
+            errors.addressLineTwo = 'Address line 2 is required';
+        }
+        if (!addressValues.suburb?.trim()) {
+            errors.suburb = 'Suburb is required';
+        }
+        if (!addressValues.state?.trim()) {
+            errors.state = 'State is required';
+        }
+        if (!addressValues.postcode?.trim()) {
+            errors.postcode = 'Postcode is required';
+        }
+        if (!addressValues.country?.trim()) {
+            errors.country = 'Country is required';
+        }
+
+        if (Object.keys(errors).length > 0) {
+            setAddressErrors(errors);
+            return;
+        }
+
+        try {
+            await orderApi.updateAddress(order.id, addressValues);
+            showToast('Address updated successfully');
+            setIsEditingAddress(false);
+            onStatusChange();
+        } catch (err) {
+            showToast('Failed to update address');
+            console.error(err);
+        }
+    }
+
+    function handleCancelAddressEdit() {
+        setAddressValues({
+            addressLineOne: order.shippingAddressLineOne ?? '',
+            addressLineTwo: order.addressLineTwo ?? '',
+            suburb: order.shippingSuburb ?? '',
+            state: order.shippingState ?? '',
+            postcode: order.shippingPostcode ?? '',
+            country: order.shippingCountry ?? '',
+        });
+        setAddressErrors({});
+        setIsEditingAddress(false);
     }
 
     const canCancel = order.status === 'saved';
@@ -182,6 +260,54 @@ function OrderCard({
                     <span className="text-ui-900 font-mono text-sm">
                         Order {order.id.slice(0, 8)}
                     </span>
+                    <div className="grid gap-1">
+                        {!isEditingAddress ? (
+                            <>
+                                <span className="text-ui-500 text-xs">
+                                    Address:
+                                </span>
+                                <span className="text-ui-700 font-mono text-xs">
+                                    {order.shippingAddress ||
+                                        'No address provided'}
+                                </span>
+                                <Button
+                                    aria-label="Edit address"
+                                    className="inline-flex size-8 shrink-0 rounded-full p-0"
+                                    onClick={() => setIsEditingAddress(true)}
+                                    type="button"
+                                    variant="ghost"
+                                >
+                                    <FaPenToSquare
+                                        aria-hidden="true"
+                                        className="size-3.5"
+                                    />
+                                </Button>
+                            </>
+                        ) : (
+                            <>
+                                <AddressFields
+                                    countryCode={addressValues.country}
+                                    errors={addressErrors}
+                                    onFieldChange={handleAddressFieldChange}
+                                    values={addressValues}
+                                />
+                                <div className="mt-3 flex justify-end gap-2">
+                                    <Button
+                                        variant="secondary"
+                                        onClick={handleCancelAddressEdit}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        variant="primary"
+                                        onClick={handleSaveAddress}
+                                    >
+                                        Save
+                                    </Button>
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </div>
                 <div className="flex items-center gap-2">
                     <OrderStatusBadge status={order.status} />

@@ -9,6 +9,7 @@ from src.orders.queries import (
     SEARCH_ORDERS_BY_USER,
     SELECT_ORDER_BY_ID,
     SELECT_ORDER_ITEMS,
+    UPDATE_ORDER_ADDRESS,
     UPDATE_ORDER_STATUS,
 )
 
@@ -111,6 +112,36 @@ class OrderRepository(Repository):
         now = UtcTime.now().iso
         with self.connect() as connection:
             connection.execute(UPDATE_ORDER_STATUS, (new_status, now, order_id))
+            row = connection.execute(SELECT_ORDER_BY_ID, (order_id,)).fetchone()
+            if not row:
+                raise ApiError("Order not found", 404)
+            order = Order(**row)
+            return replace(order, items=self._select_order_items(connection, order_id))
+
+    def update_order_address(
+        self,
+        *,
+        order_id: bytes,
+        address_line_one: str | None,
+        suburb: str | None,
+        state: str | None,
+        postcode: str | None,
+        country: str | None,
+    ) -> Order:
+        now = UtcTime.now().iso
+        with self.connect() as connection:
+            connection.execute(
+                UPDATE_ORDER_ADDRESS,
+                (
+                    address_line_one,
+                    suburb,
+                    state,
+                    postcode,
+                    country,
+                    now,
+                    order_id,
+                ),
+            )
             row = connection.execute(SELECT_ORDER_BY_ID, (order_id,)).fetchone()
             if not row:
                 raise ApiError("Order not found", 404)

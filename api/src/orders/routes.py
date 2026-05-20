@@ -7,7 +7,14 @@ from src.auth.session import (
 from src.common.app import services
 from src.common.sqlite_model import id_string_to_bytes
 from src.common.web import ApiError, parse_request
-from src.orders.requests import CreateOrderRequest, UpdateOrderStatusRequest
+from src.orders.models import (
+    ORDER_STATUS_SAVED,
+)
+from src.orders.requests import (
+    CreateOrderRequest,
+    UpdateOrderAddressRequest,
+    UpdateOrderStatusRequest,
+)
 
 orders_bp = Blueprint("orders", __name__)
 
@@ -140,3 +147,35 @@ def update_order_status(order_id: str):
         new_status=req.status,
     )
     return order.to_dict()
+
+
+@orders_bp.patch("/orders/<order_id>/address")
+def update_order_address(order_id: str):
+    user = current_authenticated_user()
+    if not user:
+        raise ApiError("Authentication required", 401)
+
+    order_id_bytes = id_string_to_bytes(order_id)
+    repo = services().order_repository
+    existing = repo.select_order_by_id(order_id_bytes)
+    if not existing or existing.user_id != user.user_id:
+        raise ApiError("Order not found", 404)
+
+    if existing.status != ORDER_STATUS_SAVED:
+        raise ApiError(
+            "Address can only be updated for orders with 'saved' status", 400
+        )
+
+    req = parse_request(UpdateOrderAddressRequest)
+    order_service = services().orders
+    updated_order = order_service.update_address(
+        actor_user_id=user.user_id,
+        order_id=order_id_bytes,
+        address_line_one=req.address_line_one,
+        address_line_two=req.address_line_two,
+        suburb=req.suburb,
+        state=req.state,
+        postcode=req.postcode,
+        country=req.country,
+    )
+    return updated_order.to_dict()

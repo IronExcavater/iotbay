@@ -18,10 +18,12 @@ from src.orders.queries import (
     INSERT_ORDER_ITEM,
     SELECT_ORDER_BY_ID,
     SELECT_ORDER_ITEMS,
+    UPDATE_ORDER_ADDRESS,
     UPDATE_ORDER_STATUS,
 )
 from src.orders.repository import OrderRepository
 from src.products.repository import ProductRepository
+from src.users.repository import UserRepository
 
 VALID_TRANSITIONS: dict[str, set[str]] = {
     ORDER_STATUS_SAVED: {ORDER_STATUS_PAID, ORDER_STATUS_CANCELLED},
@@ -35,6 +37,7 @@ class OrderService:
     audit: AuditService
     order_repository: OrderRepository
     product_repository: ProductRepository
+    user_repository: UserRepository
 
     def create_order(
         self,
@@ -77,11 +80,22 @@ class OrderService:
             total_cents += product.price_cents * quantity
             order_items.append((product_id_bytes, quantity, product.price_cents))
 
+        user = self.user_repository.select_user_by_id(user_id=actor_user_id)
+        shipping_address = {
+            "shipping_address_line_one": user.address_line_one if user else None,
+            "address_line_two": user.address_line_two if user else None,
+            "shipping_suburb": user.suburb if user else None,
+            "shipping_state": user.state if user else None,
+            "shipping_postcode": user.postcode if user else None,
+            "shipping_country": user.country if user else None,
+        }
+
         order = self._insert_order_and_stock(
             user_id=actor_user_id,
             address_id=address_id,
             items=order_items,
             total_cents=total_cents,
+            shipping_address=shipping_address,
         )
 
         self._record_audit(
@@ -100,6 +114,7 @@ class OrderService:
         address_id: bytes | None,
         items: list[tuple[bytes, int, int]],
         total_cents: int,
+        shipping_address: dict,
     ) -> Order:
         now = UtcTime.now().iso
         order_id_bytes = new_id_bytes()
@@ -126,6 +141,12 @@ class OrderService:
                     address_id,
                     ORDER_STATUS_SAVED,
                     total_cents,
+                    shipping_address["shipping_address_line_one"],
+                    shipping_address["address_line_two"],
+                    shipping_address["shipping_suburb"],
+                    shipping_address["shipping_state"],
+                    shipping_address["shipping_postcode"],
+                    shipping_address["shipping_country"],
                     now,
                     now,
                 ),
@@ -192,6 +213,73 @@ class OrderService:
             order=updated_order,
             before={"status": before_status},
             after={"status": new_status},
+        )
+
+        return updated_order
+
+    def update_address(
+        self,
+        *,
+        actor_user_id: bytes,
+        order_id: bytes,
+        address_line_one: str | None,
+        address_line_two: str | None,
+        suburb: str | None,
+        state: str | None,
+        postcode: str | None,
+        country: str | None,
+    ) -> Order:
+        order = self.order_repository.select_order_by_id(order_id)
+        if order is None:
+            raise ApiError("Order not found", 404)
+
+        now = UtcTime.now().iso
+
+        with self.order_repository.connect() as connection:
+            connection.execute(
+                UPDATE_ORDER_ADDRESS,
+                (
+                    address_line_one,
+                    address_line_two,
+                    suburb,
+                    state,
+                    postcode,
+                    country,
+                    now,
+                    order_id,
+                ),
+            )
+            row = connection.execute(SELECT_ORDER_BY_ID, (order_id,)).fetchone()
+            updated_order = replace(
+                Order(**row),
+                items=[
+                    OrderItem(**r)
+                    for r in connection.execute(
+                        SELECT_ORDER_ITEMS, (order_id,)
+                    ).fetchall()
+                ],
+            )
+
+        self._record_audit(
+            action="address_updated",
+            actor_user_id=actor_user_id,
+            order=updated_order,
+            before={
+                "shipping_address_line_one": order.shipping_address_line_one,
+                "address_line_two": order.address_line_two,
+                "shipping_suburb": order.shipping_suburb,
+                "shipping_state": order.shipping_state,
+                "shipping_postcode": order.shipping_postcode,
+                "shipping_country": order.shipping_country,
+            },
+            after={
+                "shipping_address_line_one": address_line_one,
+                "address_line_two": address_line_two,
+                "shipping_suburb": suburb,
+                "shipping_state": state,
+                "shipping_postcode": postcode,
+                "shipping_country": country,
+            },
         )
 
         return updated_order
