@@ -1,289 +1,310 @@
 import { useEffect, useState } from 'react';
-import { FaCreditCard, FaPlus, FaTrashCan } from 'react-icons/fa6';
 
 import {
     paymentMethodApi,
     type PaymentMethod,
-    type PaymentMethodInput,
 } from '@features/payment-methods/api';
 import { Button } from '@shared/ui/form/Button';
-import { Field } from '@shared/ui/form/Field';
-import { Input } from '@shared/ui/form/Input';
-import { useToast } from '@shared/ui/toast/ToastProvider';
-
-interface FormValues {
-    type: 'Visa' | 'Mastercard';
-    cardholderName: string;
-    cardNumber: string;
-    expiry: string;
-    cvc: string;
-}
-
-interface FormErrors {
-    cardholderName: string;
-    cardNumber: string;
-    expiry: string;
-    cvc: string;
-}
-
-const EMPTY_FORM: FormValues = {
-    type: 'Visa',
-    cardholderName: '',
-    cardNumber: '',
-    expiry: '',
-    cvc: '',
-};
-
-const EMPTY_ERRORS: FormErrors = {
-    cardholderName: '',
-    cardNumber: '',
-    expiry: '',
-    cvc: '',
-};
-
-function formatCardNumber(value: string, type: 'Visa' | 'Mastercard') {
-    let digits = value.replace(/\D/g, '');
-    digits = digits.slice(0, type === 'Mastercard' ? 16 : 19);
-    let formatted = '';
-    for (let i = 0; i < digits.length; i++) {
-        if (i > 0 && i % 4 === 0) formatted += ' ';
-        formatted += digits[i];
-    }
-    return formatted;
-}
-
-function formatExpiry(value: string) {
-    const digits = value.replace(/\D/g, '').slice(0, 4);
-    return digits.length >= 3
-        ? digits.slice(0, 2) + '/' + digits.slice(2)
-        : digits;
-}
-
-function validateForm(values: FormValues): FormErrors {
-    const errors = { ...EMPTY_ERRORS };
-    const cardDigits = values.cardNumber.replace(/\s/g, '');
-
-    if (!values.cardholderName.trim()) {
-        errors.cardholderName = 'Cardholder name is required';
-    }
-
-    if (values.type === 'Mastercard') {
-        if (cardDigits.length !== 16)
-            errors.cardNumber = 'Mastercard must be 16 digits';
-    } else {
-        if (cardDigits.length < 13 || cardDigits.length > 19)
-            errors.cardNumber = 'Visa must be 13 to 19 digits';
-    }
-
-    if (!/^\d{2}\/\d{2}$/.test(values.expiry)) {
-        errors.expiry = 'Use MM/YY format';
-    } else {
-        const [mm, yy] = values.expiry.split('/').map(Number);
-        const expDate = new Date(2000 + yy, mm);
-        if (mm < 1 || mm > 12 || expDate <= new Date()) {
-            errors.expiry = 'Card has expired';
-        }
-    }
-
-    if (values.cvc.length !== 3) {
-        errors.cvc = 'CVC must be 3 digits';
-    }
-
-    return errors;
-}
-
-function hasErrors(errors: FormErrors) {
-    return Object.values(errors).some((e) => e.length > 0);
-}
 
 export function PaymentMethodsSection() {
-    const { showToast } = useToast();
     const [methods, setMethods] = useState<PaymentMethod[]>([]);
     const [loading, setLoading] = useState(true);
-    const [filterType, setFilterType] = useState<'All' | 'Visa' | 'Mastercard'>(
-        'All'
-    );
 
-    const [isFormOpen, setIsFormOpen] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
-    const [values, setValues] = useState<FormValues>(EMPTY_FORM);
-    const [errors, setErrors] = useState<FormErrors>(EMPTY_ERRORS);
-    const [isSaving, setIsSaving] = useState(false);
-    const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [filterType, setFilterType] = useState('All');
+
+    const [type, setType] = useState('Visa');
+    const [cardholderName, setCardholderName] = useState('');
+    const [cardNumber, setCardNumber] = useState('');
+    const [expiry, setExpiry] = useState('');
+    const [cvc, setCvc] = useState('');
+
+    const [editingId, setEditingId] = useState('');
+
+    const [errors, setErrors] = useState({
+        cardholderName: '',
+        cardNumber: '',
+        expiry: '',
+        cvc: '',
+    });
+
+    function formatCardNumber(value: string) {
+        let digits = value.replace(/\D/g, '');
+
+        if (type === 'Mastercard') {
+            digits = digits.slice(0, 16);
+        } else {
+            digits = digits.slice(0, 19);
+        }
+
+        let formatted = '';
+
+        for (let i = 0; i < digits.length; i++) {
+            if (i > 0 && i % 4 === 0) {
+                formatted += ' ';
+            }
+
+            formatted += digits[i];
+        }
+
+        return formatted;
+    }
+
+    function formatExpiry(value: string) {
+        let digits = value.replace(/\D/g, '');
+        digits = digits.slice(0, 4);
+
+        if (digits.length >= 3) {
+            return digits.slice(0, 2) + '/' + digits.slice(2);
+        }
+
+        return digits;
+    }
+
+    function formatCvc(value: string) {
+        return value.replace(/\D/g, '').slice(0, 3);
+    }
+
+    async function loadMethods() {
+        const result = await paymentMethodApi.list();
+        setMethods(result);
+        setLoading(false);
+    }
 
     useEffect(() => {
-        const controller = new AbortController();
-        paymentMethodApi
-            .list(controller.signal)
-            .then(setMethods)
-            .catch(() => showToast('Failed to load payment methods'))
-            .finally(() => setLoading(false));
-        return () => controller.abort();
-    }, [showToast]);
+        loadMethods();
+    }, []);
 
-    function openAddForm() {
-        setEditingId(null);
-        setValues(EMPTY_FORM);
-        setErrors(EMPTY_ERRORS);
-        setIsFormOpen(true);
-    }
+    function clearForm() {
+        setEditingId('');
+        setType('Visa');
+        setCardholderName('');
+        setCardNumber('');
+        setExpiry('');
+        setCvc('');
 
-    function openEditForm(method: PaymentMethod) {
-        setEditingId(method.id);
-        setValues({
-            type: method.type as 'Visa' | 'Mastercard',
-            cardholderName: method.cardholderName,
+        setErrors({
+            cardholderName: '',
             cardNumber: '',
-            expiry: method.expiry,
+            expiry: '',
             cvc: '',
         });
-        setErrors(EMPTY_ERRORS);
-        setIsFormOpen(true);
     }
 
-    function closeForm() {
-        setIsFormOpen(false);
-        setEditingId(null);
-        setValues(EMPTY_FORM);
-        setErrors(EMPTY_ERRORS);
-    }
+    function validateForm() {
+        const cardDigits = cardNumber.replace(/\s/g, '');
 
-    function setField<K extends keyof FormValues>(
-        key: K,
-        value: FormValues[K]
-    ) {
-        setValues((prev) => ({ ...prev, [key]: value }));
+        let cardholderNameError = '';
+        let cardNumberError = '';
+        let expiryError = '';
+        let cvcError = '';
+
+        if (cardholderName.length === 0) {
+            cardholderNameError = 'Cardholder name is required';
+        }
+
+        if (type === 'Mastercard') {
+            if (cardDigits.length !== 16) {
+                cardNumberError = 'Mastercard must be 16 digits';
+            }
+        } else {
+            if (cardDigits.length < 13 || cardDigits.length > 19) {
+                cardNumberError = 'Visa must be 13 to 19 digits';
+            }
+        }
+
+        if (!/^\d{2}\/\d{2}$/.test(expiry)) {
+            expiryError = 'Use MM/YY format';
+        }
+
+        if (cvc.length !== 3) {
+            cvcError = 'CVC must be 3 digits';
+        }
+
+        setErrors({
+            cardholderName: cardholderNameError,
+            cardNumber: cardNumberError,
+            expiry: expiryError,
+            cvc: cvcError,
+        });
+
+        if (cardholderNameError.length > 0) {
+            return false;
+        }
+
+        if (cardNumberError.length > 0) {
+            return false;
+        }
+
+        if (expiryError.length > 0) {
+            return false;
+        }
+
+        if (cvcError.length > 0) {
+            return false;
+        }
+
+        return true;
     }
 
     async function handleSave() {
-        const nextErrors = validateForm(values);
-        setErrors(nextErrors);
-        if (hasErrors(nextErrors)) return;
+        const valid = validateForm();
 
-        const input: PaymentMethodInput = {
-            type: values.type,
-            cardholderName: values.cardholderName,
-            cardNumber: values.cardNumber,
-            expiry: values.expiry,
+        if (!valid) {
+            return;
+        }
+
+        const input = {
+            type: type,
+            cardholderName: cardholderName,
+            cardNumber: cardNumber,
+            expiry: expiry,
         };
 
-        setIsSaving(true);
-        try {
-            if (editingId) {
-                const updated = await paymentMethodApi.update(editingId, input);
-                setMethods((prev) =>
-                    prev.map((m) => (m.id === editingId ? updated : m))
-                );
-            } else {
-                const created = await paymentMethodApi.create(input);
-                setMethods((prev) => [...prev, created]);
-            }
-            closeForm();
-        } catch {
-            showToast('Failed to save payment method');
-        } finally {
-            setIsSaving(false);
+        if (editingId.length > 0) {
+            const updated = await paymentMethodApi.update(editingId, input);
+
+            setMethods((current) =>
+                current.map((method) => {
+                    if (method.id === editingId) {
+                        return updated;
+                    }
+
+                    return method;
+                })
+            );
+
+            clearForm();
+            return;
         }
+
+        const created = await paymentMethodApi.create(input);
+
+        setMethods((current) => [...current, created]);
+
+        clearForm();
     }
 
     async function handleDelete(id: string) {
-        setDeletingId(id);
-        try {
-            await paymentMethodApi.delete(id);
-            setMethods((prev) => prev.filter((m) => m.id !== id));
-            if (editingId === id) closeForm();
-        } catch {
-            showToast('Failed to delete payment method');
-        } finally {
-            setDeletingId(null);
+        await paymentMethodApi.delete(id);
+
+        setMethods((current) => current.filter((method) => method.id !== id));
+
+        if (editingId === id) {
+            clearForm();
         }
     }
 
-    const filteredMethods =
-        filterType === 'All'
-            ? methods
-            : methods.filter((m) => m.type === filterType);
+    function handleEdit(method: PaymentMethod) {
+        setEditingId(method.id);
+        setType(method.type);
+        setCardholderName(method.cardholderName);
+        setCardNumber('');
+        setExpiry(method.expiry);
+        setCvc('');
 
-    const maxCardLength = values.type === 'Mastercard' ? 19 : 23;
+        setErrors({
+            cardholderName: '',
+            cardNumber: '',
+            expiry: '',
+            cvc: '',
+        });
+    }
+
+    function handleTypeChange(value: string) {
+        setType(value);
+        setCardNumber('');
+    }
+
+    let maxCardLength = 23;
+
+    if (type === 'Mastercard') {
+        maxCardLength = 19;
+    }
+
+    let filteredMethods = methods;
+
+    if (filterType !== 'All') {
+        filteredMethods = methods.filter((method) => {
+            return method.type === filterType;
+        });
+    }
+
+    let saveButtonText = 'Add payment method';
+
+    if (editingId.length > 0) {
+        saveButtonText = 'Update payment method';
+    }
 
     return (
-        <div className="grid gap-4">
-            <div className="flex items-center justify-between">
-                <h3 className="text-ui-700 text-sm font-semibold tracking-[0.08em] uppercase">
-                    Payment methods
-                </h3>
+        <div className="grid gap-3">
+            <h3 className="text-ui-700 text-sm font-semibold tracking-[0.08em] uppercase">
+                Payment method
+            </h3>
 
-                {!isFormOpen && (
-                    <Button onClick={openAddForm} type="button" variant="ghost">
-                        <FaPlus aria-hidden="true" size={12} />
-                        Add
-                    </Button>
-                )}
-            </div>
+            <div className="grid gap-2">
+                <label className="text-ui-700 text-sm font-medium">
+                    Search by payment type
+                </label>
 
-            <label className="grid gap-1 text-sm">
-                <span className="text-ui-700 font-medium">Filter by type</span>
                 <select
-                    className="border-ui-200 rounded border px-3 py-2 text-sm"
-                    onChange={(e) =>
-                        setFilterType(
-                            e.target.value as 'All' | 'Visa' | 'Mastercard'
-                        )
-                    }
+                    className="border-ui-200 rounded border px-3 py-2"
+                    onChange={(event) => setFilterType(event.target.value)}
                     value={filterType}
                 >
                     <option>All</option>
                     <option>Visa</option>
                     <option>Mastercard</option>
                 </select>
-            </label>
+            </div>
 
             {loading && (
-                <p className="text-ui-500 text-sm">Loading payment methods…</p>
+                <p className="text-ui-500 text-sm">
+                    Loading payment methods...
+                </p>
             )}
 
-            {!loading && filteredMethods.length === 0 && (
-                <p className="text-ui-500 text-sm">No payment methods found.</p>
-            )}
-
-            {!loading && filteredMethods.length > 0 && (
+            {!loading && (
                 <div className="grid gap-2">
+                    {filteredMethods.length === 0 && (
+                        <p className="text-ui-500 text-sm">
+                            No payment methods found.
+                        </p>
+                    )}
+
                     {filteredMethods.map((method) => (
                         <div
                             key={method.id}
-                            className="border-ui-200 flex items-center gap-3 rounded border px-3 py-2.5"
+                            className="border-ui-200 grid gap-2 rounded border px-3 py-2"
                         >
-                            <FaCreditCard
-                                aria-hidden="true"
-                                className="text-ui-400 shrink-0"
-                                size={18}
-                            />
-
-                            <div className="min-w-0 flex-1">
-                                <p className="text-sm font-medium">
+                            <div className="grid">
+                                <span className="text-sm font-medium">
                                     {method.type} ending in {method.cardLast4}
-                                </p>
-                                <p className="text-ui-500 text-xs">
-                                    {method.cardholderName} · Expires{' '}
-                                    {method.expiry}
-                                </p>
+                                </span>
+
+                                <span className="text-ui-500 text-xs">
+                                    {method.cardholderName}
+                                </span>
+
+                                <span className="text-ui-500 text-xs">
+                                    Expiry {method.expiry}
+                                </span>
                             </div>
 
-                            <div className="flex shrink-0 gap-1">
+                            <div className="flex gap-2">
                                 <Button
-                                    onClick={() => openEditForm(method)}
+                                    onClick={() => handleEdit(method)}
                                     type="button"
                                     variant="ghost"
                                 >
                                     Edit
                                 </Button>
+
                                 <Button
-                                    disabled={deletingId === method.id}
                                     onClick={() => void handleDelete(method.id)}
                                     type="button"
                                     variant="ghost"
                                 >
-                                    <FaTrashCan aria-hidden="true" size={13} />
+                                    Delete
                                 </Button>
                             </div>
                         </div>
@@ -291,136 +312,102 @@ export function PaymentMethodsSection() {
                 </div>
             )}
 
-            {isFormOpen && (
-                <div className="border-ui-200 grid gap-3 rounded border p-3">
-                    <p className="text-ui-700 text-sm font-medium">
-                        {editingId
-                            ? 'Edit payment method'
-                            : 'Add payment method'}
+            <div className="border-ui-200 grid gap-2 rounded border p-3">
+                {editingId.length > 0 && (
+                    <p className="text-ui-500 text-sm">
+                        Editing selected payment method. Enter the card number
+                        again before updating.
                     </p>
+                )}
 
-                    {editingId && (
-                        <p className="text-ui-500 text-xs">
-                            Re-enter your card number and CVC to confirm the
-                            update.
-                        </p>
-                    )}
+                <select
+                    className="border-ui-200 rounded border px-3 py-2"
+                    onChange={(event) => handleTypeChange(event.target.value)}
+                    value={type}
+                >
+                    <option>Visa</option>
+                    <option>Mastercard</option>
+                </select>
 
-                    <div className="flex gap-2">
-                        {(['Visa', 'Mastercard'] as const).map((t) => (
-                            <button
-                                className={
-                                    values.type === t
-                                        ? 'bg-ui-900 text-ui-0 rounded-full px-3 py-1 text-sm font-medium'
-                                        : 'bg-ui-100 text-ui-700 hover:bg-ui-200 rounded-full px-3 py-1 text-sm font-medium transition-colors'
-                                }
-                                key={t}
-                                onClick={() => {
-                                    setField('type', t);
-                                    setField('cardNumber', '');
-                                }}
-                                type="button"
-                            >
-                                {t}
-                            </button>
-                        ))}
-                    </div>
+                <input
+                    className={
+                        errors.cardholderName.length > 0
+                            ? 'rounded border border-red-500 px-3 py-2'
+                            : 'border-ui-200 rounded border px-3 py-2'
+                    }
+                    onChange={(event) => setCardholderName(event.target.value)}
+                    placeholder="Cardholder name"
+                    value={cardholderName}
+                />
 
-                    <Field
-                        error={errors.cardholderName || undefined}
-                        label="Cardholder name"
-                    >
-                        <Input
-                            hasError={!!errors.cardholderName}
-                            onChange={(e) =>
-                                setField('cardholderName', e.target.value)
-                            }
-                            placeholder="Jane Smith"
-                            value={values.cardholderName}
-                        />
-                    </Field>
+                {errors.cardholderName.length > 0 && (
+                    <p className="text-sm text-red-400">
+                        {errors.cardholderName}
+                    </p>
+                )}
 
-                    <Field
-                        error={errors.cardNumber || undefined}
-                        label="Card number"
-                    >
-                        <Input
-                            hasError={!!errors.cardNumber}
-                            maxLength={maxCardLength}
-                            onChange={(e) =>
-                                setField(
-                                    'cardNumber',
-                                    formatCardNumber(
-                                        e.target.value,
-                                        values.type
-                                    )
-                                )
-                            }
-                            placeholder="1234 5678 9012 3456"
-                            value={values.cardNumber}
-                        />
-                    </Field>
+                <input
+                    className={
+                        errors.cardNumber.length > 0
+                            ? 'rounded border border-red-500 px-3 py-2'
+                            : 'border-ui-200 rounded border px-3 py-2'
+                    }
+                    maxLength={maxCardLength}
+                    onChange={(event) =>
+                        setCardNumber(formatCardNumber(event.target.value))
+                    }
+                    placeholder="1234 5678 9012 3456"
+                    value={cardNumber}
+                />
 
-                    <div className="grid grid-cols-2 gap-3">
-                        <Field
-                            error={errors.expiry || undefined}
-                            label="Expiry"
-                        >
-                            <Input
-                                hasError={!!errors.expiry}
-                                maxLength={5}
-                                onChange={(e) =>
-                                    setField(
-                                        'expiry',
-                                        formatExpiry(e.target.value)
-                                    )
-                                }
-                                placeholder="MM/YY"
-                                value={values.expiry}
-                            />
-                        </Field>
+                {errors.cardNumber.length > 0 && (
+                    <p className="text-sm text-red-400">{errors.cardNumber}</p>
+                )}
 
-                        <Field error={errors.cvc || undefined} label="CVC">
-                            <Input
-                                hasError={!!errors.cvc}
-                                maxLength={3}
-                                onChange={(e) =>
-                                    setField(
-                                        'cvc',
-                                        e.target.value
-                                            .replace(/\D/g, '')
-                                            .slice(0, 3)
-                                    )
-                                }
-                                placeholder="123"
-                                value={values.cvc}
-                            />
-                        </Field>
-                    </div>
+                <input
+                    className={
+                        errors.expiry.length > 0
+                            ? 'rounded border border-red-500 px-3 py-2'
+                            : 'border-ui-200 rounded border px-3 py-2'
+                    }
+                    maxLength={5}
+                    onChange={(event) =>
+                        setExpiry(formatExpiry(event.target.value))
+                    }
+                    placeholder="MM/YY"
+                    value={expiry}
+                />
 
-                    <div className="flex gap-2">
-                        <Button
-                            disabled={isSaving}
-                            onClick={() => void handleSave()}
-                            type="button"
-                        >
-                            {isSaving
-                                ? 'Saving…'
-                                : editingId
-                                  ? 'Update'
-                                  : 'Add payment method'}
-                        </Button>
+                {errors.expiry.length > 0 && (
+                    <p className="text-sm text-red-400">{errors.expiry}</p>
+                )}
 
-                        <Button
-                            onClick={closeForm}
-                            type="button"
-                            variant="ghost"
-                        >
-                            Cancel
-                        </Button>
-                    </div>
-                </div>
-            )}
+                <input
+                    className={
+                        errors.cvc.length > 0
+                            ? 'rounded border border-red-500 px-3 py-2'
+                            : 'border-ui-200 rounded border px-3 py-2'
+                    }
+                    maxLength={3}
+                    onChange={(event) => setCvc(formatCvc(event.target.value))}
+                    placeholder="CVC"
+                    value={cvc}
+                />
+
+                {errors.cvc.length > 0 && (
+                    <p className="text-sm text-red-400">{errors.cvc}</p>
+                )}
+
+                <Button onClick={() => void handleSave()} type="button">
+                    {saveButtonText}
+                </Button>
+
+                {editingId.length > 0 && (
+                    <Button onClick={clearForm} type="button" variant="ghost">
+                        Cancel edit
+                    </Button>
+                )}
+            </div>
         </div>
     );
 }

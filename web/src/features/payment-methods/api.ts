@@ -1,10 +1,3 @@
-import {
-    deleteJson,
-    getJson,
-    patchJson,
-    postJson,
-} from '@shared/services/http';
-
 export interface PaymentMethod {
     id: string;
     type: string;
@@ -21,22 +14,71 @@ export interface PaymentMethodInput {
 }
 
 export const paymentMethodApi = {
-    list(signal?: AbortSignal): Promise<PaymentMethod[]> {
-        return getJson('/api/payment-methods', signal);
+    async list(): Promise<PaymentMethod[]> {
+        const response = await fetch('/api/payment-methods', {
+            credentials: 'include',
+            headers: {
+                'x-api-key': import.meta.env.IOTBAY_API_KEY,
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to load payment methods');
+        }
+
+        return response.json();
     },
 
-    create(input: PaymentMethodInput): Promise<PaymentMethod> {
-        return postJson('/api/payment-methods', input);
+    async create(input: PaymentMethodInput): Promise<PaymentMethod> {
+        const response = await fetch('/api/payment-methods', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': import.meta.env.IOTBAY_API_KEY,
+            },
+            body: JSON.stringify(input),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to add payment method');
+        }
+
+        return response.json();
     },
 
-    update(id: string, input: PaymentMethodInput): Promise<PaymentMethod> {
-        return patchJson<PaymentMethod, PaymentMethodInput>(
-            `/api/payment-methods/${id}`,
-            input
-        );
+    async update(
+        id: string,
+        input: PaymentMethodInput
+    ): Promise<PaymentMethod> {
+        const response = await fetch('/api/payment-methods/' + id, {
+            method: 'PATCH',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': import.meta.env.IOTBAY_API_KEY,
+            },
+            body: JSON.stringify(input),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to update payment method');
+        }
+
+        return response.json();
     },
 
-    delete(id: string): Promise<void> {
-        return deleteJson(`/api/payment-methods/${id}`);
+    async delete(id: string): Promise<void> {
+        const response = await fetch('/api/payment-methods/' + id, {
+            method: 'DELETE',
+            credentials: 'include',
+            headers: {
+                'x-api-key': import.meta.env.IOTBAY_API_KEY,
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to delete payment method');
+        }
     },
 };

@@ -19,12 +19,11 @@ import { useCart } from '@features/cart/CartProvider';
 import { CartQuantityControl } from '@features/cart/components/CartQuantityControl';
 import { TermsDialog } from '@features/legal/TermsDialog';
 import { orderApi } from '@features/orders/api';
+import { PaymentMethodsSection } from '@features/payment-methods/components/PaymentMethodsSection';
 import { ProductRow } from '@features/products/components/ProductRow';
 import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { Button, ButtonLink } from '@shared/ui/form/Button';
 import { Checkbox } from '@shared/ui/form/Checkbox';
-import { Field } from '@shared/ui/form/Field';
-import { Input } from '@shared/ui/form/Input';
 import { TextButton } from '@shared/ui/form/TextLink';
 import { PageHeader } from '@shared/ui/PageHeader';
 import { useToast } from '@shared/ui/toast/ToastProvider';
@@ -44,15 +43,6 @@ export default function CartPage() {
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [isTermsOpen, setIsTermsOpen] = useState(false);
     const [isOrdering, setIsOrdering] = useState(false);
-    const [paymentValues, setPaymentValues] = useState({
-        cardholderName: '',
-        cardNumber: '',
-        cvc: '',
-        expiry: '',
-    });
-    const [paymentErrors, setPaymentErrors] = useState<
-        Partial<Record<keyof typeof paymentValues, string>>
-    >({});
 
     useEffect(() => {
         const nextValues = user
@@ -94,13 +84,10 @@ export default function CartPage() {
 
     async function handleOrder() {
         const nextAddressErrors = validateAddressValues(addressValues, true);
-        const nextPaymentErrors = validatePaymentValues(paymentValues);
         setAddressErrors(nextAddressErrors);
-        setPaymentErrors(nextPaymentErrors);
         if (
             !canOrder ||
             Object.values(nextAddressErrors).some(Boolean) ||
-            Object.values(nextPaymentErrors).some(Boolean) ||
             !user
         )
             return;
@@ -281,20 +268,7 @@ export default function CartPage() {
                                 />
                             </div>
 
-                            <PaymentFields
-                                errors={paymentErrors}
-                                onChange={(name, value) => {
-                                    setPaymentValues((current) => ({
-                                        ...current,
-                                        [name]: value,
-                                    }));
-                                    setPaymentErrors((current) => ({
-                                        ...current,
-                                        [name]: undefined,
-                                    }));
-                                }}
-                                values={paymentValues}
-                            />
+                            <PaymentMethodsSection />
 
                             <Checkbox
                                 checked={acceptedTerms}
@@ -355,104 +329,6 @@ export default function CartPage() {
     );
 }
 
-function PaymentFields({
-    errors,
-    onChange,
-    values,
-}: {
-    errors: Partial<Record<keyof PaymentValues, string>>;
-    onChange: (name: keyof PaymentValues, value: string) => void;
-    values: PaymentValues;
-}) {
-    return (
-        <section className="grid gap-3">
-            <h3 className="text-ui-700 text-sm font-semibold tracking-[0.08em] uppercase">
-                Payment method
-            </h3>
-            <Field
-                error={errors.cardholderName}
-                label="Name on card"
-                metaPlacement="below"
-                required
-            >
-                <Input
-                    autoComplete="cc-name"
-                    hasError={Boolean(errors.cardholderName)}
-                    onChange={(event) =>
-                        onChange('cardholderName', event.target.value)
-                    }
-                    placeholder="Jane Doe"
-                    value={values.cardholderName}
-                />
-            </Field>
-            <Field
-                error={errors.cardNumber}
-                label="Card number"
-                metaPlacement="below"
-                required
-            >
-                <Input
-                    autoComplete="cc-number"
-                    hasError={Boolean(errors.cardNumber)}
-                    inputMode="numeric"
-                    maxLength={19}
-                    onChange={(event) =>
-                        onChange(
-                            'cardNumber',
-                            formatCardNumber(event.target.value)
-                        )
-                    }
-                    placeholder="4242 4242 4242 4242"
-                    value={values.cardNumber}
-                />
-            </Field>
-            <div className="grid gap-3 sm:grid-cols-2">
-                <Field
-                    error={errors.expiry}
-                    label="Expiry"
-                    metaPlacement="below"
-                    required
-                >
-                    <Input
-                        autoComplete="cc-exp"
-                        hasError={Boolean(errors.expiry)}
-                        inputMode="numeric"
-                        maxLength={5}
-                        onChange={(event) =>
-                            onChange('expiry', formatExpiry(event.target.value))
-                        }
-                        placeholder="MM/YY"
-                        value={values.expiry}
-                    />
-                </Field>
-                <Field
-                    error={errors.cvc}
-                    label="Security code"
-                    metaPlacement="below"
-                    required
-                >
-                    <Input
-                        autoComplete="cc-csc"
-                        hasError={Boolean(errors.cvc)}
-                        inputMode="numeric"
-                        maxLength={4}
-                        onChange={(event) =>
-                            onChange(
-                                'cvc',
-                                event.target.value
-                                    .replace(/\D/g, '')
-                                    .slice(0, 4)
-                            )
-                        }
-                        placeholder="123"
-                        value={values.cvc}
-                    />
-                </Field>
-            </div>
-        </section>
-    );
-}
-
 function SummaryRow({ label, value }: { label: string; value: string }) {
     return (
         <div className="text-ui-600 flex justify-between gap-3">
@@ -460,82 +336,6 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
             <span className="text-ui-900">{value}</span>
         </div>
     );
-}
-
-type PaymentValues = {
-    cardholderName: string;
-    cardNumber: string;
-    cvc: string;
-    expiry: string;
-};
-
-function formatCardNumber(value: string) {
-    return value
-        .replace(/\D/g, '')
-        .slice(0, 16)
-        .replace(/(\d{4})(?=\d)/g, '$1 ')
-        .trim();
-}
-
-function formatExpiry(value: string) {
-    const digits = value.replace(/\D/g, '').slice(0, 4);
-    if (digits.length <= 2) return digits;
-    return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-}
-
-function validatePaymentValues(values: PaymentValues) {
-    const errors: Partial<Record<keyof PaymentValues, string>> = {};
-    const cardDigits = values.cardNumber.replace(/\D/g, '');
-    const expiryMatch = /^(\d{2})\/(\d{2})$/.exec(values.expiry);
-
-    if (values.cardholderName.trim().length < 2) {
-        errors.cardholderName = 'Enter the name printed on the card';
-    }
-
-    if (cardDigits.length < 13 || cardDigits.length > 16) {
-        errors.cardNumber = 'Enter a valid card number';
-    } else if (!passesLuhnCheck(cardDigits)) {
-        errors.cardNumber = 'Check the card number';
-    }
-
-    if (!expiryMatch) {
-        errors.expiry = 'Use MM/YY';
-    } else {
-        const month = Number(expiryMatch[1]);
-        const year = 2000 + Number(expiryMatch[2]);
-        const expiresAt = new Date(year, month);
-        const now = new Date();
-        const currentMonth = new Date(now.getFullYear(), now.getMonth());
-
-        if (month < 1 || month > 12) {
-            errors.expiry = 'Enter a valid month';
-        } else if (expiresAt <= currentMonth) {
-            errors.expiry = 'Card has expired';
-        }
-    }
-
-    if (!/^\d{3,4}$/.test(values.cvc)) {
-        errors.cvc = 'Enter the 3 or 4 digit code';
-    }
-
-    return errors;
-}
-
-function passesLuhnCheck(value: string) {
-    let sum = 0;
-    let shouldDouble = false;
-
-    for (let index = value.length - 1; index >= 0; index -= 1) {
-        let digit = Number(value[index]);
-        if (shouldDouble) {
-            digit *= 2;
-            if (digit > 9) digit -= 9;
-        }
-        sum += digit;
-        shouldDouble = !shouldDouble;
-    }
-
-    return sum % 10 === 0;
 }
 
 function hasAddressChanged(

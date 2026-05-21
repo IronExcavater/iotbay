@@ -58,8 +58,8 @@ def create_app(config_path: str | None = None) -> Flask:
         access_logs_bp,
         audit_bp,
         orders_bp,
-        cart_bp,
         payment_methods_bp,
+        cart_bp,
     ):
         app.register_blueprint(blueprint, url_prefix="/api")
     return app
