@@ -12,29 +12,29 @@ Flow tested:
   4. Customer fills in card details and submits.
   5. Success confirmation is visible on the page.
 
-NOTE: This test depends on the frontend cart/checkout UI being wired to the
+NOTE: The test depends on the frontend cart/checkout UI being wired to the
 payment API.  Until that wiring is complete the test will navigate to the
 orders page and verify that a paid order is shown in the list.
 """
+
 import unittest
 from unittest.mock import patch
 
 from test.e2e.flows.auth import SignInFlow
-from test.e2e.support.browser import SeleniumE2ETestCase, WEB_URL
+from test.e2e.support.browser import WEB_URL, SeleniumE2ETestCase
 
 
 class PaymentE2ETestCase(SeleniumE2ETestCase):
     """Selenium acceptance tests for the payment feature."""
 
-    # ------------------------------------------------------------------
     # Helpers
-    # ------------------------------------------------------------------
 
     def _create_product_for_customer(self) -> str:
         """Insert a product directly via the live API and return its ID."""
-        from test.shared.live_app import JsonHttpClient
         from src.auth.security import hash_password
         from src.users.models import USER_STATUS_ACTIVE, USER_TYPE_STAFF
+
+        from test.shared.live_app import JsonHttpClient
 
         staff_repo = self.fixture.user_repository
         staff_repo.insert_user(
@@ -113,9 +113,7 @@ class PaymentE2ETestCase(SeleniumE2ETestCase):
             )
         client.post("/api/logout")
 
-    # ------------------------------------------------------------------
     # Test: paid order is visible on the orders page
-    # ------------------------------------------------------------------
 
     def test_paid_order_appears_on_orders_page(self) -> None:
         """AC: after a successful simulated payment the order status shows 'paid'
@@ -139,9 +137,7 @@ class PaymentE2ETestCase(SeleniumE2ETestCase):
         self.driver.get(f"{WEB_URL}/orders")
         self.wait_for_text("paid")
 
-    # ------------------------------------------------------------------
     # Test: unauthenticated user is redirected away from orders page
-    # ------------------------------------------------------------------
 
     def test_unauthenticated_user_cannot_access_orders_page(self) -> None:
         """AC: visiting /orders without being logged in redirects to sign-in."""
