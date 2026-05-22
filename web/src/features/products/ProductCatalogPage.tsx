@@ -2,9 +2,11 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { FaGrip, FaList, FaMagnifyingGlass } from 'react-icons/fa6';
 import { Link, useNavigate } from 'react-router-dom';
 
+import { useCart } from '@features/cart/CartProvider';
 import { productApi, type Product } from '@features/products/api';
 import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { toErrorMessage } from '@shared/services/http';
+import { Button } from '@shared/ui/form/Button';
 import { SearchInput } from '@shared/ui/form/SearchInput';
 import { PageHeader } from '@shared/ui/PageHeader';
 import {
@@ -22,6 +24,7 @@ type CatalogueView = 'cards' | 'list';
 
 export default function ProductCatalogPage() {
     const navigate = useNavigate();
+    const { addToCart, isInCart } = useCart();
     useDocumentTitle('Catalogue');
     const [products, setProducts] = useState<Product[]>([]);
     const [isLoadingProducts, setIsLoadingProducts] = useState(true);
@@ -33,8 +36,12 @@ export default function ProductCatalogPage() {
         const abortController = new AbortController();
 
         async function loadProducts() {
+            setIsLoadingProducts(true);
             try {
-                const items = await productApi.list(abortController.signal);
+                const items = await productApi.list(
+                    search,
+                    abortController.signal
+                );
 
                 if (abortController.signal.aborted) return;
 
@@ -55,16 +62,7 @@ export default function ProductCatalogPage() {
         void loadProducts();
 
         return () => abortController.abort();
-    }, []);
-
-    const filteredProducts = products.filter((product) => {
-        const query = search.trim().toLowerCase();
-        if (!query) return true;
-        return [product.name, product.code, product.description, product.type]
-            .join(' ')
-            .toLowerCase()
-            .includes(query);
-    });
+    }, [search]);
 
     return (
         <section className="grid gap-6">
@@ -113,15 +111,17 @@ export default function ProductCatalogPage() {
                     </div>
                 ) : (
                     <ProductList
+                        addToCart={addToCart}
                         error={null}
                         isLoading
+                        isInCart={isInCart}
                         onNavigate={navigate}
                         products={[]}
                     />
                 )
             ) : productsError ? (
                 <p className="text-sm text-red-700">{productsError}</p>
-            ) : filteredProducts.length === 0 ? (
+            ) : products.length === 0 ? (
                 <section className="grid justify-items-center gap-3 py-12 text-center">
                     <FaMagnifyingGlass
                         aria-hidden="true"
@@ -133,16 +133,23 @@ export default function ProductCatalogPage() {
                 </section>
             ) : view === 'cards' ? (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {filteredProducts.map((product) => (
-                        <ProductCard key={product.id} product={product} />
+                    {products.map((product) => (
+                        <ProductCard
+                            addToCart={addToCart}
+                            inCart={isInCart(product.id)}
+                            key={product.id}
+                            product={product}
+                        />
                     ))}
                 </div>
             ) : (
                 <ProductList
+                    addToCart={addToCart}
                     error={null}
                     isLoading={false}
+                    isInCart={isInCart}
                     onNavigate={navigate}
-                    products={filteredProducts}
+                    products={products}
                 />
             )}
         </section>
@@ -176,38 +183,95 @@ function ViewButton({
     );
 }
 
-function ProductCard({ product }: { product: Product }) {
+function ProductCard({
+    addToCart,
+    inCart,
+    product,
+}: {
+    addToCart: (item: {
+        code?: string;
+        imageUrl?: string;
+        name: string;
+        priceCents: number;
+        productId: string;
+        quantity: number;
+    }) => void;
+    inCart: boolean;
+    product: Product;
+}) {
     const image = product.mediaUrls[0] ?? '/iotbay_icon_themed.svg';
     const stockStatus = stockStatusForProduct(product);
+    const [quantity, setQuantity] = useState(product.stock > 0 ? '1' : '0');
+    const selectedQuantity = resolveQuantity(quantity, product.stock);
 
     return (
-        <Link
-            className="group border-ui-200 bg-ui-0 hover:border-ui-300 hover:bg-ui-50 focus-visible:ring-ui-900 focus-visible:ring-offset-ui-0 grid overflow-hidden rounded border transition-[background-color,border-color,box-shadow] outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-            to={`/products/${product.id}`}
-        >
-            <div className="bg-ui-100 aspect-4/3 overflow-hidden">
-                <img
-                    alt={product.name}
-                    className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]"
-                    src={image}
-                />
-            </div>
-            <div className="grid gap-2 p-4">
-                <span className="text-ui-500 font-mono text-xs">
-                    {product.code}
-                </span>
-                <span className="text-ui-600 text-xs">{product.type}</span>
-                <h2 className="text-ui-900 font-semibold">{product.name}</h2>
-                <p className="text-ui-900 text-lg font-semibold">
-                    {Money.format(product.priceCents)}
-                </p>
-                {stockStatus && (
-                    <p className={stockStatus.className}>
-                        {stockStatus.message}
+        <div className="border-ui-200 bg-ui-0 grid overflow-hidden rounded border">
+            <Link
+                className="group hover:border-ui-300 hover:bg-ui-50 focus-visible:ring-ui-900 focus-visible:ring-offset-ui-0 grid transition-[background-color,border-color,box-shadow] outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                to={`/products/${product.id}`}
+            >
+                <div className="bg-ui-100 aspect-4/3 overflow-hidden">
+                    <img
+                        alt={product.name}
+                        className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]"
+                        src={image}
+                    />
+                </div>
+                <div className="grid gap-2 p-4">
+                    <span className="text-ui-500 font-mono text-xs">
+                        {product.code}
+                    </span>
+                    <span className="text-ui-600 text-xs">{product.type}</span>
+                    <h2 className="text-ui-900 font-semibold">
+                        {product.name}
+                    </h2>
+                    <p className="text-ui-900 text-lg font-semibold">
+                        {Money.format(product.priceCents)}
                     </p>
-                )}
+                    {stockStatus && (
+                        <p className={stockStatus.className}>
+                            {stockStatus.message}
+                        </p>
+                    )}
+                </div>
+            </Link>
+            <div className="border-ui-200 grid gap-3 border-t p-4">
+                <label className="grid gap-1">
+                    <span className="text-ui-500 text-xs font-medium">
+                        Quantity
+                    </span>
+                    <input
+                        className="bg-ui-0 ring-ui-300 focus:ring-ui-900 h-10 rounded border-0 px-3 text-sm ring-1 outline-none focus:ring-2"
+                        disabled={product.stock <= 0}
+                        max={product.stock}
+                        min={1}
+                        onChange={(event) => setQuantity(event.target.value)}
+                        type="number"
+                        value={quantity}
+                    />
+                </label>
+                <Button
+                    disabled={product.stock <= 0}
+                    onClick={() =>
+                        addToCart({
+                            code: product.code,
+                            imageUrl: image,
+                            name: product.name,
+                            priceCents: product.priceCents,
+                            productId: product.id,
+                            quantity: selectedQuantity,
+                        })
+                    }
+                    type="button"
+                >
+                    {product.stock <= 0
+                        ? 'Out of stock'
+                        : inCart
+                          ? 'Add more to cart'
+                          : 'Add to cart'}
+                </Button>
             </div>
-        </Link>
+        </div>
     );
 }
 
@@ -225,13 +289,24 @@ function ProductCardSkeleton() {
 }
 
 function ProductList({
+    addToCart,
     error,
     isLoading,
+    isInCart,
     onNavigate,
     products,
 }: {
+    addToCart: (item: {
+        code?: string;
+        imageUrl?: string;
+        name: string;
+        priceCents: number;
+        productId: string;
+        quantity: number;
+    }) => void;
     error: string | null;
     isLoading: boolean;
+    isInCart: (productId: string) => boolean;
     onNavigate: (to: string) => void;
     products: Product[];
 }) {
@@ -280,6 +355,8 @@ function ProductList({
                         ) : (
                             products.map((product) => (
                                 <ProductListRow
+                                    addToCart={addToCart}
+                                    inCart={isInCart(product.id)}
                                     key={product.id}
                                     onNavigate={onNavigate}
                                     product={product}
@@ -294,13 +371,26 @@ function ProductList({
 }
 
 function ProductListRow({
+    addToCart,
+    inCart,
     onNavigate,
     product,
 }: {
+    addToCart: (item: {
+        code?: string;
+        imageUrl?: string;
+        name: string;
+        priceCents: number;
+        productId: string;
+        quantity: number;
+    }) => void;
+    inCart: boolean;
     onNavigate: (to: string) => void;
     product: Product;
 }) {
     const stockStatus = stockStatusForProduct(product);
+    const [quantity, setQuantity] = useState(product.stock > 0 ? '1' : '0');
+    const selectedQuantity = resolveQuantity(quantity, product.stock);
 
     return (
         <TablePrimaryActionRow
@@ -318,11 +408,54 @@ function ProductListRow({
             <td className="text-ui-600 px-5 py-3">{product.type}</td>
             <td className="px-5 py-3">{Money.format(product.priceCents)}</td>
             <td className="px-5 py-3">
-                {stockStatus && (
-                    <span className={stockStatus.className}>
-                        {stockStatus.message}
-                    </span>
-                )}
+                <div className="grid gap-2">
+                    {stockStatus && (
+                        <span className={stockStatus.className}>
+                            {stockStatus.message}
+                        </span>
+                    )}
+                    <div
+                        className="flex flex-wrap items-center gap-2"
+                        onClick={(event) => {
+                            event.stopPropagation();
+                        }}
+                    >
+                        <input
+                            className="bg-ui-0 ring-ui-300 focus:ring-ui-900 h-9 w-20 rounded border-0 px-3 text-sm ring-1 outline-none focus:ring-2"
+                            disabled={product.stock <= 0}
+                            max={product.stock}
+                            min={1}
+                            onChange={(event) =>
+                                setQuantity(event.target.value)
+                            }
+                            type="number"
+                            value={quantity}
+                        />
+                        <Button
+                            disabled={product.stock <= 0}
+                            onClick={() =>
+                                addToCart({
+                                    code: product.code,
+                                    imageUrl:
+                                        product.mediaUrls[0] ??
+                                        '/iotbay_icon_themed.svg',
+                                    name: product.name,
+                                    priceCents: product.priceCents,
+                                    productId: product.id,
+                                    quantity: selectedQuantity,
+                                })
+                            }
+                            type="button"
+                            variant="secondary"
+                        >
+                            {product.stock <= 0
+                                ? 'Out'
+                                : inCart
+                                  ? 'Add more'
+                                  : 'Add'}
+                        </Button>
+                    </div>
+                </div>
             </td>
             <td className="text-ui-500 px-5 py-3">
                 <Tooltip
@@ -352,4 +485,17 @@ function stockStatusForProduct(product: Product): {
                 : 'text-red-700 text-sm font-medium',
         message: product.stockStatusMessage,
     };
+}
+
+function resolveQuantity(value: string, stock: number) {
+    if (stock <= 0) {
+        return 0;
+    }
+
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+        return 1;
+    }
+
+    return Math.min(stock, Math.max(1, Math.trunc(parsed)));
 }

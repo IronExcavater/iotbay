@@ -17,6 +17,7 @@ import {
 import { useAuth } from '@features/auth/AuthProvider';
 import { useCart } from '@features/cart/CartProvider';
 import { orderApi } from '@features/orders/api';
+import { PaymentMethodsSection } from '@features/payment-methods/PaymentMethodsSection';
 import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
 import { Button, ButtonLink } from '@shared/ui/form/Button';
 import { Checkbox } from '@shared/ui/form/Checkbox';
@@ -49,7 +50,11 @@ export default function CartPage() {
     }, [user]);
 
     const subtotalCents = useMemo(
-        () => items.reduce((sum, item) => sum + item.priceCents, 0),
+        () =>
+            items.reduce(
+                (sum, item) => sum + item.priceCents * item.quantity,
+                0
+            ),
         [items]
     );
     const deliveryCents = items.length > 0 ? 1200 : 0;
@@ -99,7 +104,7 @@ export default function CartPage() {
                 addressId: null,
                 items: items.map((item) => ({
                     productId: item.productId,
-                    quantity: 1,
+                    quantity: item.quantity,
                 })),
             });
 
@@ -180,12 +185,14 @@ export default function CartPage() {
                                             {item.name}
                                         </Link>
                                         <span className="text-ui-500 text-sm">
-                                            Quantity 1
+                                            Quantity {item.quantity}
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between gap-3 sm:justify-end">
                                         <span className="text-ui-900 font-semibold">
-                                            {Money.format(item.priceCents)}
+                                            {Money.format(
+                                                item.priceCents * item.quantity
+                                            )}
                                         </span>
                                         <Button
                                             aria-label={`Remove ${item.name}`}
@@ -256,6 +263,8 @@ export default function CartPage() {
                             </p>
                         )}
                     </div>
+
+                    <PaymentMethodsSection />
 
                     <Checkbox
                         checked={acceptedTerms}

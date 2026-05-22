@@ -10,7 +10,7 @@ from src.users.models import (
 )
 from src.users.repository import UserRepository
 
-from test.unit.helpers.app_case import AppTestCase
+from test.shared.app import AppTestCase
 
 
 class UserRepositoryTestCase(AppTestCase):

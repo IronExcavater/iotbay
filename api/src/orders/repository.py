@@ -2,6 +2,7 @@ from dataclasses import replace
 
 from src.common.clock import UtcTime
 from src.common.repository import Repository
+from src.common.sqlite_model import new_id_bytes
 from src.common.web import ApiError
 from src.orders.models import ORDER_STATUS_SAVED, Order, OrderItem
 from src.orders.queries import (
@@ -9,6 +10,7 @@ from src.orders.queries import (
     INSERT_ORDER_ITEM,
     LIST_ALL_ORDERS,
     LIST_ORDERS_BY_USER,
+    SEARCH_ORDERS_BY_USER,
     SELECT_ORDER_BY_ID,
     SELECT_ORDER_ITEMS,
     UPDATE_ORDER_STATUS,
@@ -51,6 +53,25 @@ class OrderRepository(Repository):
                 orders.append(replace(order, items=items))
             return orders
 
+    def search_orders_by_user(
+        self,
+        *,
+        user_id: bytes,
+        order_id: bytes | None = None,
+        date: str | None = None,
+    ) -> list[Order]:
+        with self.connect() as connection:
+            rows = connection.execute(
+                SEARCH_ORDERS_BY_USER,
+                (user_id, order_id, order_id, date, date),
+            ).fetchall()
+            orders = []
+            for row in rows:
+                order = Order(**row)
+                items = self._select_order_items(connection, order.order_id)
+                orders.append(replace(order, items=items))
+            return orders
+
     def _select_order_items(
         self,
         connection,
@@ -67,7 +88,6 @@ class OrderRepository(Repository):
         total_cents: int,
     ) -> Order:
         now = UtcTime.now().iso
-        from src.common.sqlite_model import new_id_bytes
 
         order_id_bytes = new_id_bytes()
         with self.connect() as connection:

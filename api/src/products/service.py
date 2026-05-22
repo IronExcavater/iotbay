@@ -23,8 +23,8 @@ class ProductService:
     media_repository: MediaRepository
     repository: ProductRepository
 
-    def list_products(self) -> list[Product]:
-        return self.repository.list_products()
+    def list_products(self, *, search: str | None = None) -> list[Product]:
+        return self.repository.list_products(search=search)
 
     def create_product(
         self,

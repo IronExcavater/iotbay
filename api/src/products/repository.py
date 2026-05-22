@@ -5,7 +5,7 @@ from src.common.clock import UtcTime
 from src.common.repository import Repository
 from src.common.web import ApiError
 from src.products.models import ENTITY_TYPE_PRODUCT, Product
-from src.products.queries import LIST_PRODUCTS, SELECT_PRODUCT_BY_ID
+from src.products.queries import LIST_PRODUCTS, SEARCH_PRODUCTS, SELECT_PRODUCT_BY_ID
 
 
 class DuplicateCodeError(ApiError):
@@ -23,9 +23,20 @@ class ProductRepository(Repository):
         super().__init__(database_path)
         self._audit = AuditRepository(database_path)
 
-    def list_products(self) -> list[Product]:
+    def list_products(self, *, search: str | None = None) -> list[Product]:
+        normalized_search = (search or "").strip().lower()
         with self.connect() as connection:
-            rows = connection.execute(LIST_PRODUCTS, (ENTITY_TYPE_PRODUCT,)).fetchall()
+            if normalized_search:
+                like_query = f"%{normalized_search}%"
+                rows = connection.execute(
+                    SEARCH_PRODUCTS,
+                    (ENTITY_TYPE_PRODUCT, like_query, like_query),
+                ).fetchall()
+            else:
+                rows = connection.execute(
+                    LIST_PRODUCTS,
+                    (ENTITY_TYPE_PRODUCT,),
+                ).fetchall()
 
         return [Product.from_row(row) for row in rows]
 
@@ -200,3 +211,28 @@ class ProductRepository(Repository):
 
         if deleted_count == 0:
             raise ProductNotFoundError()
+
+    def decrease_stock(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        product_id: bytes,
+        quantity: int,
+    ) -> bool:
+        cursor = connection.execute(
+            "UPDATE products SET stock = stock - ? WHERE product_id = ? AND stock >= ?",
+            (quantity, product_id, quantity),
+        )
+        return cursor.rowcount > 0
+
+    def increase_stock(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        product_id: bytes,
+        quantity: int,
+    ) -> None:
+        connection.execute(
+            "UPDATE products SET stock = stock + ? WHERE product_id = ?",
+            (quantity, product_id),
+        )

@@ -8,12 +8,13 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from test.shared.live_app import DEFAULT_TEST_API_KEY, LiveAppFixture
+from test.shared.http import DEFAULT_TEST_API_KEY
+from test.shared.live_app import LiveAppFixture
 from test.shared.users import TestCustomer, create_customer
 
 WEB_PORT = 5173
 API_PORT = 5001
-WEB_URL = f"http://127.0.0.1:{WEB_PORT}"
+WEB_URL = f"http://localhost:{WEB_PORT}"
 ROOT_DIR = Path(__file__).resolve().parents[4]
 
 
@@ -25,10 +26,7 @@ class SeleniumE2ETestCase(unittest.TestCase):
         super().setUp()
         self.driver: Any = None
         try:
-            self.fixture = LiveAppFixture(
-                api_port=API_PORT,
-                web_url=WEB_URL,
-            ).__enter__()
+            self.fixture = LiveAppFixture(api_port=API_PORT).__enter__()
         except OSError as error:
             raise unittest.SkipTest(
                 f"API port {API_PORT} is unavailable for Selenium E2E tests"
@@ -123,7 +121,7 @@ def _wait_for_url(url: str) -> None:
             with urllib.request.urlopen(url, timeout=2) as response:
                 if response.status == 200:
                     return
-        except urllib.error.URLError:
+        except OSError, urllib.error.URLError:
             time.sleep(0.25)
     raise unittest.SkipTest(f"Vite dev server did not start at {url}")
 

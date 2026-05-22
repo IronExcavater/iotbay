@@ -1,4 +1,4 @@
-import { getJson } from '@shared/services/http';
+import { getJson, queryString } from '@shared/services/http';
 
 export interface AccessLogEntry {
     deviceLabel: string;
@@ -24,15 +24,6 @@ export interface AccessLogQuery {
     eventType?: string;
     fromDate?: string;
     toDate?: string;
-}
-
-function queryString(query: AccessLogQuery = {}) {
-    const searchParams = new URLSearchParams();
-    for (const [key, value] of Object.entries(query)) {
-        if (value) searchParams.set(key, value);
-    }
-    const value = searchParams.toString();
-    return value ? `?${value}` : '';
 }
 
 export const accessLogsApi = {

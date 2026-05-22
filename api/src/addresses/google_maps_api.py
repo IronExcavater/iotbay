@@ -366,7 +366,10 @@ class GoogleMapsApi:
         try:
             with urlopen(request, context=self._ssl_context()) as response:
                 payload = json.load(response)
-        except (HTTPError, URLError, json.JSONDecodeError) as error:
+        except HTTPError as error:
+            with error:
+                raise AddressServiceUnavailableError() from error
+        except (URLError, json.JSONDecodeError) as error:
             raise AddressServiceUnavailableError() from error
 
         if not isinstance(payload, dict):

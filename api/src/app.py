@@ -5,7 +5,6 @@ from src.app_services import build_app_services
 from src.audit.routes import audit_bp
 from src.auth.routes import auth_bp
 from src.cart.routes import cart_bp
-from src.payments.routes import payments_bp
 from src.common.app import APP_SERVICES_EXTENSION
 from src.common.web import register_api_access, register_errors
 from src.config import (
@@ -18,6 +17,7 @@ from src.db import migrate
 from src.health.routes import health_bp
 from src.media.routes import media_bp
 from src.orders.routes import orders_bp
+from src.payment_methods.routes import payment_methods_bp
 from src.products.routes import products_bp
 
 
@@ -58,8 +58,8 @@ def create_app(config_path: str | None = None) -> Flask:
         access_logs_bp,
         audit_bp,
         orders_bp,
+        payment_methods_bp,
         cart_bp,
-        payments_bp,
     ):
         app.register_blueprint(blueprint, url_prefix="/api")
     return app

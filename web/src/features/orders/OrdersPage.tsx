@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { orderApi, type Order } from '@features/orders/api';
+import {
+    orderApi,
+    type Order,
+    type OrderSearchParams,
+} from '@features/orders/api';
 import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
+import { Button } from '@shared/ui/form/Button';
 import { PageHeader } from '@shared/ui/PageHeader';
 import { useToast } from '@shared/ui/toast/ToastProvider';
 import { Money } from '@shared/value-objects/Money';
@@ -12,10 +17,14 @@ export default function OrdersPage() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [searchId, setSearchId] = useState('');
+    const [searchDate, setSearchDate] = useState('');
 
-    const fetchOrders = (signal?: AbortSignal) => {
+    const fetchOrders = (signal?: AbortSignal, params?: OrderSearchParams) => {
+        setLoading(true);
+        setError(null);
         return orderApi
-            .list(signal)
+            .list(params, signal)
             .then(setOrders)
             .catch((err) => {
                 if (!signal?.aborted) {
@@ -35,12 +44,66 @@ export default function OrdersPage() {
         return () => controller.abort();
     }, []);
 
+    function handleSearch(e: React.ChangeEvent) {
+        e.preventDefault();
+        const params: OrderSearchParams = {};
+        if (searchId.trim()) params.orderId = searchId.trim();
+        if (searchDate) params.date = searchDate;
+        fetchOrders(undefined, params);
+    }
+
+    function handleClear() {
+        setSearchId('');
+        setSearchDate('');
+        fetchOrders();
+    }
+
     return (
         <section className="grid gap-6">
             <PageHeader
                 description="Orders placed from this account will appear here."
                 title="Orders"
             />
+            <form
+                onSubmit={handleSearch}
+                className="flex flex-wrap items-end gap-3"
+            >
+                <div className="grid gap-1">
+                    <label
+                        htmlFor="search-order-id"
+                        className="text-ui-500 text-xs"
+                    >
+                        Order ID
+                    </label>
+                    <input
+                        id="search-order-id"
+                        type="text"
+                        value={searchId}
+                        onChange={(e) => setSearchId(e.target.value)}
+                        placeholder="Paste order ID…"
+                        className="border-ui-200 rounded border px-3 py-1.5 text-sm"
+                    />
+                </div>
+                <div className="grid gap-1">
+                    <label
+                        htmlFor="search-date"
+                        className="text-ui-500 text-xs"
+                    >
+                        Date
+                    </label>
+                    <input
+                        id="search-date"
+                        type="date"
+                        value={searchDate}
+                        onChange={(e) => setSearchDate(e.target.value)}
+                        className="border-ui-200 rounded border px-3 py-1.5 text-sm"
+                    />
+                </div>
+                <Button type="submit">Search</Button>
+                <Button type="button" variant="secondary" onClick={handleClear}>
+                    Clear
+                </Button>
+            </form>
 
             {loading && <p className="text-ui-500 text-sm">Loading orders…</p>}
 
@@ -103,6 +166,12 @@ function OrderCard({
         >
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="grid gap-1">
+                    <div className="flex items-center gap-2">
+                        <span className="text-ui-500 text-xs">Order ID:</span>
+                        <span className="text-ui-700 font-mono text-xs">
+                            {order.id}
+                        </span>
+                    </div>
                     <span className="text-ui-500 text-xs">
                         {new Date(order.createdAt).toLocaleDateString()}
                     </span>
@@ -110,14 +179,14 @@ function OrderCard({
                 <div className="flex items-center gap-2">
                     <OrderStatusBadge status={order.status} />
                     {canCancel && (
-                        <button
-                            className="text-xs text-red-600 hover:underline disabled:opacity-50"
+                        <Button
                             disabled={cancelling}
                             onClick={handleCancel}
                             type="button"
+                            variant="danger"
                         >
                             Cancel
-                        </button>
+                        </Button>
                     )}
                 </div>
             </div>
@@ -138,7 +207,7 @@ function OrderCard({
                                     />
                                 )}
                                 <span className="text-ui-900">{item.name}</span>
-                                {item.quantity > 1 && (
+                                {item.quantity > 0 && (
                                     <span className="text-ui-500">
                                         ×{item.quantity}
                                     </span>

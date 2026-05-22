@@ -1,5 +1,5 @@
-from test.unit.helpers.app_case import AppTestCase
-from test.unit.helpers.session_factory import (
+from test.shared.app import AppTestCase
+from test.shared.sessions import (
     create_staff_test_session,
     create_test_session,
 )
@@ -14,13 +14,14 @@ class ProductRouteTestCase(AppTestCase):
 
     def test_create_product_and_list(self) -> None:
         create_staff_test_session(self.client)
-        media_urls = ["data:image/png;base64,aW90YmF5"]
+        remote_url = "https://example.com/router.jpg"
+        uploaded_image = "data:image/png;base64,aW90YmF5"
         create_response = self.client.post(
             "/api/admin/products",
             json={
                 "name": "Smart Sensor",
                 "code": "snsr-001",
-                "mediaUrls": media_urls,
+                "mediaUrls": [remote_url, uploaded_image],
                 "priceCents": 12999,
                 "stock": 14,
                 "type": "Sensor",
@@ -32,9 +33,10 @@ class ProductRouteTestCase(AppTestCase):
         self.assertIsNotNone(created)
         self.assertEqual(created["name"], "Smart Sensor")
         self.assertEqual(created["code"], "SNSR-001")
-        self.assertEqual(len(created["mediaUrls"]), 1)
-        self.assertTrue(created["mediaUrls"][0].startswith("/api/media/"))
-        media_response = self.client.get(created["mediaUrls"][0])
+        self.assertEqual(len(created["mediaUrls"]), 2)
+        self.assertEqual(created["mediaUrls"][0], remote_url)
+        self.assertTrue(created["mediaUrls"][1].startswith("/api/media/"))
+        media_response = self.client.get(created["mediaUrls"][1])
         self.assertEqual(media_response.status_code, 200)
         self.assertEqual(media_response.content_type, "image/png")
         self.assertEqual(media_response.data, b"iotbay")
@@ -165,6 +167,45 @@ class ProductRouteTestCase(AppTestCase):
                 response = self.client.post("/api/admin/products", json=payload)
                 self.assertEqual(response.status_code, 400)
                 self.assertEqual(response.get_json(), {"error": message})
+
+    def test_list_products_searches_name_and_type(self) -> None:
+        create_staff_test_session(self.client)
+        self.client.post(
+            "/api/admin/products",
+            json={
+                "name": "Thermal Monitor",
+                "code": "SNSR-001",
+                "mediaUrls": [],
+                "priceCents": 12999,
+                "stock": 14,
+                "type": "Sensor",
+            },
+        )
+        self.client.post(
+            "/api/admin/products",
+            json={
+                "name": "Door Relay",
+                "code": "ACTR-001",
+                "mediaUrls": [],
+                "priceCents": 8999,
+                "stock": 6,
+                "type": "Actuator",
+            },
+        )
+
+        search_by_type = self.client.get("/api/products?q=sensor")
+        self.assertEqual(search_by_type.status_code, 200)
+        sensor_items = search_by_type.get_json()["items"]
+        self.assertEqual(len(sensor_items), 1)
+        self.assertEqual(sensor_items[0]["type"], "Sensor")
+        self.assertEqual(sensor_items[0]["name"], "Thermal Monitor")
+
+        search_by_name = self.client.get("/api/products?q=door")
+        self.assertEqual(search_by_name.status_code, 200)
+        door_items = search_by_name.get_json()["items"]
+        self.assertEqual(len(door_items), 1)
+        self.assertEqual(door_items[0]["type"], "Actuator")
+        self.assertEqual(door_items[0]["name"], "Door Relay")
 
     def test_duplicate_update_and_delete_product(self) -> None:
         create_staff_test_session(self.client)

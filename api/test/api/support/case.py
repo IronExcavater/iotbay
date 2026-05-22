@@ -1,7 +1,8 @@
 import unittest
 
 from test.api.support.clients import AccessLogsApi, AuditApi, AuthApi, SessionsApi
-from test.shared.live_app import JsonHttpClient, LiveAppFixture
+from test.shared.http import JsonHttpClient
+from test.shared.live_app import LiveAppFixture
 from test.shared.users import TestCustomer, create_customer
 
 

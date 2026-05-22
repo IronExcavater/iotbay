@@ -34,8 +34,13 @@ interface ProductsResponse {
 }
 
 export const productApi = {
-    async list(signal?: AbortSignal): Promise<Product[]> {
-        return (await getJson<ProductsResponse>('/api/products', signal)).items;
+    async list(search = '', signal?: AbortSignal): Promise<Product[]> {
+        const query = search.trim();
+        const path = query
+            ? `/api/products?q=${encodeURIComponent(query)}`
+            : '/api/products';
+
+        return (await getJson<ProductsResponse>(path, signal)).items;
     },
 
     get(productId: string, signal?: AbortSignal): Promise<Product> {
