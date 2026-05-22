@@ -27,7 +27,8 @@ SELECT
     created_at, updated_at
 FROM orders
 WHERE user_id = ?
-  AND (? IS NULL OR DATE(created_at) = ?)
+    AND (? IS NULL OR order_id = ?)
+    AND (? IS NULL OR DATE(created_at) = ?)
 ORDER BY created_at DESC
 """
 

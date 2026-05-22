@@ -38,7 +38,7 @@ class UpdateOrderStatusRequest(BaseModel):
     @field_validator("status")
     @classmethod
     def validate_status(cls, v):
-        ORDER_STATUS_VALIDATOR.validate(v)
+        ORDER_STATUS_VALIDATOR.validate_request(v)
         return v
 
     class Config:
