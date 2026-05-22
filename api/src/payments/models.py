@@ -19,7 +19,7 @@ class Payment(SqliteRowModel, BlobUuidModel, ApiModel):
         "order_id",
         "amount_cents",
         "status",
-        "card_last_four",
+        "card_last4",  # CHANGED: was card_last_four
         "card_holder",
         "paid_at",
     )
@@ -28,9 +28,10 @@ class Payment(SqliteRowModel, BlobUuidModel, ApiModel):
     user_id: bytes
     amount_cents: int
     status: str
-    card_last_four: str
+    card_last4: str  # CHANGED: was card_last_four
     card_holder: str
     paid_at: str
+    payment_method_id: bytes | None = None  # NEW: optional link to saved method
     payment_id: bytes = field(default_factory=new_id_bytes)
 
     def to_dict(self) -> dict[str, object]:
@@ -39,7 +40,12 @@ class Payment(SqliteRowModel, BlobUuidModel, ApiModel):
             "orderId": id_bytes_to_string(self.order_id),
             "amountCents": self.amount_cents,
             "status": self.status,
-            "cardLastFour": self.card_last_four,
+            "cardLast4": self.card_last4,  # CHANGED: was cardLastFour
             "cardHolder": self.card_holder,
             "paidAt": self.paid_at,
+            "paymentMethodId": (  # NEW
+                id_bytes_to_string(self.payment_method_id)
+                if self.payment_method_id is not None
+                else None
+            ),
         }

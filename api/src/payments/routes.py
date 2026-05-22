@@ -11,7 +11,7 @@ from src.payments.requests import PayOrderRequest
 payments_bp = Blueprint("payments", __name__)
 
 
-def _require_customer() -> object:
+def _require_customer():
     user = current_authenticated_user()
     if not user:
         raise ApiError("Authentication required", HTTPStatus.UNAUTHORIZED)
@@ -20,31 +20,29 @@ def _require_customer() -> object:
     return user
 
 
+# POST /api/orders/<order_id>/pay
+# Pay with raw card details OR with a saved paymentMethodId in the body
+
+
 @payments_bp.post("/orders/<order_id>/pay")
 def pay_order(order_id: str) -> ResponseReturnValue:
     """
     POST /api/orders/<order_id>/pay
 
-    Accepts card details and processes a simulated payment for the order.
-    The order must belong to the authenticated customer and be in 'saved' status.
+    Option A — raw card details:
+        { "cardNumber": "4111...", "cardHolder": "Jane", "expiry": "12/28" }
 
-    Request body:
-        { "cardNumber": "4111111111111111",
-          "cardHolder": "Jane Smith",
-          "expiry": "12/28" }
+    Option B — saved payment method:
+        { "paymentMethodId": "<uuid>" }
 
-    Responses:
-        200  – payment succeeded; returns payment record
-        402  – payment was declined by the simulated gateway
-        404  – order not found or does not belong to this user
-        409  – order already paid or in a non-payable state
+    Option C — both (saved method used for linking, raw fields validated):
+        { "paymentMethodId": "<uuid>", "cardNumber": "...", ... }
     """
     user = _require_customer()
     order_id_bytes = id_string_to_bytes(order_id)
     req = parse_request(PayOrderRequest)
 
-    payment_service = services().payment_service
-    payment = payment_service.pay_order(
+    payment = services().payment_service.pay_order(
         actor_user_id=user.user_id,
         order_id=order_id_bytes,
         request=req,
@@ -52,17 +50,41 @@ def pay_order(order_id: str) -> ResponseReturnValue:
     return payment.to_dict(), HTTPStatus.OK
 
 
-@payments_bp.get("/orders/<order_id>/payment")
-def get_payment_for_order(order_id: str) -> ResponseReturnValue:
-    """
-    GET /api/orders/<order_id>/payment
+# POST /api/payment-methods/<method_id>/pay/<order_id> match with new paymentmethod
+# Convenience endpoint: pay an order directly from a saved method URL
 
-    Returns the payment record for an order, if one exists.
+
+@payments_bp.post("/payment-methods/<method_id>/pay/<order_id>")
+def pay_order_with_saved_method(method_id: str, order_id: str) -> ResponseReturnValue:
+    """
+    POST /api/payment-methods/<method_id>/pay/<order_id>
+
+    Pay an order using a saved payment method without supplying card details
+    in the body.  The body can be empty ({}) since the method is identified
+    by the URL.
     """
     user = _require_customer()
     order_id_bytes = id_string_to_bytes(order_id)
 
-    # Verify order ownership first
+    # Build a request that uses the saved method
+    req = PayOrderRequest(paymentMethodId=method_id)
+
+    payment = services().payment_service.pay_order(
+        actor_user_id=user.user_id,
+        order_id=order_id_bytes,
+        request=req,
+    )
+    return payment.to_dict(), HTTPStatus.OK
+
+
+# GET /api/orders/<order_id>/payment
+
+
+@payments_bp.get("/orders/<order_id>/payment")
+def get_payment_for_order(order_id: str) -> ResponseReturnValue:
+    user = _require_customer()
+    order_id_bytes = id_string_to_bytes(order_id)
+
     order = services().order_repository.select_order_by_id(order_id_bytes)
     if order is None or order.user_id != user.user_id:
         raise ApiError("Order not found", HTTPStatus.NOT_FOUND, code="ORDER_NOT_FOUND")
@@ -77,13 +99,11 @@ def get_payment_for_order(order_id: str) -> ResponseReturnValue:
     return payment.to_dict(), HTTPStatus.OK
 
 
+# GET /api/payments
+
+
 @payments_bp.get("/payments")
 def list_my_payments() -> ResponseReturnValue:
-    """
-    GET /api/payments
-
-    Lists all payment records for the authenticated customer.
-    """
     user = _require_customer()
     payments = services().payment_repository.list_payments_by_user_id(user.user_id)
     return {"items": [p.to_dict() for p in payments]}, HTTPStatus.OK

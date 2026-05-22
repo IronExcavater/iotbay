@@ -2,9 +2,11 @@ import random
 from dataclasses import dataclass
 
 from src.common.clock import UtcTime
+from src.common.sqlite_model import id_string_to_bytes
 from src.common.web import ApiError
 from src.orders.models import ORDER_STATUS_PAID, ORDER_STATUS_SAVED
 from src.orders.repository import OrderRepository
+from src.payment_methods.repository import PaymentMethodRepository  # NEW
 from src.payments.models import (
     PAYMENT_STATUS_FAILED,
     PAYMENT_STATUS_SUCCESS,
@@ -18,6 +20,7 @@ from src.payments.requests import PayOrderRequest
 class PaymentService:
     payment_repository: PaymentRepository
     order_repository: OrderRepository
+    payment_method_repository: PaymentMethodRepository  # NEW
 
     def pay_order(
         self,
@@ -26,19 +29,6 @@ class PaymentService:
         order_id: bytes,
         request: PayOrderRequest,
     ) -> Payment:
-        """
-        Simulate payment for a given order.
-
-        Validates that:
-        - The order exists and belongs to the requesting user.
-        - The order is in 'saved' status (not already paid or cancelled).
-
-        Then simulates a payment outcome (90 % success / 10 % failure for demo
-        purposes).  On success the order status is updated to 'paid' and a
-        payment record is persisted.  On failure a payment record with
-        status 'failed' is persisted and an error is returned.
-        """
-
         # --- Validate the order ---
         order = self.order_repository.select_order_by_id(order_id)
         if order is None or order.user_id != actor_user_id:
@@ -58,12 +48,43 @@ class PaymentService:
                 code="ORDER_NOT_PAYABLE",
             )
 
-        # --- Extract card last four to check legit ---
-        card_last_four = request.card_number[-4:]
+        # --- Resolve card details ---
+        # NEW BLOCK: if a saved payment method is provided, load it and use
+        # its stored card_last4 / cardholder_name instead of the raw request fields.
+        payment_method_id_bytes: bytes | None = None
+        card_last4: str
+        card_holder: str
 
-        # --- Simulate payment gateway (just like a third party payment service)---
+        if request.payment_method_id is not None:
+            # Look up the saved payment method and verify ownership
+            saved_methods = self.payment_method_repository.list_payment_methods(
+                actor_user_id
+            )
+            matched = next(
+                (m for m in saved_methods if m["id"] == request.payment_method_id),
+                None,
+            )
+            if matched is None:
+                raise ApiError(
+                    "Payment method not found",
+                    404,
+                    code="PAYMENT_METHOD_NOT_FOUND",
+                )
+            card_last4 = matched["cardLast4"]
+            card_holder = matched["cardholderName"]
+            payment_method_id_bytes = id_string_to_bytes(request.payment_method_id)
+        else:
+            # Raw card details — card_number is guaranteed non-None by the
+            # model_validator in PayOrderRequest
+            assert request.card_number is not None  # noqa: S101
+            assert request.card_holder is not None  # noqa: S101
+            card_last4 = request.card_number[-4:]
+            card_holder = request.card_holder
+
+        # --- Simulate payment gateway ---
+        # Use card_last4 for the deterministic fail rule (ends in 0000)
         now_iso = UtcTime.now().iso
-        simulated_success = self._simulate_payment(request.card_number)
+        simulated_success = self._simulate_payment(card_last4)
 
         status = PAYMENT_STATUS_SUCCESS if simulated_success else PAYMENT_STATUS_FAILED
 
@@ -72,9 +93,10 @@ class PaymentService:
             user_id=actor_user_id,
             amount_cents=order.total_cents,
             status=status,
-            card_last_four=card_last_four,
-            card_holder=request.card_holder,
+            card_last4=card_last4,  # CHANGED: was card_last_four
+            card_holder=card_holder,
             paid_at=now_iso,
+            payment_method_id=payment_method_id_bytes,  # NEW
         )
 
         if simulated_success:
@@ -91,18 +113,16 @@ class PaymentService:
 
         return payment
 
-    # ------------------------------------------------------------------
-    # Card check helpers (return fault if card ending by 0000)
-    # ------------------------------------------------------------------
+    # Private helpers
 
     @staticmethod
-    def _simulate_payment(card_number: str) -> bool:
+    def _simulate_payment(card_last4: str) -> bool:  # CHANGED param name
         """
         Simulate a payment outcome.
 
-        A card number ending in '0000' always fails.
-        
+        A card whose last 4 digits are '0000' always fails (useful for testing).
+        Otherwise there is a 90 % success rate.
         """
-        if card_number.endswith("0000"):
+        if card_last4 == "0000":
             return False
-        return random.random() < 0.9  # noqa: S311  (not cryptographic)
+        return random.random() < 0.9  # noqa: S311
