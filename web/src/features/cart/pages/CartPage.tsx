@@ -43,6 +43,7 @@ export default function CartPage() {
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [isTermsOpen, setIsTermsOpen] = useState(false);
     const [isOrdering, setIsOrdering] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         const nextValues = user
@@ -118,6 +119,46 @@ export default function CartPage() {
             showToast('Unable to place order');
         } finally {
             setIsOrdering(false);
+        }
+    }
+
+    async function handleSaveOrder() {
+        const nextAddressErrors = validateAddressValues(addressValues, true);
+        setAddressErrors(nextAddressErrors);
+        if (
+            !canOrder ||
+            Object.values(nextAddressErrors).some(Boolean) ||
+            !user
+        )
+            return;
+
+        setIsSaving(true);
+        try {
+            if (addressChanged) {
+                await updateMe(
+                    toProfileUpdateInput(addressValues, {
+                        emailChanged: false,
+                        isCustomer: true,
+                        isStaff: false,
+                    })
+                );
+            }
+
+            await orderApi.create({
+                addressId: null,
+                items: items.map((item) => ({
+                    productId: item.productId,
+                    quantity: item.quantity,
+                })),
+            });
+
+            clearCart();
+            showToast('Order saved successfully');
+            navigate(`/orders`);
+        } catch {
+            showToast('Unable to save order');
+        } finally {
+            setIsSaving(false);
         }
     }
 
@@ -302,15 +343,26 @@ export default function CartPage() {
                     ) : null}
 
                     {user ? (
-                        <Button
-                            disabled={!canOrder || isOrdering}
-                            loading={isOrdering}
-                            onClick={() => void handleOrder()}
-                            type="button"
-                            variant="primary"
-                        >
-                            Place order
-                        </Button>
+                        <div className="grid gap-2">
+                            <Button
+                                disabled={!canOrder || isSaving}
+                                loading={isSaving}
+                                onClick={() => void handleSaveOrder()}
+                                type="button"
+                                variant="secondary"
+                            >
+                                Save order
+                            </Button>
+                            <Button
+                                disabled={!canOrder || isOrdering}
+                                loading={isOrdering}
+                                onClick={() => void handleOrder()}
+                                type="button"
+                                variant="primary"
+                            >
+                                Place order
+                            </Button>
+                        </div>
                     ) : (
                         <ButtonLink to="/sign-in?next=/cart">
                             Sign in to order

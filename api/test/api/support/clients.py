@@ -24,6 +24,23 @@ class AuthApi:
             user_agent=user_agent,
         )
 
+    def login_staff(
+        self,
+        *,
+        email: str,
+        password: str,
+        user_agent: str = "Mozilla/5.0 Chrome/123.0 Windows",
+    ) -> HttpResponse:
+        return self.http.post(
+            "/api/login",
+            {
+                "email": email,
+                "password": password,
+                "userType": "staff",
+            },
+            user_agent=user_agent,
+        )
+
     def logout(self) -> HttpResponse:
         return self.http.post("/api/logout")
 

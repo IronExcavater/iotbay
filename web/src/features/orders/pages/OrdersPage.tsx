@@ -278,23 +278,25 @@ function OrderCard({
                                                 'No address provided'}
                                         </span>
                                     </div>
-                                    <Button
-                                        aria-label="Edit address"
-                                        className="inline-flex items-center gap-1 rounded-md px-3 py-2"
-                                        onClick={() =>
-                                            setIsEditingAddress(true)
-                                        }
-                                        type="button"
-                                        variant="ghost"
-                                    >
-                                        <FaPenToSquare
-                                            aria-hidden="true"
-                                            className="size-3.5"
-                                        />
-                                        <span className="text-ui-500 text-xs">
-                                            Edit
-                                        </span>
-                                    </Button>
+                                    {order.status === 'saved' && (
+                                        <Button
+                                            aria-label="Edit address"
+                                            className="inline-flex items-center gap-1 rounded-md px-3 py-2"
+                                            onClick={() =>
+                                                setIsEditingAddress(true)
+                                            }
+                                            type="button"
+                                            variant="ghost"
+                                        >
+                                            <FaPenToSquare
+                                                aria-hidden="true"
+                                                className="size-3.5"
+                                            />
+                                            <span className="text-ui-500 text-xs">
+                                                Edit
+                                            </span>
+                                        </Button>
+                                    )}
                                 </div>
                             </>
                         ) : (
@@ -326,15 +328,17 @@ function OrderCard({
                 <div className="flex items-center gap-2">
                     <OrderStatusBadge status={order.status} />
                     {canCancel && (
-                        <Button
-                            className="h-8 px-2 text-xs"
-                            disabled={cancelling}
-                            onClick={handleCancel}
-                            type="button"
-                            variant="danger"
-                        >
-                            Cancel
-                        </Button>
+                        <>
+                            <Button
+                                className="h-8 px-2 text-xs"
+                                disabled={cancelling}
+                                onClick={handleCancel}
+                                type="button"
+                                variant="danger"
+                            >
+                                Cancel
+                            </Button>
+                        </>
                     )}
                 </div>
             </div>
@@ -376,6 +380,18 @@ function OrderCard({
                 <span className="text-ui-900 font-semibold">
                     Total: {Money.format(order.totalCents)}
                 </span>
+            </div>
+            <div className="flex justify-end">
+                {canCancel && (
+                    <>
+                        <ButtonLink
+                            className="h-8 px-2 text-xs"
+                            to={`/checkout?orderId=${order.id}`}
+                        >
+                            Pay
+                        </ButtonLink>
+                    </>
+                )}
             </div>
         </li>
     );
