@@ -16,9 +16,14 @@ from src.orders.models import (
 from src.orders.queries import (
     INSERT_ORDER,
     INSERT_ORDER_ITEM,
+    SELECT_ORDER_BY_ID,
+    SELECT_ORDER_ITEMS,
+    UPDATE_ORDER_ADDRESS,
+    UPDATE_ORDER_STATUS,
 )
 from src.orders.repository import OrderRepository
 from src.products.repository import ProductRepository
+from src.users.repository import UserRepository
 
 VALID_TRANSITIONS: dict[str, set[str]] = {
     ORDER_STATUS_SAVED: {ORDER_STATUS_PAID, ORDER_STATUS_CANCELLED},
@@ -32,6 +37,7 @@ class OrderService:
     audit: AuditService
     order_repository: OrderRepository
     product_repository: ProductRepository
+    user_repository: UserRepository
 
     def create_order(
         self,
@@ -44,11 +50,13 @@ class OrderService:
             raise ApiError("At least one item is required", 400)
 
         total_cents = 0
-        order_items: list[tuple[bytes, int]] = []
+        order_items: list[tuple[bytes, int, int]] = []
 
         for item in items:
             product_id_str = str(item["product_id"])
             quantity = int(item["quantity"])
+            if quantity < 1:
+                raise ApiError("Quantity must be at least 1", 400)
 
             product_id_bytes = id_string_to_bytes(product_id_str)
             product = self.product_repository.select_product_by_id(
@@ -70,13 +78,24 @@ class OrderService:
                 )
 
             total_cents += product.price_cents * quantity
-            order_items.append((product_id_bytes, quantity))
+            order_items.append((product_id_bytes, quantity, product.price_cents))
+
+        user = self.user_repository.select_user_by_id(user_id=actor_user_id)
+        shipping_address = {
+            "shipping_address_line_one": user.address_line_one if user else None,
+            "address_line_two": user.address_line_two if user else None,
+            "shipping_suburb": user.suburb if user else None,
+            "shipping_state": user.state if user else None,
+            "shipping_postcode": user.postcode if user else None,
+            "shipping_country": user.country if user else None,
+        }
 
         order = self._insert_order_and_stock(
             user_id=actor_user_id,
             address_id=address_id,
             items=order_items,
             total_cents=total_cents,
+            shipping_address=shipping_address,
         )
 
         self._record_audit(
@@ -93,14 +112,15 @@ class OrderService:
         *,
         user_id: bytes,
         address_id: bytes | None,
-        items: list[tuple[bytes, int]],
+        items: list[tuple[bytes, int, int]],
         total_cents: int,
+        shipping_address: dict,
     ) -> Order:
         now = UtcTime.now().iso
         order_id_bytes = new_id_bytes()
 
         with self.order_repository.connect() as connection:
-            for product_id, quantity in items:
+            for product_id, quantity, _ in items:
                 success = self.product_repository.decrease_stock(
                     connection,
                     product_id=product_id,
@@ -121,16 +141,21 @@ class OrderService:
                     address_id,
                     ORDER_STATUS_SAVED,
                     total_cents,
+                    shipping_address["shipping_address_line_one"],
+                    shipping_address["address_line_two"],
+                    shipping_address["shipping_suburb"],
+                    shipping_address["shipping_state"],
+                    shipping_address["shipping_postcode"],
+                    shipping_address["shipping_country"],
                     now,
                     now,
                 ),
             )
-            for product_id, quantity in items:
+            for product_id, quantity, price_cents in items:
                 connection.execute(
-                    INSERT_ORDER_ITEM, (order_id_bytes, product_id, quantity)
+                    INSERT_ORDER_ITEM,
+                    (order_id_bytes, product_id, quantity, price_cents),
                 )
-
-            from src.orders.queries import SELECT_ORDER_BY_ID, SELECT_ORDER_ITEMS
 
             row = connection.execute(SELECT_ORDER_BY_ID, (order_id_bytes,)).fetchone()
             order = Order(**row)
@@ -159,14 +184,28 @@ class OrderService:
             )
 
         before_status = order.status
+        now = UtcTime.now().iso
 
-        if new_status == ORDER_STATUS_CANCELLED:
-            self._restore_stock(order)
+        with self.order_repository.connect() as connection:
+            if new_status == ORDER_STATUS_CANCELLED:
+                for item in order.items:
+                    self.product_repository.increase_stock(
+                        connection,
+                        product_id=item.product_id,
+                        quantity=item.quantity,
+                    )
 
-        updated_order = self.order_repository.update_order_status(
-            order_id=order_id,
-            new_status=new_status,
-        )
+            connection.execute(UPDATE_ORDER_STATUS, (new_status, now, order_id))
+            row = connection.execute(SELECT_ORDER_BY_ID, (order_id,)).fetchone()
+            updated_order = replace(
+                Order(**row),
+                items=[
+                    OrderItem(**r)
+                    for r in connection.execute(
+                        SELECT_ORDER_ITEMS, (order_id,)
+                    ).fetchall()
+                ],
+            )
 
         self._record_audit(
             action="status_changed",
@@ -178,14 +217,72 @@ class OrderService:
 
         return updated_order
 
-    def _restore_stock(self, order: Order) -> None:
+    def update_address(
+        self,
+        *,
+        actor_user_id: bytes,
+        order_id: bytes,
+        address_line_one: str | None,
+        address_line_two: str | None,
+        suburb: str | None,
+        state: str | None,
+        postcode: str | None,
+        country: str | None,
+    ) -> Order:
+        order = self.order_repository.select_order_by_id(order_id)
+        if order is None:
+            raise ApiError("Order not found", 404)
+
+        now = UtcTime.now().iso
+
         with self.order_repository.connect() as connection:
-            for item in order.items:
-                self.product_repository.increase_stock(
-                    connection,
-                    product_id=item.product_id,
-                    quantity=item.quantity,
-                )
+            connection.execute(
+                UPDATE_ORDER_ADDRESS,
+                (
+                    address_line_one,
+                    address_line_two,
+                    suburb,
+                    state,
+                    postcode,
+                    country,
+                    now,
+                    order_id,
+                ),
+            )
+            row = connection.execute(SELECT_ORDER_BY_ID, (order_id,)).fetchone()
+            updated_order = replace(
+                Order(**row),
+                items=[
+                    OrderItem(**r)
+                    for r in connection.execute(
+                        SELECT_ORDER_ITEMS, (order_id,)
+                    ).fetchall()
+                ],
+            )
+
+        self._record_audit(
+            action="address_updated",
+            actor_user_id=actor_user_id,
+            order=updated_order,
+            before={
+                "shipping_address_line_one": order.shipping_address_line_one,
+                "address_line_two": order.address_line_two,
+                "shipping_suburb": order.shipping_suburb,
+                "shipping_state": order.shipping_state,
+                "shipping_postcode": order.shipping_postcode,
+                "shipping_country": order.shipping_country,
+            },
+            after={
+                "shipping_address_line_one": address_line_one,
+                "address_line_two": address_line_two,
+                "shipping_suburb": suburb,
+                "shipping_state": state,
+                "shipping_postcode": postcode,
+                "shipping_country": country,
+            },
+        )
+
+        return updated_order
 
     def _record_audit(
         self,

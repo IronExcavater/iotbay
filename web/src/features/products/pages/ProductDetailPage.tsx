@@ -8,10 +8,14 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { AuditTimeline } from '@features/audit/components/AuditTimeline';
-import { useEntityAudit } from '@features/audit/useEntityAudit';
-import { useCart } from '@features/cart/CartProvider';
-import { ProductFormDialog } from '@features/products/admin/components/ProductFormDialog';
+import { useEntityAudit } from '@features/audit/hooks/useEntityAudit';
+import { AddToCartControl } from '@features/cart/components/AddToCartControl';
+import { ProductFormFields } from '@features/products/admin/components/ProductFormDialog';
 import { productApi, type Product } from '@features/products/api';
+import {
+    ProductTagRow,
+    StockStatus,
+} from '@features/products/components/ProductBadges';
 import {
     assessProductForm,
     toProductErrorState,
@@ -36,13 +40,11 @@ export default function ProductDetailPage({
     const navigate = useNavigate();
     const { productId = '' } = useParams();
     const { showToast } = useToast();
-    const { addToCart, isInCart } = useCart();
     const [product, setProduct] = useState<Product | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
-    const [quantity, setQuantity] = useState('1');
     const [pageError, setPageError] = useState<string | null>(null);
     const [fieldErrors, setFieldErrors] = useState<ProductFieldErrors>({});
     const [formValues, setFormValues] = useState<ProductFormValues>({
@@ -91,7 +93,6 @@ export default function ProductDetailPage({
             if (!signal?.aborted) {
                 setProduct(nextProduct);
                 setSelectedMediaIndex(0);
-                setQuantity(nextProduct.stock > 0 ? '1' : '0');
                 setPageError(null);
             }
         } catch (error) {
@@ -147,10 +148,6 @@ export default function ProductDetailPage({
         product.mediaUrls.length > 0
             ? product.mediaUrls
             : ['/iotbay_icon_themed.svg'];
-    const inCart = isInCart(product.id);
-    const customerStockStatus = !admin ? stockStatusForProduct(product) : null;
-    const selectedQuantity = resolveQuantity(quantity, product.stock);
-
     function openEditDialog() {
         if (!product) return;
         setFormValues(toProductFormValues(product));
@@ -222,20 +219,14 @@ export default function ProductDetailPage({
                             <p className="text-ui-500 font-mono text-sm">
                                 {product.code}
                             </p>
-                            <div className="flex flex-wrap gap-2 text-xs">
-                                <span className="bg-ui-100 text-ui-700 rounded-full px-2.5 py-1">
-                                    {product.type}
-                                </span>
-                                {admin ? (
-                                    <span className="bg-ui-100 text-ui-700 rounded-full px-2.5 py-1">
-                                        Stock: {product.stock}
-                                    </span>
-                                ) : null}
-                            </div>
-                            <div className="flex min-w-0 items-center gap-2">
-                                <h1 className="text-ui-900 truncate text-3xl font-semibold tracking-tight">
+                            <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                <h1 className="text-ui-900 text-3xl font-semibold tracking-tight">
                                     {product.name}
                                 </h1>
+                                <ProductTagRow
+                                    admin={admin}
+                                    product={product}
+                                />
                                 {admin && (
                                     <Button
                                         aria-label="Edit product"
@@ -255,58 +246,20 @@ export default function ProductDetailPage({
                                 <p className="text-ui-900 text-2xl font-semibold">
                                     {Money.format(product.priceCents)}
                                 </p>
-                                {!admin &&
-                                    (product.stock > 0 ? (
-                                        <div className="flex flex-wrap items-center gap-3">
-                                            <label className="grid gap-1">
-                                                <span className="text-ui-500 text-xs font-medium">
-                                                    Quantity
-                                                </span>
-                                                <input
-                                                    className="bg-ui-0 ring-ui-300 focus:ring-ui-900 h-10 w-24 rounded border-0 px-3 text-sm ring-1 outline-none focus:ring-2"
-                                                    max={product.stock}
-                                                    min={1}
-                                                    onChange={(event) =>
-                                                        setQuantity(
-                                                            event.target.value
-                                                        )
-                                                    }
-                                                    type="number"
-                                                    value={quantity}
-                                                />
-                                            </label>
-                                            <Button
-                                                className="self-end"
-                                                onClick={() =>
-                                                    addToCart({
-                                                        code: product.code,
-                                                        imageUrl: media[0],
-                                                        name: product.name,
-                                                        priceCents:
-                                                            product.priceCents,
-                                                        productId: product.id,
-                                                        quantity:
-                                                            selectedQuantity,
-                                                    })
-                                                }
-                                                type="button"
-                                            >
-                                                {inCart
-                                                    ? 'Add more to cart'
-                                                    : 'Add to cart'}
-                                            </Button>
-                                        </div>
-                                    ) : (
-                                        <Button disabled type="button">
-                                            Out of stock
-                                        </Button>
-                                    ))}
+                                {!admin && (
+                                    <AddToCartControl
+                                        item={{
+                                            code: product.code,
+                                            imageUrl: media[0],
+                                            name: product.name,
+                                            priceCents: product.priceCents,
+                                            productId: product.id,
+                                        }}
+                                        stock={product.stock}
+                                    />
+                                )}
                             </div>
-                            {customerStockStatus && (
-                                <p className={customerStockStatus.className}>
-                                    {customerStockStatus.message}
-                                </p>
-                            )}
+                            {!admin && <StockStatus product={product} />}
                         </div>
 
                         <div className="grid gap-2">
@@ -322,71 +275,54 @@ export default function ProductDetailPage({
                 </section>
             </section>
 
-            {admin && <AuditTimeline events={audit.events} />}
+            {admin && isEditOpen && (
+                <section className="border-ui-200 rounded border p-5">
+                    <div className="mb-4 flex items-center justify-between">
+                        <h2 className="text-ui-900 text-lg font-semibold">
+                            Edit product
+                        </h2>
+                        <Button
+                            onClick={closeEditDialog}
+                            type="button"
+                            variant="ghost"
+                        >
+                            Cancel
+                        </Button>
+                    </div>
+                    <ProductFormFields
+                        codeInput={codeInput}
+                        fieldErrors={fieldErrors}
+                        isSubmitting={isSubmitting}
+                        nameInput={nameInput}
+                        onMediaUrlsChange={(mediaUrls) => {
+                            setFormValues((current) => ({
+                                ...current,
+                                mediaUrls,
+                            }));
+                        }}
+                        onStockChange={(stock) => {
+                            setFormValues((current) => ({
+                                ...current,
+                                stock,
+                            }));
+                        }}
+                        onSubmit={handleSubmit}
+                        onTypeChange={(type) => {
+                            setFormValues((current) => ({
+                                ...current,
+                                type,
+                            }));
+                        }}
+                        priceInput={priceInput}
+                        submitLabel="Save product"
+                        values={formValues}
+                    />
+                </section>
+            )}
 
-            <ProductFormDialog
-                codeInput={codeInput}
-                fieldErrors={fieldErrors}
-                formTitle="Edit product"
-                isOpen={isEditOpen}
-                isSubmitting={isSubmitting}
-                nameInput={nameInput}
-                onClose={closeEditDialog}
-                onMediaUrlsChange={(mediaUrls) => {
-                    setFormValues((current) => ({
-                        ...current,
-                        mediaUrls,
-                    }));
-                }}
-                onStockChange={(stock) => {
-                    setFormValues((current) => ({
-                        ...current,
-                        stock,
-                    }));
-                }}
-                onSubmit={handleSubmit}
-                onTypeChange={(type) => {
-                    setFormValues((current) => ({
-                        ...current,
-                        type,
-                    }));
-                }}
-                priceInput={priceInput}
-                submitLabel="Save product"
-                values={formValues}
-            />
+            {admin && <AuditTimeline events={audit.events} />}
         </section>
     );
-}
-
-function stockStatusForProduct(product: Product): {
-    className: string;
-    message: string;
-} | null {
-    if (!product.stockStatusMessage || !product.stockStatusTone) {
-        return null;
-    }
-
-    return {
-        className:
-            product.stockStatusTone === 'warning'
-                ? 'text-amber-600 text-sm font-medium'
-                : 'text-red-700 text-sm font-medium',
-        message: product.stockStatusMessage,
-    };
-}
-
-function resolveQuantity(value: string, stock: number) {
-    if (stock <= 0) {
-        return 0;
-    }
-
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed)) {
-        return 1;
-    }
-
-    return Math.min(stock, Math.max(1, Math.trunc(parsed)));
 }
 
 function MediaCarousel({

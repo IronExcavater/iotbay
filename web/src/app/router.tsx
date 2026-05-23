@@ -5,24 +5,23 @@ import AdminLayout from '@app/layouts/AdminLayout';
 import SiteLayout from '@app/layouts/SiteLayout';
 import NotFoundPage from '@app/NotFoundPage';
 import AdminAccessLogsPage from '@features/access-logs/admin/AdminAccessLogsPage';
+import { ProtectedRoute } from '@features/auth/components/ProtectedRoute';
 import AuthPage from '@features/auth/pages/AuthPage';
 import ResetPasswordPage from '@features/auth/pages/ResetPasswordPage';
 import StaffRegistrationPage from '@features/auth/pages/StaffRegistrationPage';
 import VerifyEmailPage from '@features/auth/pages/VerifyEmailPage';
-import { ProtectedRoute } from '@features/auth/ProtectedRoute';
-import CartPage from '@features/cart/CartPage';
+import CartPage from '@features/cart/pages/CartPage';
 import HomePage from '@features/home/HomePage';
-import TermsPage from '@features/legal/TermsPage';
 import AdminOrdersPage from '@features/orders/admin/AdminOrdersPage';
 import OrdersPage from '@features/orders/OrdersPage';
 import CheckoutPage from '@features/payments/CheckoutPage'; // NEW
 import PaymentHistoryPage from '@features/payments/PaymentHistoryPage'; // NEW
 import AdminProductsPage from '@features/products/admin/AdminProductsPage';
-import ProductCatalogPage from '@features/products/ProductCatalogPage';
-import ProductDetailPage from '@features/products/ProductDetailPage';
+import ProductCatalogPage from '@features/products/pages/ProductCatalogPage';
+import ProductDetailPage from '@features/products/pages/ProductDetailPage';
 import AdminUsersPage from '@features/users/admin/AdminUsersPage';
 import InviteStaffPage from '@features/users/admin/InviteStaffPage';
-import UserDetailPage from '@features/users/UserDetailPage';
+import UserDetailPage from '@features/users/pages/UserDetailPage';
 
 export const router = createBrowserRouter([
     {
@@ -45,10 +44,6 @@ export const router = createBrowserRouter([
             {
                 path: 'cart',
                 element: <CartPage />,
-            },
-            {
-                path: 'terms',
-                element: <TermsPage />,
             },
             {
                 element: <ProtectedRoute access="guest" />,

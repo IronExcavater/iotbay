@@ -143,8 +143,12 @@ class Product(SqliteRowModel, BlobUuidModel, ApiModel):
     def stock_status_message(self) -> str | None:
         if self.stock > 10:
             return None
+        if self.stock == 0:
+            return "Out of stock"
         if self.stock >= 5:
-            return "Selling fast - only a few left"
+            return f"Limited stock: {self.stock} available"
+        if self.stock == 1:
+            return "Last unit available"
         return f"Only {self.stock} left in stock"
 
     @property
@@ -190,5 +194,4 @@ def normalize_product_stock(value: object) -> int:
 
 
 def normalize_media_urls(value: list[str]) -> list[str]:
-    urls = [item.strip() for item in value if item.strip()][:6]
-    return urls or ["/iotbay_icon_themed.svg"]
+    return [item.strip() for item in value if item.strip()][:6]

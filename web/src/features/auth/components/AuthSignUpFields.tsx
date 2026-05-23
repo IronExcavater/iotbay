@@ -1,4 +1,4 @@
-import { AddressFields } from '@features/addresses/AddressFields';
+import { AddressFields } from '@features/addresses/components/AddressFields';
 import type { AddressFieldName } from '@features/addresses/form';
 import type { AuthFieldErrors, AuthFormValues } from '@features/auth/form';
 import { Field } from '@shared/ui/form/Field';

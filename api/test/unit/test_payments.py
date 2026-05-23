@@ -1,7 +1,9 @@
+import sqlite3
 import unittest
 from unittest.mock import patch
 
 from src.common.app import extension_from, services_from
+from src.common.sqlite_model import new_id_bytes
 from src.orders.models import (
     ORDER_STATUS_CANCELLED,
     ORDER_STATUS_PAID,
@@ -11,7 +13,6 @@ from src.payments.models import PAYMENT_STATUS_FAILED, PAYMENT_STATUS_SUCCESS
 from src.payments.requests import PayOrderRequest
 from src.payments.service import PaymentService
 from src.users.repository import UserRepository
-
 from test.shared.app import AppTestCase
 from test.shared.users import create_customer
 
@@ -111,19 +112,33 @@ class PaymentServiceTestCase(AppTestCase):
         )
         return create_customer(repo, email=email, password="CedarGrove42")
 
-    def _make_order(self, user_id: bytes, status: str = ORDER_STATUS_SAVED):
-        svc = services_from(self.client.application)
-        order = svc.order_repository.insert_order(
-            user_id=user_id,
-            address_id=None,
-            items=[],
-            total_cents=4999,
-        )
-        if status != ORDER_STATUS_SAVED:
-            order = svc.order_repository.update_order_status(
-                order_id=order.order_id,
-                new_status=status,
+    def _make_order(
+        self, user_id: bytes, status: str = ORDER_STATUS_SAVED
+    ):
+        """
+        Insert a minimal order directly via raw SQL.
+        OrderRepository has no insert method — orders are normally created
+        through the order service which requires cart items. Raw SQL with
+        foreign keys disabled is the simplest way to get a test order into
+        the database without depending on unrelated features.
+        """
+        order_id = new_id_bytes()
+        with sqlite3.connect(self.database_path) as conn:
+            conn.execute("PRAGMA foreign_keys = OFF")
+            conn.execute(
+                """
+                INSERT INTO orders
+                    (order_id, user_id, status, total_cents,
+                     created_at, updated_at)
+                VALUES
+                    (?, ?, ?, ?, datetime('now'), datetime('now'))
+                """,
+                (order_id, user_id, status, 4999),
             )
+
+        svc = services_from(self.client.application)
+        order = svc.order_repository.select_order_by_id(order_id)
+        assert order is not None
         return order
 
     def _payment_service(self) -> PaymentService:
@@ -161,7 +176,9 @@ class PaymentServiceTestCase(AppTestCase):
         test_user = self._make_customer(email="saved.method@example.com")
         order = self._make_order(test_user.user.user_id)
 
-        repo = services_from(self.client.application).payment_method_repository
+        repo = services_from(
+            self.client.application
+        ).payment_method_repository
         method = repo.insert_payment_method(
             customer_id=test_user.user.user_id,
             type="visa",
@@ -197,7 +214,9 @@ class PaymentServiceTestCase(AppTestCase):
                 actor_user_id=test_user.user.user_id,
                 order_id=order.order_id,
                 request=_pay_request(
-                    payment_method_id=("00000000-0000-0000-0000-000000000001")
+                    payment_method_id=(
+                        "00000000-0000-0000-0000-000000000001"
+                    )
                 ),
             )
 
@@ -238,7 +257,6 @@ class PaymentServiceTestCase(AppTestCase):
         self.assertEqual(unchanged.status, ORDER_STATUS_SAVED)
 
     def test_pay_order_raises_404_when_order_not_found(self) -> None:
-        from src.common.sqlite_model import new_id_bytes
         from src.common.web import ApiError
 
         test_user = self._make_customer(email="nofound@example.com")
@@ -272,7 +290,9 @@ class PaymentServiceTestCase(AppTestCase):
         from src.common.web import ApiError
 
         test_user = self._make_customer(email="already.paid@example.com")
-        order = self._make_order(test_user.user.user_id, status=ORDER_STATUS_PAID)
+        order = self._make_order(
+            test_user.user.user_id, status=ORDER_STATUS_PAID
+        )
 
         with self.assertRaises(ApiError) as ctx:
             self._payment_service().pay_order(
@@ -287,7 +307,9 @@ class PaymentServiceTestCase(AppTestCase):
         from src.common.web import ApiError
 
         test_user = self._make_customer(email="cancelled@example.com")
-        order = self._make_order(test_user.user.user_id, status=ORDER_STATUS_CANCELLED)
+        order = self._make_order(
+            test_user.user.user_id, status=ORDER_STATUS_CANCELLED
+        )
 
         with self.assertRaises(ApiError) as ctx:
             self._payment_service().pay_order(

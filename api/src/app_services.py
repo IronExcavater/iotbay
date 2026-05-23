@@ -89,6 +89,7 @@ def build_app_services(
             audit=AuditService(repository=audit_repository),
             order_repository=order_repository,
             product_repository=product_repository,
+            user_repository=user_repository,
         ),
         order_repository=order_repository,
         payment_method_repository=payment_method_repository,
