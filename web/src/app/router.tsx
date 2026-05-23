@@ -13,7 +13,9 @@ import VerifyEmailPage from '@features/auth/pages/VerifyEmailPage';
 import CartPage from '@features/cart/pages/CartPage';
 import HomePage from '@features/home/HomePage';
 import AdminOrdersPage from '@features/orders/admin/AdminOrdersPage';
-import OrdersPage from '@features/orders/pages/OrdersPage';
+import OrdersPage from '@features/orders/OrdersPage';
+import CheckoutPage from '@features/payments/CheckoutPage'; // NEW
+import PaymentHistoryPage from '@features/payments/PaymentHistoryPage'; // NEW
 import AdminProductsPage from '@features/products/admin/AdminProductsPage';
 import ProductCatalogPage from '@features/products/pages/ProductCatalogPage';
 import ProductDetailPage from '@features/products/pages/ProductDetailPage';
@@ -86,6 +88,16 @@ export const router = createBrowserRouter([
                     {
                         path: 'orders',
                         element: <OrdersPage />,
+                    },
+                    // NEW: dedicated checkout page (reached from cart)
+                    {
+                        path: 'checkout',
+                        element: <CheckoutPage />,
+                    },
+                    // NEW: payment history page (reached from account or receipt)
+                    {
+                        path: 'account/payments',
+                        element: <PaymentHistoryPage />,
                     },
                 ],
             },
