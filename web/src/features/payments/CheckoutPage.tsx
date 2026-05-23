@@ -375,13 +375,13 @@ export default function CheckoutPage() {
                         ))}
 
                         <p className="text-ui-500 text-xs">
-                            Manage your saved cards in{' '}
+                            Manage your{' '}
                             <button
                                 className="text-blue-600 underline underline-offset-2"
-                                onClick={() => navigate('/cart')}
+                                onClick={() => navigate(-1)}
                                 type="button"
                             >
-                                Account settings
+                                Payment Method
                             </button>
                             .
                         </p>
