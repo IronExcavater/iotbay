@@ -328,15 +328,17 @@ function OrderCard({
                 <div className="flex items-center gap-2">
                     <OrderStatusBadge status={order.status} />
                     {canCancel && (
-                        <Button
-                            className="h-8 px-2 text-xs"
-                            disabled={cancelling}
-                            onClick={handleCancel}
-                            type="button"
-                            variant="danger"
-                        >
-                            Cancel
-                        </Button>
+                        <>
+                            <Button
+                                className="h-8 px-2 text-xs"
+                                disabled={cancelling}
+                                onClick={handleCancel}
+                                type="button"
+                                variant="danger"
+                            >
+                                Cancel
+                            </Button>
+                        </>
                     )}
                 </div>
             </div>
@@ -378,6 +380,18 @@ function OrderCard({
                 <span className="text-ui-900 font-semibold">
                     Total: {Money.format(order.totalCents)}
                 </span>
+            </div>
+            <div className="flex justify-end">
+                {canCancel && (
+                    <>
+                        <ButtonLink
+                            className="h-8 px-2 text-xs"
+                            to={`/checkout?orderId=${order.id}`}
+                        >
+                            Pay
+                        </ButtonLink>
+                    </>
+                )}
             </div>
         </li>
     );
