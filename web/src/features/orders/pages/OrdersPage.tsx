@@ -278,23 +278,25 @@ function OrderCard({
                                                 'No address provided'}
                                         </span>
                                     </div>
-                                    <Button
-                                        aria-label="Edit address"
-                                        className="inline-flex items-center gap-1 rounded-md px-3 py-2"
-                                        onClick={() =>
-                                            setIsEditingAddress(true)
-                                        }
-                                        type="button"
-                                        variant="ghost"
-                                    >
-                                        <FaPenToSquare
-                                            aria-hidden="true"
-                                            className="size-3.5"
-                                        />
-                                        <span className="text-ui-500 text-xs">
-                                            Edit
-                                        </span>
-                                    </Button>
+                                    {order.status === 'saved' && (
+                                        <Button
+                                            aria-label="Edit address"
+                                            className="inline-flex items-center gap-1 rounded-md px-3 py-2"
+                                            onClick={() =>
+                                                setIsEditingAddress(true)
+                                            }
+                                            type="button"
+                                            variant="ghost"
+                                        >
+                                            <FaPenToSquare
+                                                aria-hidden="true"
+                                                className="size-3.5"
+                                            />
+                                            <span className="text-ui-500 text-xs">
+                                                Edit
+                                            </span>
+                                        </Button>
+                                    )}
                                 </div>
                             </>
                         ) : (

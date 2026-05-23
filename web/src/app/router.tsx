@@ -13,7 +13,7 @@ import VerifyEmailPage from '@features/auth/pages/VerifyEmailPage';
 import CartPage from '@features/cart/pages/CartPage';
 import HomePage from '@features/home/HomePage';
 import AdminOrdersPage from '@features/orders/admin/AdminOrdersPage';
-import OrdersPage from '@features/orders/OrdersPage';
+import OrdersPage from '@features/orders/pages/OrdersPage';
 import CheckoutPage from '@features/payments/CheckoutPage'; // NEW
 import PaymentHistoryPage from '@features/payments/PaymentHistoryPage'; // NEW
 import AdminProductsPage from '@features/products/admin/AdminProductsPage';
