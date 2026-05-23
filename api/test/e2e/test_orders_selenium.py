@@ -10,7 +10,6 @@ class OrdersSeleniumAcceptanceTestCase(SeleniumE2ETestCase):
         from test.shared.users import create_staff
 
         staff = create_staff(self.fixture.user_repository)
-        # Use API to create product
         from test.shared.http import JsonHttpClient
 
         http = JsonHttpClient("http://localhost:5001", api_key="test-api-key")
@@ -49,16 +48,13 @@ class OrdersSeleniumAcceptanceTestCase(SeleniumE2ETestCase):
         """AC: full checkout flow — add to cart, place order, see in orders."""
         product_id, customer = self._create_product_and_login()
 
-        # Navigate to product and add to cart
         self.driver.get(f"{WEB_URL}/products/{product_id}")
         self.click_when_ready("//button[contains(., 'Add to cart')]", by="xpath")
 
-        # Go to cart and place order
         cart = CartPage(self)
         cart.open()
         self.wait_for_text("Test Sensor")
 
-        # Fill address fields (required for checkout)
         from selenium.webdriver.common.by import By
 
         address_fields = self.driver.find_elements(
@@ -76,7 +72,6 @@ class OrdersSeleniumAcceptanceTestCase(SeleniumE2ETestCase):
         cart.accept_terms()
         cart.place_order()
 
-        # Should redirect to orders page
         self.wait_for_text("Orders")
         self.wait_for_text("saved")
 
@@ -84,7 +79,6 @@ class OrdersSeleniumAcceptanceTestCase(SeleniumE2ETestCase):
         """AC: customer can cancel a saved order from the UI."""
         product_id, customer = self._create_product_and_login()
 
-        # Create order via API for speed
         from test.shared.http import JsonHttpClient
 
         http = JsonHttpClient("http://localhost:5001", api_key="test-api-key")
@@ -100,12 +94,10 @@ class OrdersSeleniumAcceptanceTestCase(SeleniumE2ETestCase):
             },
         )
 
-        # Navigate to orders page
         page = OrdersPage(self)
         page.open()
         self.wait_for_text("saved")
 
-        # Cancel the order
         page.click_cancel_button()
 
         self.wait_for_text("cancelled")
@@ -114,7 +106,6 @@ class OrdersSeleniumAcceptanceTestCase(SeleniumE2ETestCase):
         """AC: customer can filter orders using the date picker."""
         product_id, customer = self._create_product_and_login()
 
-        # Create order via API
         from test.shared.http import JsonHttpClient
 
         http = JsonHttpClient("http://localhost:5001", api_key="test-api-key")
@@ -134,7 +125,6 @@ class OrdersSeleniumAcceptanceTestCase(SeleniumE2ETestCase):
         page.open()
         self.wait_for_text("saved")
 
-        # Search with a future date
         date_input = self.driver.find_element("css selector", "#search-date")
         date_input.send_keys("2999-01-01")
         self.click_when_ready("//button[normalize-space()='Search']", by="xpath")
@@ -142,5 +132,4 @@ class OrdersSeleniumAcceptanceTestCase(SeleniumE2ETestCase):
         import time
 
         time.sleep(1)
-        # Should show no results after filtering
         self.assertFalse(page.has_text("saved"))

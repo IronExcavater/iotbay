@@ -25,7 +25,6 @@ def _create_product(
     )
     assert response.status_code == 201
     product = response.get_json()
-    # Switch back to no session (caller will set up their own)
     client.delete_cookie("iotbay_test_session")
     return product["id"]
 
@@ -179,7 +178,6 @@ class ListOrdersTestCase(AppTestCase):
                 "items": [{"productId": product_id, "quantity": 1}],
             },
         )
-        # Switch to a different customer
         self.client.delete_cookie("iotbay_test_session")
         _login_customer(self.client, email="bob@example.com")
 
@@ -224,7 +222,6 @@ class ListOrdersTestCase(AppTestCase):
             },
         )
 
-        # Future date should return nothing
         response = self.client.get("/api/orders?date=2999-01-01")
 
         self.assertEqual(response.status_code, 200)

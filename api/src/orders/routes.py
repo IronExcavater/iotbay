@@ -77,16 +77,9 @@ def list_all_orders():
     except ValueError:
         page = 1
 
-    order_id_bytes = None
-    if order_id_param:
-        try:
-            order_id_bytes = id_string_to_bytes(order_id_param)
-        except ValueError:
-            raise ApiError("Invalid order ID format", 400, code="INVALID_ID")
-
     repo = services().order_repository
     orders, total = repo.list_all_orders(
-        order_id=order_id_bytes,
+        order_id=order_id_param or None,
         date=date_param or None,
         page=page,
         limit=_ADMIN_PAGE_LIMIT,

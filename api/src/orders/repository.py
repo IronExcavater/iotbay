@@ -43,7 +43,7 @@ class OrderRepository(Repository):
     def list_all_orders(
         self,
         *,
-        order_id: bytes | None = None,
+        order_id: str | None = None,
         date: str | None = None,
         page: int = 1,
         limit: int = 20,
@@ -51,8 +51,8 @@ class OrderRepository(Repository):
         conditions = ["1=1"]
         params: list = []
         if order_id is not None:
-            conditions.append("order_id = ?")
-            params.append(order_id)
+            conditions.append("LOWER(HEX(order_id)) LIKE ?")
+            params.append(f"%{order_id.strip().lower().replace('-', '')}%")
         if date:
             conditions.append("DATE(created_at) = ?")
             params.append(date)

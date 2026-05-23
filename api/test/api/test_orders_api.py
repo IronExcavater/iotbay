@@ -8,10 +8,8 @@ class OrdersApiAcceptanceTestCase(ApiAcceptanceTestCase):
         self, *, name="Sensor", code="SNSR-001", price_cents=5000, stock=10
     ):
         """Create a product via the staff API and return its ID."""
-        # Login as staff
         staff_http = JsonHttpClient(self.fixture.base_url, api_key=self.fixture.api_key)
         staff_auth = AuthApi(staff_http)
-        # Create staff user and login
         from test.shared.users import create_staff
 
         staff = create_staff(self.fixture.user_repository)
@@ -34,7 +32,6 @@ class OrdersApiAcceptanceTestCase(ApiAcceptanceTestCase):
         """AC: complete order flow — create, list, cancel."""
         product_id = self._create_product_as_staff()
 
-        # Create order
         create_response = self.http.post(
             "/api/orders",
             {
@@ -48,13 +45,11 @@ class OrdersApiAcceptanceTestCase(ApiAcceptanceTestCase):
         self.assertEqual(order["totalCents"], 10000)
         order_id = order["id"]
 
-        # List orders
         list_response = self.http.get("/api/orders")
         self.assertEqual(list_response.status, 200)
         self.assertEqual(len(list_response.body), 1)
         self.assertEqual(list_response.body[0]["id"], order_id)
 
-        # Cancel order
         cancel_response = self.http.request(
             "PATCH",
             f"/api/orders/{order_id}/status",
@@ -63,7 +58,6 @@ class OrdersApiAcceptanceTestCase(ApiAcceptanceTestCase):
         self.assertEqual(cancel_response.status, 200)
         self.assertEqual(cancel_response.body["status"], "cancelled")
 
-        # Verify order appears as cancelled in list
         list_after = self.http.get("/api/orders")
         self.assertEqual(list_after.body[0]["status"], "cancelled")
 

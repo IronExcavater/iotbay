@@ -25,7 +25,6 @@ class CartPage:
 
     def accept_terms(self) -> None:
         self.case.click_when_ready("[type='checkbox']")
-        # Accept in the dialog
         self.case.click_when_ready("//button[normalize-space()='Accept']", by="xpath")
 
     def place_order(self) -> None:

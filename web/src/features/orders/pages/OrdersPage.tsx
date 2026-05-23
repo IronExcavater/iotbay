@@ -255,38 +255,47 @@ function OrderCard({
                 <div className="grid gap-1">
                     <div className="flex items-center gap-2">
                         <span className="text-ui-500 text-xs">Order ID:</span>
-                        <span className="text-ui-700 font-mono text-xs">
-                            {order.id}
+                        <span className="text-ui-800 font-mono text-sm">
+                            {order.id.slice(0, 8)}
                         </span>
                     </div>
-                    <span className="text-ui-500 text-xs">
-                        {DateTimeValue.format(order.createdAt, 'long')}
-                    </span>
-                    <span className="text-ui-900 font-mono text-sm">
-                        Order {order.id.slice(0, 8)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                        <span className="text-ui-500 text-xs">Date:</span>
+                        <span className="text-ui-800 text-xs">
+                            {DateTimeValue.format(order.createdAt, 'long')}
+                        </span>
+                    </div>
                     <div className="grid gap-1">
                         {!isEditingAddress ? (
                             <>
-                                <span className="text-ui-500 text-xs">
-                                    Address:
+                                <span className="text-ui-800 text-sm">
+                                    Address
                                 </span>
-                                <span className="text-ui-700 font-mono text-xs">
-                                    {order.shippingAddress ||
-                                        'No address provided'}
-                                </span>
-                                <Button
-                                    aria-label="Edit address"
-                                    className="inline-flex size-8 shrink-0 rounded-full p-0"
-                                    onClick={() => setIsEditingAddress(true)}
-                                    type="button"
-                                    variant="ghost"
-                                >
-                                    <FaPenToSquare
-                                        aria-hidden="true"
-                                        className="size-3.5"
-                                    />
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <div className="rounded-sm border border-gray-200 p-2">
+                                        <span className="text-ui-700 font-mono text-xs">
+                                            {order.shippingAddress ||
+                                                'No address provided'}
+                                        </span>
+                                    </div>
+                                    <Button
+                                        aria-label="Edit address"
+                                        className="inline-flex items-center gap-1 rounded-md px-3 py-2"
+                                        onClick={() =>
+                                            setIsEditingAddress(true)
+                                        }
+                                        type="button"
+                                        variant="ghost"
+                                    >
+                                        <FaPenToSquare
+                                            aria-hidden="true"
+                                            className="size-3.5"
+                                        />
+                                        <span className="text-ui-500 text-xs">
+                                            Edit
+                                        </span>
+                                    </Button>
+                                </div>
                             </>
                         ) : (
                             <>
