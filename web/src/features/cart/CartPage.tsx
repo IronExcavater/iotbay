@@ -100,7 +100,7 @@ export default function CartPage() {
                 );
             }
 
-            await orderApi.create({
+            const order = await orderApi.create({
                 addressId: null,
                 items: items.map((item) => ({
                     productId: item.productId,
@@ -109,8 +109,8 @@ export default function CartPage() {
             });
 
             clearCart();
-            showToast('Order placed successfully');
-            navigate('/orders');
+            // CHANGED: navigate to the dedicated checkout page with the order ID
+            navigate(`/checkout?orderId=${order.id}`);
         } catch {
             showToast('Unable to place order');
         } finally {
