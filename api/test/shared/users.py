@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from src.auth.security import hash_password
 from src.users.models import (
+    STAFF_PERMISSION_ADMIN,
     USER_STATUS_ACTIVE,
     USER_TYPE_CUSTOMER,
     USER_TYPE_STAFF,
@@ -78,6 +79,7 @@ def create_staff(
     first_name: str = "Taylor",
     last_name: str = "Morgan",
     password: str = DEFAULT_STAFF_PASSWORD,
+    permission: str = STAFF_PERMISSION_ADMIN,
 ) -> TestUser:
     return create_user(
         repository,
@@ -86,6 +88,7 @@ def create_staff(
         last_name=last_name,
         password=password,
         user_type=USER_TYPE_STAFF,
+        permission=permission,
     )
 
 

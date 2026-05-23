@@ -10,7 +10,7 @@ class ProductRouteTestCase(AppTestCase):
         response = self.client.get("/api/products")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.get_json(), {"items": []})
+        self.assertEqual(response.get_json(), {"items": [], "pages": 1, "total": 0})
 
     def test_create_product_and_list(self) -> None:
         create_staff_test_session(self.client)
@@ -253,4 +253,7 @@ class ProductRouteTestCase(AppTestCase):
 
         delete_response = self.client.delete(f"/api/admin/products/{created['id']}")
         self.assertEqual(delete_response.status_code, 204)
-        self.assertEqual(self.client.get("/api/products").get_json(), {"items": []})
+        self.assertEqual(
+            self.client.get("/api/products").get_json(),
+            {"items": [], "pages": 1, "total": 0},
+        )

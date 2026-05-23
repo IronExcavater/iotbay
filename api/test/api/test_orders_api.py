@@ -13,7 +13,7 @@ class OrdersApiAcceptanceTestCase(ApiAcceptanceTestCase):
         from test.shared.users import create_staff
 
         staff = create_staff(self.fixture.user_repository)
-        staff_auth.login_customer(email=staff.email, password=staff.password)
+        staff_auth.login_staff(email=staff.email, password=staff.password)
         response = staff_http.post(
             "/api/admin/products",
             {
@@ -31,6 +31,7 @@ class OrdersApiAcceptanceTestCase(ApiAcceptanceTestCase):
     def test_full_order_lifecycle_create_list_cancel(self):
         """AC: complete order flow — create, list, cancel."""
         product_id = self._create_product_as_staff()
+        self.given_logged_in_customer()
 
         create_response = self.http.post(
             "/api/orders",
