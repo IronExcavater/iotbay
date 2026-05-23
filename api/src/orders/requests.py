@@ -38,8 +38,20 @@ class UpdateOrderStatusRequest(BaseModel):
     @field_validator("status")
     @classmethod
     def validate_status(cls, v):
-        ORDER_STATUS_VALIDATOR.validate(v)
+        ORDER_STATUS_VALIDATOR.validate_request(v)
         return v
+
+    class Config:
+        populate_by_name = True
+
+
+class UpdateOrderAddressRequest(BaseModel):
+    address_line_one: str | None = Field(None, alias="addressLineOne")
+    address_line_two: str | None = Field(None, alias="addressLineTwo")
+    suburb: str | None = Field(None)
+    state: str | None = Field(None)
+    postcode: str | None = Field(None)
+    country: str | None = Field(None)
 
     class Config:
         populate_by_name = True

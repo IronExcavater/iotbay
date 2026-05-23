@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type DragEvent } from 'react';
 import {
     FaArrowUpFromBracket,
     FaImage,
@@ -20,20 +20,17 @@ import { Input } from '@shared/ui/form/Input';
 import { MoneyField } from '@shared/ui/form/MoneyField';
 import { OverlayDialog } from '@shared/ui/overlay/OverlayDialog';
 
-interface ProductFormDialogProps {
+export interface ProductFormFieldsProps {
     codeInput: {
         handleChange: React.ChangeEventHandler<HTMLInputElement>;
         inputRef: React.Ref<HTMLInputElement>;
     };
     fieldErrors: ProductFieldErrors;
-    formTitle: string;
-    isOpen: boolean;
     isSubmitting: boolean;
     nameInput: {
         handleChange: React.ChangeEventHandler<HTMLInputElement>;
         inputRef: React.Ref<HTMLInputElement>;
     };
-    onClose: () => void;
     onMediaUrlsChange: (value: string[]) => void;
     onStockChange: (value: string) => void;
     onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
@@ -46,14 +43,11 @@ interface ProductFormDialogProps {
     values: ProductFormValues;
 }
 
-export function ProductFormDialog({
+export function ProductFormFields({
     codeInput,
     fieldErrors,
-    formTitle,
-    isOpen,
     isSubmitting,
     nameInput,
-    onClose,
     onMediaUrlsChange,
     onStockChange,
     onSubmit,
@@ -61,11 +55,7 @@ export function ProductFormDialog({
     priceInput,
     submitLabel,
     values,
-}: ProductFormDialogProps) {
-    if (!isOpen) {
-        return null;
-    }
-
+}: ProductFormFieldsProps) {
     function updateImage(index: number, value: string) {
         onMediaUrlsChange(
             values.mediaUrls.map((image, currentIndex) =>
@@ -105,95 +95,104 @@ export function ProductFormDialog({
     }
 
     return (
+        <form className="grid gap-4" onSubmit={onSubmit}>
+            <Field error={fieldErrors.name} label="Name" required>
+                <Input
+                    hasError={Boolean(fieldErrors.name)}
+                    onChange={nameInput.handleChange}
+                    placeholder="Smart Light Bulb"
+                    ref={nameInput.inputRef}
+                    value={values.name}
+                />
+            </Field>
+
+            <Field error={fieldErrors.code} label="Code" required>
+                <Input
+                    hasError={Boolean(fieldErrors.code)}
+                    onChange={codeInput.handleChange}
+                    placeholder="SKU-001"
+                    ref={codeInput.inputRef}
+                    value={values.code}
+                />
+            </Field>
+
+            <MoneyField
+                error={fieldErrors.price}
+                hint={
+                    fieldErrors.price ? undefined : 'Enter Australian dollars'
+                }
+                inputRef={priceInput.inputRef}
+                label="Price"
+                onChange={priceInput.handleChange}
+                required
+                value={values.price}
+            />
+
+            <div className="grid gap-4 sm:grid-cols-2">
+                <Field error={fieldErrors.type} label="Device type" required>
+                    <Input
+                        hasError={Boolean(fieldErrors.type)}
+                        onChange={(event) => onTypeChange(event.target.value)}
+                        placeholder="Industrial Sensor"
+                        value={values.type}
+                    />
+                </Field>
+
+                <Field error={fieldErrors.stock} label="Stock" required>
+                    <Input
+                        hasError={Boolean(fieldErrors.stock)}
+                        inputMode="numeric"
+                        onChange={(event) => onStockChange(event.target.value)}
+                        placeholder="0"
+                        value={values.stock}
+                    />
+                </Field>
+            </div>
+
+            <ProductImagesEditor
+                images={values.mediaUrls}
+                onAddFile={(files) => {
+                    void addFiles(files);
+                }}
+                onAddUrl={addImage}
+                onRemove={removeImage}
+                onReplace={(index, file) => {
+                    void replaceImage(index, file);
+                }}
+                onUpdate={updateImage}
+            />
+
+            <div className="grid gap-3 pt-2">
+                <Button
+                    disabled={isSubmitting}
+                    loading={isSubmitting}
+                    type="submit"
+                    variant="primary"
+                >
+                    {submitLabel}
+                </Button>
+            </div>
+        </form>
+    );
+}
+
+interface ProductFormDialogProps extends ProductFormFieldsProps {
+    formTitle: string;
+    isOpen: boolean;
+    onClose: () => void;
+}
+
+export function ProductFormDialog({
+    formTitle,
+    isOpen,
+    onClose,
+    ...rest
+}: ProductFormDialogProps) {
+    if (!isOpen) return null;
+
+    return (
         <OverlayDialog onClose={onClose} title={formTitle}>
-            <form className="grid gap-4" onSubmit={onSubmit}>
-                <Field error={fieldErrors.name} label="Name" required>
-                    <Input
-                        hasError={Boolean(fieldErrors.name)}
-                        onChange={nameInput.handleChange}
-                        placeholder="Smart Light Bulb"
-                        ref={nameInput.inputRef}
-                        value={values.name}
-                    />
-                </Field>
-
-                <Field error={fieldErrors.code} label="Code" required>
-                    <Input
-                        hasError={Boolean(fieldErrors.code)}
-                        onChange={codeInput.handleChange}
-                        placeholder="SKU-001"
-                        ref={codeInput.inputRef}
-                        value={values.code}
-                    />
-                </Field>
-
-                <MoneyField
-                    error={fieldErrors.price}
-                    hint={
-                        fieldErrors.price
-                            ? undefined
-                            : 'Enter Australian dollars'
-                    }
-                    inputRef={priceInput.inputRef}
-                    label="Price"
-                    onChange={priceInput.handleChange}
-                    required
-                    value={values.price}
-                />
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                    <Field
-                        error={fieldErrors.type}
-                        label="Device type"
-                        required
-                    >
-                        <Input
-                            hasError={Boolean(fieldErrors.type)}
-                            onChange={(event) =>
-                                onTypeChange(event.target.value)
-                            }
-                            placeholder="Industrial Sensor"
-                            value={values.type}
-                        />
-                    </Field>
-
-                    <Field error={fieldErrors.stock} label="Stock" required>
-                        <Input
-                            hasError={Boolean(fieldErrors.stock)}
-                            inputMode="numeric"
-                            onChange={(event) =>
-                                onStockChange(event.target.value)
-                            }
-                            placeholder="0"
-                            value={values.stock}
-                        />
-                    </Field>
-                </div>
-
-                <ProductImagesEditor
-                    images={values.mediaUrls}
-                    onAddFile={(files) => {
-                        void addFiles(files);
-                    }}
-                    onAddUrl={addImage}
-                    onRemove={removeImage}
-                    onReplace={(index, file) => {
-                        void replaceImage(index, file);
-                    }}
-                    onUpdate={updateImage}
-                />
-
-                <div className="grid gap-3 pt-2">
-                    <Button
-                        disabled={isSubmitting}
-                        loading={isSubmitting}
-                        type="submit"
-                        variant="primary"
-                    >
-                        {submitLabel}
-                    </Button>
-                </div>
-            </form>
+            <ProductFormFields {...rest} />
         </OverlayDialog>
     );
 }
@@ -215,6 +214,20 @@ function ProductImagesEditor({
 }) {
     const canAdd = images.length < 6;
     const [editingUrlIndex, setEditingUrlIndex] = useState<number | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
+
+    function handleDrag(event: DragEvent<HTMLLabelElement>) {
+        event.preventDefault();
+        if (!canAdd) return;
+        setIsDragging(event.type === 'dragenter' || event.type === 'dragover');
+    }
+
+    function handleDrop(event: DragEvent<HTMLLabelElement>) {
+        event.preventDefault();
+        setIsDragging(false);
+        if (!canAdd) return;
+        onAddFile(event.dataTransfer.files);
+    }
 
     return (
         <section className="grid gap-3">
@@ -258,18 +271,58 @@ function ProductImagesEditor({
                 </div>
             </div>
 
+            {canAdd && images.length > 0 && (
+                <label
+                    className={`border-ui-300 focus-within:ring-ui-900 flex min-h-24 cursor-pointer flex-col items-center justify-center gap-2 rounded border border-dashed p-4 text-center transition-[background-color,box-shadow] focus-within:ring-2 ${
+                        isDragging ? 'bg-ui-100' : 'bg-ui-50 hover:bg-ui-100'
+                    }`}
+                    onDragEnter={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDragOver={handleDrag}
+                    onDrop={handleDrop}
+                >
+                    <span className="text-ui-900 text-sm font-medium">
+                        Drop more images here
+                    </span>
+                    <span className="text-ui-500 text-xs">
+                        {6 - images.length} slot
+                        {6 - images.length === 1 ? '' : 's'} remaining
+                    </span>
+                    <input
+                        accept="image/*"
+                        className="sr-only"
+                        multiple
+                        onChange={(event) => {
+                            onAddFile(event.target.files);
+                            event.target.value = '';
+                        }}
+                        type="file"
+                    />
+                </label>
+            )}
+
             <div className="grid gap-3 sm:grid-cols-2">
                 {images.length === 0 && canAdd && (
-                    <label className="border-ui-300 bg-ui-50 hover:bg-ui-100 focus-within:ring-ui-900 flex min-h-36 cursor-pointer flex-col items-center justify-center gap-3 rounded border border-dashed p-4 text-center transition-[background-color,box-shadow] focus-within:ring-2">
+                    <label
+                        className={`border-ui-300 focus-within:ring-ui-900 flex min-h-36 cursor-pointer flex-col items-center justify-center gap-3 rounded border border-dashed p-4 text-center transition-[background-color,box-shadow] focus-within:ring-2 ${
+                            isDragging
+                                ? 'bg-ui-100'
+                                : 'bg-ui-50 hover:bg-ui-100'
+                        }`}
+                        onDragEnter={handleDrag}
+                        onDragLeave={handleDrag}
+                        onDragOver={handleDrag}
+                        onDrop={handleDrop}
+                    >
                         <span className="bg-ui-0 text-ui-500 ring-ui-200 inline-flex size-10 items-center justify-center rounded-full ring-1">
                             <FaImage aria-hidden="true" className="size-4" />
                         </span>
                         <span className="grid gap-1">
                             <span className="text-ui-900 text-sm font-medium">
-                                Upload product images
+                                Upload or drop product images
                             </span>
                             <span className="text-ui-500 text-xs">
-                                Up to six images
+                                JPEG, PNG, GIF, or WebP. Up to six images.
                             </span>
                         </span>
                         <input
@@ -312,25 +365,30 @@ function ProductImagesEditor({
                                     value={image}
                                 />
                             )}
-                            <div className="flex items-center justify-between gap-2">
+                            <div className="grid gap-2">
                                 <div className="text-ui-500 min-w-0 truncate text-xs">
                                     {image
                                         ? imageLabel(image)
                                         : 'No image selected'}
                                 </div>
-                                <div className="flex shrink-0 items-center gap-2">
-                                    <button
-                                        className="text-ui-600 hover:text-ui-900 focus-visible:ring-ui-900 rounded text-sm font-medium outline-none focus-visible:ring-2"
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <Button
+                                        className="h-8 px-2"
                                         onClick={() =>
                                             setEditingUrlIndex((current) =>
                                                 current === index ? null : index
                                             )
                                         }
                                         type="button"
+                                        variant="secondary"
                                     >
+                                        <FaLink
+                                            aria-hidden="true"
+                                            className="size-3"
+                                        />
                                         URL
-                                    </button>
-                                    <label className="text-ui-600 hover:text-ui-900 focus-within:ring-ui-900 relative inline-flex cursor-pointer items-center rounded text-sm font-medium outline-none focus-within:ring-2">
+                                    </Button>
+                                    <label className="ring-ui-300 hover:bg-ui-100 focus-within:ring-ui-900 relative inline-flex h-8 cursor-pointer items-center rounded px-2 text-sm font-medium ring-1 outline-none focus-within:ring-2">
                                         Replace
                                         <input
                                             accept="image/*"
@@ -345,20 +403,20 @@ function ProductImagesEditor({
                                             type="file"
                                         />
                                     </label>
+                                    <Button
+                                        className="h-8 px-2 text-red-700"
+                                        onClick={() => onRemove(index)}
+                                        type="button"
+                                        variant="ghost"
+                                    >
+                                        <FaTrashCan
+                                            aria-hidden="true"
+                                            className="size-3.5"
+                                        />
+                                        Remove
+                                    </Button>
                                 </div>
                             </div>
-                            <Button
-                                className="text-ui-600 justify-self-start px-0 hover:bg-transparent hover:text-red-700"
-                                onClick={() => onRemove(index)}
-                                type="button"
-                                variant="ghost"
-                            >
-                                <FaTrashCan
-                                    aria-hidden="true"
-                                    className="size-3.5"
-                                />
-                                Remove
-                            </Button>
                         </div>
                     </div>
                 ))}

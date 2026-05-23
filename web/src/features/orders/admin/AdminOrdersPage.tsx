@@ -1,140 +1,222 @@
-import { useEffect, useState } from 'react';
-import type { Order } from '@features/orders/api';
+import { useEffect, useRef, useState } from 'react';
+
+import { orderApi, type Order } from '@features/orders/api';
+import { OrderStatusBadge } from '@features/orders/components/OrderStatusBadge';
+import { useDebounce } from '@shared/hooks/useDebounce';
 import { useDocumentTitle } from '@shared/hooks/useDocumentTitle';
-import { getJson } from '@shared/services/http';
 import { Button } from '@shared/ui/form/Button';
+import { Field } from '@shared/ui/form/Field';
+import { Input } from '@shared/ui/form/Input';
+import { SearchInput } from '@shared/ui/form/SearchInput';
 import { PageHeader } from '@shared/ui/PageHeader';
-import { TableHead } from '@shared/ui/table/Table';
+import { Pagination } from '@shared/ui/Pagination';
+import {
+    Table,
+    TableHead,
+    TableLoadingRow,
+    TableMessageRow,
+} from '@shared/ui/table/Table';
+import { DateTimeValue } from '@shared/value-objects/DateTimeValue';
 import { Money } from '@shared/value-objects/Money';
 
 export default function AdminOrdersPage() {
     useDocumentTitle('All Orders');
     const [orders, setOrders] = useState<Order[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
+    const [ordersError, setOrdersError] = useState<string | null>(null);
     const [searchId, setSearchId] = useState('');
     const [searchDate, setSearchDate] = useState('');
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
 
-    function fetchOrders(signal?: AbortSignal) {
-        setLoading(true);
-        getJson<Order[]>('/api/staff/all', signal)
-            .then((data) => {
-                setOrders(data);
-            })
-            .catch(() => {})
-            .finally(() => setLoading(false));
-    }
+    const debouncedId = useDebounce(searchId, 350);
+
+    const stablePages = useRef(1);
+    if (!isLoading) stablePages.current = totalPages;
 
     useEffect(() => {
-        const controller = new AbortController();
-        fetchOrders(controller.signal);
-        return () => controller.abort();
-    }, []);
+        const ac = new AbortController();
+        setIsLoading(true);
 
-    const filteredOrders = orders.filter((order) => {
-        let matches = true;
-        if (searchId.trim()) {
-            matches =
-                matches &&
-                order.id.toLowerCase().includes(searchId.trim().toLowerCase());
-        }
-        if (searchDate) {
-            matches = matches && order.createdAt.startsWith(searchDate);
-        }
-        return matches;
-    });
+        void orderApi
+            .listAll(
+                {
+                    orderId: debouncedId.trim() || undefined,
+                    date: searchDate || undefined,
+                    page,
+                },
+                ac.signal
+            )
+            .then(({ items, pages }) => {
+                if (!ac.signal.aborted) {
+                    setOrders(items);
+                    setTotalPages(pages);
+                    setOrdersError(null);
+                }
+            })
+            .catch((error) => {
+                if (!ac.signal.aborted) {
+                    setOrdersError(
+                        error instanceof Error
+                            ? error.message
+                            : 'Unable to load orders'
+                    );
+                }
+            })
+            .finally(() => {
+                if (!ac.signal.aborted) setIsLoading(false);
+            });
+
+        return () => ac.abort();
+    }, [debouncedId, searchDate, page]);
+
+    function handleIdChange(value: string) {
+        setSearchId(value);
+        setPage(1);
+    }
+
+    function handleDateChange(value: string) {
+        setSearchDate(value);
+        setPage(1);
+    }
+
+    const hasSearch = Boolean(debouncedId.trim() || searchDate);
 
     return (
         <section className="grid gap-6">
             <PageHeader
-                title="All Customer Orders"
                 description="View and manage orders across all customers."
+                title="All customer orders"
             />
 
-            <form
-                className="flex flex-wrap items-end gap-3"
-                onSubmit={(e) => e.preventDefault()}
-            >
-                <div className="grid gap-1">
-                    <label
-                        htmlFor="admin-search-order-id"
-                        className="text-ui-500 text-xs"
-                    >
-                        Order ID
-                    </label>
-                    <input
-                        id="admin-search-order-id"
-                        type="text"
+            <div className="bg-ui-0 border-ui-200 overflow-hidden rounded border">
+                <div className="border-ui-200 flex flex-wrap items-center gap-3 border-b px-5 py-4">
+                    <SearchInput
+                        className="w-56"
+                        onChange={handleIdChange}
+                        placeholder="Search by order ID"
                         value={searchId}
-                        onChange={(e) => setSearchId(e.target.value)}
-                        placeholder="Search by order ID…"
-                        className="border-ui-200 rounded border px-3 py-1.5 text-sm"
                     />
-                </div>
-                <div className="grid gap-1">
-                    <label
-                        htmlFor="admin-search-date"
-                        className="text-ui-500 text-xs"
-                    >
-                        Date
-                    </label>
-                    <input
-                        id="admin-search-date"
-                        type="date"
-                        value={searchDate}
-                        onChange={(e) => setSearchDate(e.target.value)}
-                        className="border-ui-200 rounded border px-3 py-1.5 text-sm"
-                    />
-                </div>
-                <Button
-                    type="button"
-                    onClick={() => {
-                        setSearchId('');
-                        setSearchDate('');
-                    }}
-                    variant="secondary"
-                >
-                    Clear
-                </Button>
-            </form>
 
-            {loading && <p className="text-ui-500 text-sm">Loading…</p>}
-            {!loading && filteredOrders.length === 0 && (
-                <p className="text-ui-500 text-sm">No orders found.</p>
-            )}
-            {!loading && filteredOrders.length > 0 && (
-                <table className="w-full text-sm">
-                    <TableHead>
-                        <tr className="border-b text-left">
-                            <th className="py-2">Order ID</th>
-                            <th className="py-2">Date</th>
-                            <th className="py-2">Status</th>
-                            <th className="py-2">Items</th>
-                            <th className="py-2 text-right">Total</th>
-                        </tr>
-                    </TableHead>
-                    <tbody>
-                        {filteredOrders.map((order) => (
-                            <tr key={order.id} className="border-b">
-                                <td className="py-2 font-mono text-xs">
-                                    {order.id.slice(0, 8)}…
-                                </td>
-                                <td className="py-2">
-                                    {new Date(
-                                        order.createdAt
-                                    ).toLocaleDateString()}
-                                </td>
-                                <td className="py-2 capitalize">
-                                    {order.status}
-                                </td>
-                                <td className="py-2">{order.items.length}</td>
-                                <td className="py-2 text-right">
-                                    {Money.format(order.totalCents)}
-                                </td>
+                    <Field label="Date">
+                        <Input
+                            id="admin-search-date"
+                            onChange={(event) =>
+                                handleDateChange(event.target.value)
+                            }
+                            type="date"
+                            value={searchDate}
+                        />
+                    </Field>
+
+                    {hasSearch && (
+                        <Button
+                            onClick={() => {
+                                setSearchId('');
+                                setSearchDate('');
+                                setPage(1);
+                            }}
+                            type="button"
+                            variant="ghost"
+                        >
+                            Clear
+                        </Button>
+                    )}
+                </div>
+
+                <div
+                    className={`overflow-x-auto transition-opacity ${
+                        isLoading && orders.length > 0
+                            ? 'pointer-events-none opacity-60'
+                            : ''
+                    }`}
+                >
+                    <Table>
+                        <colgroup>
+                            <col className="w-[18%]" />
+                            <col className="w-[18%]" />
+                            <col className="w-[14%]" />
+                            <col className="w-[32%]" />
+                            <col className="w-[18%]" />
+                        </colgroup>
+                        <TableHead>
+                            <tr>
+                                <th className="px-5 py-3">Order ID</th>
+                                <th className="px-5 py-3">Date</th>
+                                <th className="px-5 py-3">Status</th>
+                                <th className="px-5 py-3">Items</th>
+                                <th className="px-5 py-3 text-right">Total</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            )}
+                        </TableHead>
+                        <tbody>
+                            {isLoading && orders.length === 0 ? (
+                                <>
+                                    <TableLoadingRow colSpan={5} />
+                                    <TableLoadingRow colSpan={5} />
+                                    <TableLoadingRow colSpan={5} />
+                                </>
+                            ) : ordersError ? (
+                                <TableMessageRow
+                                    colSpan={5}
+                                    message={ordersError}
+                                    tone="error"
+                                />
+                            ) : orders.length === 0 ? (
+                                <TableMessageRow
+                                    colSpan={5}
+                                    message={
+                                        hasSearch
+                                            ? 'No orders matched your search.'
+                                            : 'No orders yet.'
+                                    }
+                                    tone="muted"
+                                />
+                            ) : (
+                                orders.map((order) => (
+                                    <tr
+                                        className="border-ui-200 border-t align-top"
+                                        key={order.id}
+                                    >
+                                        <td className="px-5 py-3 font-mono text-xs">
+                                            {order.id.slice(0, 8)}
+                                        </td>
+                                        <td className="text-ui-600 px-5 py-3">
+                                            {DateTimeValue.format(
+                                                order.createdAt,
+                                                'short'
+                                            )}
+                                        </td>
+                                        <td className="px-5 py-3">
+                                            <OrderStatusBadge
+                                                status={order.status}
+                                            />
+                                        </td>
+                                        <td className="text-ui-600 px-5 py-3">
+                                            {order.items.length} item
+                                            {order.items.length === 1
+                                                ? ''
+                                                : 's'}
+                                        </td>
+                                        <td className="px-5 py-3 text-right font-semibold">
+                                            {Money.format(order.totalCents)}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </Table>
+                </div>
+
+                {stablePages.current > 1 && (
+                    <div className="border-ui-200 border-t px-5 py-3">
+                        <Pagination
+                            onChange={setPage}
+                            page={page}
+                            totalPages={stablePages.current}
+                        />
+                    </div>
+                )}
+            </div>
         </section>
     );
 }

@@ -7,7 +7,14 @@ from src.auth.session import (
 from src.common.app import services
 from src.common.sqlite_model import id_string_to_bytes
 from src.common.web import ApiError, parse_request
-from src.orders.requests import CreateOrderRequest, UpdateOrderStatusRequest
+from src.orders.models import (
+    ORDER_STATUS_SAVED,
+)
+from src.orders.requests import (
+    CreateOrderRequest,
+    UpdateOrderAddressRequest,
+    UpdateOrderStatusRequest,
+)
 
 orders_bp = Blueprint("orders", __name__)
 
@@ -19,19 +26,11 @@ def list_orders():
         raise ApiError("Authentication required", 401)
 
     repo = services().order_repository
-    order_id_param = flask_request.args.get("orderId")
     date_param = flask_request.args.get("date")
 
-    if order_id_param or date_param:
-        try:
-            order_id_bytes = (
-                id_string_to_bytes(order_id_param) if order_id_param else None
-            )
-        except ValueError:
-            raise ApiError("Invalid order ID format", 400, code="INVALID_ID")
+    if date_param:
         orders = repo.search_orders_by_user(
             user_id=user.user_id,
-            order_id=order_id_bytes,
             date=date_param,
         )
     else:
@@ -64,13 +63,33 @@ def create_order():
     return order.to_dict(), 201
 
 
+_ADMIN_PAGE_LIMIT = 20
+
+
 @orders_bp.get("/staff/all")
 def list_all_orders():
     current_authenticated_staff_user()
 
+    order_id_param = flask_request.args.get("orderId")
+    date_param = flask_request.args.get("date")
+    try:
+        page = max(1, int(flask_request.args.get("page", 1)))
+    except ValueError:
+        page = 1
+
     repo = services().order_repository
-    orders = repo.list_all_orders()
-    return [order.to_dict() for order in orders]
+    orders, total = repo.list_all_orders(
+        order_id=order_id_param or None,
+        date=date_param or None,
+        page=page,
+        limit=_ADMIN_PAGE_LIMIT,
+    )
+    pages = max(1, -(-total // _ADMIN_PAGE_LIMIT))
+    return {
+        "items": [order.to_dict() for order in orders],
+        "total": total,
+        "pages": pages,
+    }
 
 
 @orders_bp.get("/orders/<order_id>")
@@ -102,6 +121,10 @@ def update_order_status(order_id: str):
         raise ApiError("Order not found", 404)
 
     req = parse_request(UpdateOrderStatusRequest)
+
+    if user.user_type == "customer" and req.status != "cancelled":
+        raise ApiError("Customers may only cancel orders", 403)
+
     order_service = services().orders
     order = order_service.update_status(
         actor_user_id=user.user_id,
@@ -109,3 +132,35 @@ def update_order_status(order_id: str):
         new_status=req.status,
     )
     return order.to_dict()
+
+
+@orders_bp.patch("/orders/<order_id>/address")
+def update_order_address(order_id: str):
+    user = current_authenticated_user()
+    if not user:
+        raise ApiError("Authentication required", 401)
+
+    order_id_bytes = id_string_to_bytes(order_id)
+    repo = services().order_repository
+    existing = repo.select_order_by_id(order_id_bytes)
+    if not existing or existing.user_id != user.user_id:
+        raise ApiError("Order not found", 404)
+
+    if existing.status != ORDER_STATUS_SAVED:
+        raise ApiError(
+            "Address can only be updated for orders with 'saved' status", 400
+        )
+
+    req = parse_request(UpdateOrderAddressRequest)
+    order_service = services().orders
+    updated_order = order_service.update_address(
+        actor_user_id=user.user_id,
+        order_id=order_id_bytes,
+        address_line_one=req.address_line_one,
+        address_line_two=req.address_line_two,
+        suburb=req.suburb,
+        state=req.state,
+        postcode=req.postcode,
+        country=req.country,
+    )
+    return updated_order.to_dict()

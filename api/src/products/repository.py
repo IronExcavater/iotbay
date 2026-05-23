@@ -5,7 +5,7 @@ from src.common.clock import UtcTime
 from src.common.repository import Repository
 from src.common.web import ApiError
 from src.products.models import ENTITY_TYPE_PRODUCT, Product
-from src.products.queries import LIST_PRODUCTS, SEARCH_PRODUCTS, SELECT_PRODUCT_BY_ID
+from src.products.queries import SELECT_PRODUCT_BY_ID
 
 
 class DuplicateCodeError(ApiError):
@@ -23,22 +23,73 @@ class ProductRepository(Repository):
         super().__init__(database_path)
         self._audit = AuditRepository(database_path)
 
-    def list_products(self, *, search: str | None = None) -> list[Product]:
-        normalized_search = (search or "").strip().lower()
-        with self.connect() as connection:
-            if normalized_search:
-                like_query = f"%{normalized_search}%"
-                rows = connection.execute(
-                    SEARCH_PRODUCTS,
-                    (ENTITY_TYPE_PRODUCT, like_query, like_query),
-                ).fetchall()
-            else:
-                rows = connection.execute(
-                    LIST_PRODUCTS,
-                    (ENTITY_TYPE_PRODUCT,),
-                ).fetchall()
+    def list_products(
+        self,
+        *,
+        search: str | None = None,
+        type_filter: str | None = None,
+        min_price_cents: int | None = None,
+        max_price_cents: int | None = None,
+        in_stock: bool = False,
+        page: int = 1,
+        limit: int = 24,
+    ) -> tuple[list[Product], int]:
+        conditions = ["audit_log.entity_type = ?"]
+        params: list = [ENTITY_TYPE_PRODUCT]
 
-        return [Product.from_row(row) for row in rows]
+        if search:
+            like = f"%{search.strip().lower()}%"
+            conditions.append(
+                "(LOWER(products.name) LIKE ? OR LOWER(products.type) LIKE ?)"
+            )
+            params.extend([like, like])
+
+        if type_filter:
+            conditions.append("(products.type = ? OR products.type LIKE ?)")
+            params.extend([type_filter, f"{type_filter}/%"])
+
+        if min_price_cents is not None:
+            conditions.append("products.price_cents >= ?")
+            params.append(min_price_cents)
+
+        if max_price_cents is not None:
+            conditions.append("products.price_cents <= ?")
+            params.append(max_price_cents)
+
+        if in_stock:
+            conditions.append("products.stock > 0")
+
+        where = " AND ".join(conditions)
+        base = (
+            "SELECT products.*,"
+            " audit_log.created_at AS created_at,"
+            " audit_log.updated_at AS updated_at"
+            " FROM products"
+            " JOIN entity_audit_log AS audit_log"
+            " ON audit_log.entity_id = products.product_id"
+            f" WHERE {where}"
+        )
+        order = " ORDER BY audit_log.created_at ASC, products.code ASC LIMIT ? OFFSET ?"
+        offset = (page - 1) * limit
+
+        with self.connect() as connection:
+            total: int = connection.execute(
+                f"SELECT COUNT(*) FROM ({base})", params
+            ).fetchone()[0]
+            rows = connection.execute(
+                f"{base}{order}",
+                params + [limit, offset],
+            ).fetchall()
+
+        return [Product.from_row(row) for row in rows], total
+
+    def list_product_types(self) -> list[dict]:
+        with self.connect() as connection:
+            rows = connection.execute(
+                "SELECT type, COUNT(*) AS count FROM products"
+                " WHERE type != '' GROUP BY type ORDER BY type"
+            ).fetchall()
+        return [{"type": row[0], "count": row[1]} for row in rows]
 
     def select_product_by_id(self, *, product_id: bytes) -> Product | None:
         with self.connect() as connection:

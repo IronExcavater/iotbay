@@ -23,8 +23,29 @@ class ProductService:
     media_repository: MediaRepository
     repository: ProductRepository
 
-    def list_products(self, *, search: str | None = None) -> list[Product]:
-        return self.repository.list_products(search=search)
+    def list_products(
+        self,
+        *,
+        search: str | None = None,
+        type_filter: str | None = None,
+        min_price_cents: int | None = None,
+        max_price_cents: int | None = None,
+        in_stock: bool = False,
+        page: int = 1,
+        limit: int = 24,
+    ) -> tuple[list[Product], int]:
+        return self.repository.list_products(
+            search=search,
+            type_filter=type_filter,
+            min_price_cents=min_price_cents,
+            max_price_cents=max_price_cents,
+            in_stock=in_stock,
+            page=page,
+            limit=limit,
+        )
+
+    def list_product_types(self) -> list[dict]:
+        return self.repository.list_product_types()
 
     def create_product(
         self,

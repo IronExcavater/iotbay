@@ -28,14 +28,14 @@ import {
     toProfileValues,
     validateProfileForm,
     type ProfileFieldErrors,
-} from '@features/account/profileForm';
+} from '@features/account/form';
 import type { ProfileValues } from '@features/account/types';
 import {
     setAddressField,
     type AddressFieldName,
 } from '@features/addresses/form';
 import { AuditTimeline } from '@features/audit/components/AuditTimeline';
-import { useEntityAudit } from '@features/audit/useEntityAudit';
+import { useEntityAudit } from '@features/audit/hooks/useEntityAudit';
 import { authApi, type SessionInfo, type User } from '@features/auth/api';
 import { useAuth } from '@features/auth/AuthProvider';
 import {

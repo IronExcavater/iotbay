@@ -29,18 +29,54 @@ export interface CreateProductInput {
     type: string;
 }
 
-interface ProductsResponse {
+export interface ProductListParams {
+    search?: string;
+    type?: string;
+    page?: number;
+    minPriceCents?: number;
+    maxPriceCents?: number;
+    inStock?: boolean;
+}
+
+export interface ProductsPage {
     items: Product[];
+    total: number;
+    pages: number;
+}
+
+export interface ProductTypeCount {
+    type: string;
+    count: number;
 }
 
 export const productApi = {
-    async list(search = '', signal?: AbortSignal): Promise<Product[]> {
-        const query = search.trim();
-        const path = query
-            ? `/api/products?q=${encodeURIComponent(query)}`
-            : '/api/products';
+    async list(
+        params: ProductListParams = {},
+        signal?: AbortSignal
+    ): Promise<ProductsPage> {
+        const query = new URLSearchParams();
+        if (params.search?.trim()) query.set('q', params.search.trim());
+        if (params.type) query.set('type', params.type);
+        if (params.page && params.page > 1)
+            query.set('page', String(params.page));
+        if (params.minPriceCents !== undefined)
+            query.set('minPriceCents', String(params.minPriceCents));
+        if (params.maxPriceCents !== undefined)
+            query.set('maxPriceCents', String(params.maxPriceCents));
+        if (params.inStock) query.set('inStock', 'true');
+        const qs = query.toString();
+        return getJson<ProductsPage>(
+            `/api/products${qs ? `?${qs}` : ''}`,
+            signal
+        );
+    },
 
-        return (await getJson<ProductsResponse>(path, signal)).items;
+    async types(signal?: AbortSignal): Promise<ProductTypeCount[]> {
+        const { types } = await getJson<{ types: ProductTypeCount[] }>(
+            '/api/products/types',
+            signal
+        );
+        return types;
     },
 
     get(productId: string, signal?: AbortSignal): Promise<Product> {

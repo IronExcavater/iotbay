@@ -27,14 +27,33 @@ class InvalidProductIdError(ApiError):
         )
 
 
+_PAGE_LIMIT = 24
+
+
 @products_bp.get("/products")
 def list_products():
     query = parse_query(ProductListQuery)
-    products = [
-        product.to_dict()
-        for product in services().products.list_products(search=query.q or None)
-    ]
-    return {"items": products}, HTTPStatus.OK
+    items, total = services().products.list_products(
+        search=query.q or None,
+        type_filter=query.type or None,
+        min_price_cents=query.min_price_cents,
+        max_price_cents=query.max_price_cents,
+        in_stock=query.in_stock,
+        page=max(1, query.page),
+        limit=_PAGE_LIMIT,
+    )
+    pages = max(1, -(-total // _PAGE_LIMIT))
+    return {
+        "items": [p.to_dict() for p in items],
+        "total": total,
+        "pages": pages,
+    }, HTTPStatus.OK
+
+
+@products_bp.get("/products/types")
+def list_product_types():
+    types = services().products.list_product_types()
+    return {"types": types}, HTTPStatus.OK
 
 
 @products_bp.get("/products/<product_id>")
