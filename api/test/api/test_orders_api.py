@@ -43,7 +43,7 @@ class OrdersApiAcceptanceTestCase(ApiAcceptanceTestCase):
         self.assertEqual(create_response.status, 201)
         order = create_response.body
         self.assertEqual(order["status"], "saved")
-        self.assertEqual(order["totalCents"], 10000)
+        self.assertEqual(order["totalCents"], 11200)
         order_id = order["id"]
 
         list_response = self.http.get("/api/orders")

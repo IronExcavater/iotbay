@@ -243,6 +243,12 @@ function OrderCard({
 
     const canCancel = order.status === 'saved';
 
+    const subtotalCents = order.items.reduce(
+        (sum, item) => sum + item.priceCents * item.quantity,
+        0
+    );
+    const deliveryCents = order.items.length > 0 ? 1200 : 0;
+
     return (
         <li
             className={`border-ui-200 grid gap-4 rounded border p-5 ${
@@ -377,9 +383,24 @@ function OrderCard({
                 </ul>
             )}
             <div className="flex justify-end">
-                <span className="text-ui-900 font-semibold">
-                    Total: {Money.format(order.totalCents)}
-                </span>
+                <div className="grid gap-2 text-sm">
+                    <SummaryRow
+                        label="Subtotal"
+                        value={Money.format(subtotalCents)}
+                    />
+                    <SummaryRow
+                        label="Delivery"
+                        value={
+                            order.items.length > 0
+                                ? Money.format(deliveryCents)
+                                : Money.format(0)
+                        }
+                    />
+                    <div className="border-ui-200 mt-1 flex justify-between border-t pt-3 text-base font-semibold">
+                        <span>Total</span>
+                        <span>{Money.format(order.totalCents)}</span>
+                    </div>
+                </div>
             </div>
             <div className="flex justify-end">
                 {canCancel && (
@@ -394,5 +415,14 @@ function OrderCard({
                 )}
             </div>
         </li>
+    );
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="text-ui-600 flex justify-between gap-3">
+            <span>{label}</span>
+            <span className="text-ui-900">{value}</span>
+        </div>
     );
 }
