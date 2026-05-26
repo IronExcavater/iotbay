@@ -10,12 +10,12 @@
         "db:migrate:new": "python3 -m src.db migrate-new",
         "db:seed:load": "python3 -m src.db seed-load",
         "db:seed:dump": "python3 -m src.db seed-dump",
-        "lint": "python3 -m ruff check .",
-        "lint:fix": "python3 -m ruff check . --fix",
-        "format": "python3 -m ruff format . --check",
-        "format:fix": "python3 -m ruff format .",
+        "lint": ".venv/bin/python -m ruff check .",
+        "lint:fix": ".venv/bin/python -m ruff check . --fix",
+        "format": ".venv/bin/python -m ruff format . --check",
+        "format:fix": ".venv/bin/python -m ruff format .",
         "fix:all": "npm run lint:fix && npm run format:fix",
-        "test": "python3 -m unittest discover -s tests -p 'test_*.py' -v",
+        "test": ".venv/bin/python -m unittest discover -s tests -p 'test_*.py' -v",
         "check": "npm run lint && npm run format && npm run test"
     }
 }
