@@ -53,9 +53,7 @@
 }
 
 :root {
-    --font-family:
-        'Inter Variable', system-ui, -apple-system, blinkmacsystemfont,
-        'Segoe UI', sans-serif, 'Fluent Emoji 3D';
+    --font-family: 'Inter Variable', 'Segoe UI', sans-serif, 'Fluent Emoji 3D';
 }
 
 html,
