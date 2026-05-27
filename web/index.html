@@ -6,6 +6,28 @@
         <title>IoTBay Marketplace</title>
         <link rel="icon" type="image/svg+xml" href="/iotbay_icon_themed.svg" />
         <script src="/init-theme.js"></script>
+        <script>
+            // Restore path encoded by 404.html for GitHub Pages SPA routing.
+            ;(function (l) {
+                if (l.search[1] === '/') {
+                    var decoded = l.search
+                        .slice(1)
+                        .split('&')
+                        .map(function (s) {
+                            return s.replace(/~and~/g, '&')
+                        })
+                    window.history.replaceState(
+                        null,
+                        null,
+                        decoded[0] +
+                            (decoded.slice(1).join('&')
+                                ? '?' + decoded.slice(1).join('&')
+                                : '') +
+                            l.hash
+                    )
+                }
+            })(window.location)
+        </script>
     </head>
     <body>
         <div id="root"></div>

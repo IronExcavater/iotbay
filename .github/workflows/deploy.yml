@@ -21,8 +21,7 @@ jobs:
     timeout-minutes: 10
 
     env:
-      IOTBAY_API_KEY: ${{ secrets.IOTBAY_API_KEY }}
-      VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+      VITE_DEMO_MODE: 'true'
 
     steps:
       - name: Check out source

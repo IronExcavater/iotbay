@@ -116,3 +116,8 @@ body {
     cursor: pointer;
     pointer-events: all;
 }
+
+/* Demo loading screen progress bar — width driven by --progress CSS variable set on parent */
+.demo-progress {
+    width: var(--progress, 0%);
+}
