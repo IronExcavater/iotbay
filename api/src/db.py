@@ -1,21 +1,46 @@
-import os
 import re
 import sqlite3
 import sys
-from collections.abc import Generator
+from collections.abc import Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
+
+from src.config import load_app_config
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_DB_PATH = ROOT_DIR / "data" / "iotbay.sqlite3"
 MIGRATIONS_DIR = ROOT_DIR / "migrations"
 SEED_SQL_PATH = ROOT_DIR / "db" / "seed.sql"
 
+
+@dataclass(slots=True, frozen=True)
+class SeedTable:
+    name: str
+    order_by: str
+
+
+SEED_TABLES = (
+    SeedTable(name="users", order_by="email ASC"),
+    SeedTable(
+        name="addresses",
+        order_by="formatted_address ASC",
+    ),
+    SeedTable(name="customers", order_by="user_id ASC"),
+    SeedTable(
+        name="staff",
+        order_by="permission ASC, designation ASC, user_id ASC",
+    ),
+    SeedTable(name="products", order_by="code ASC"),
+    SeedTable(name="entity_audit_log", order_by="entity_type ASC, entity_id ASC"),
+    SeedTable(name="audit_events", order_by="occurred_at ASC, audit_event_id ASC"),
+)
+
 MIGRATION_SLUG_PATTERN = re.compile(r"[^a-z0-9]+")
 
 
 def migrate(database_path: str) -> None:
-    with _connect(database_path) as db:
+    with connect(database_path) as db:
         db.execute(
             """
             CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -30,7 +55,7 @@ def migrate(database_path: str) -> None:
                 continue
 
             sql = migration_file.read_text(encoding="utf-8")
-            db.executescript(sql)
+            _execute_migration_script(db, sql)
             db.execute(
                 (
                     "INSERT INTO schema_migrations (name, applied_at) "
@@ -58,29 +83,27 @@ def seed_apply(database_path: str) -> None:
         return
 
     script = SEED_SQL_PATH.read_text(encoding="utf-8")
-    with _connect(database_path) as db:
+    with connect(database_path) as db:
         db.executescript(script)
 
 
 def seed_save(database_path: str) -> None:
     migrate(database_path)
 
-    with _connect(database_path) as db:
-        rows = db.execute(
-            """
-            SELECT id, name, code, price_cents, created_at
-            FROM products
-            ORDER BY id ASC
-            """
-        ).fetchall()
+    with connect(database_path) as db:
+        lines = ["BEGIN TRANSACTION;"]
+        for table in reversed(SEED_TABLES):
+            lines.append(f"DELETE FROM {table.name};")
 
-        lines = ["BEGIN TRANSACTION;", "DELETE FROM products;"]
-        for row in rows:
-            values = ", ".join(_sql_literal(db, value) for value in row)
-            lines.append(
-                "INSERT INTO products (id, name, code, price_cents, created_at) "
-                f"VALUES ({values});"
+        for table in SEED_TABLES:
+            lines.extend(
+                _table_snapshot_lines(
+                    db,
+                    table.name,
+                    order_by=table.order_by,
+                )
             )
+
         lines.extend(["COMMIT;", ""])
 
     SEED_SQL_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -88,22 +111,21 @@ def seed_save(database_path: str) -> None:
 
 
 @contextmanager
-def connect(database_path: str) -> Generator[sqlite3.Connection, None, None]:
+def connect(database_path: str) -> Iterator[sqlite3.Connection]:
     if database_path != ":memory:":
         Path(database_path).parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(database_path)
-    conn.row_factory = sqlite3.Row
+
+    connection = sqlite3.connect(database_path)
+    connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON")
     try:
-        yield conn
-        conn.commit()
+        yield connection
+        connection.commit()
     except Exception:
-        conn.rollback()
+        connection.rollback()
         raise
     finally:
-        conn.close()
-
-
-_connect = connect
+        connection.close()
 
 
 def _migration_files() -> list[Path]:
@@ -116,6 +138,27 @@ def _migration_files() -> list[Path]:
             files.append(path)
 
     return sorted(files)
+
+
+def _execute_migration_script(db: sqlite3.Connection, sql: str) -> None:
+    try:
+        db.executescript(sql)
+    except sqlite3.OperationalError as error:
+        if "duplicate column name" not in str(error).lower():
+            raise
+
+        for statement in sql.split(";"):
+            normalized_statement = statement.strip()
+            if not normalized_statement:
+                continue
+            try:
+                db.execute(normalized_statement)
+            except sqlite3.OperationalError as statement_error:
+                message = str(statement_error).lower()
+                is_duplicate_column = "duplicate column name" in message
+                is_alter_table = normalized_statement.upper().startswith("ALTER TABLE ")
+                if not (is_duplicate_column and is_alter_table):
+                    raise
 
 
 def _is_migration_file(file_name: str) -> bool:
@@ -151,36 +194,65 @@ def _sql_literal(db: sqlite3.Connection, value: object) -> str:
     row = db.execute("SELECT quote(?)", (value,)).fetchone()
     if row is None:
         raise RuntimeError("failed to quote SQL value")
+
     literal = row[0]
     if not isinstance(literal, str):
         raise RuntimeError("invalid SQL value")
+
     return literal
 
 
-def _database_path_from_env() -> str:
-    return os.environ.get("IOTBAY_DATABASE_PATH", str(DEFAULT_DB_PATH))
+def _table_snapshot_lines(
+    db: sqlite3.Connection,
+    table_name: str,
+    *,
+    order_by: str,
+) -> list[str]:
+    rows = db.execute(f"SELECT * FROM {table_name} ORDER BY {order_by}").fetchall()
+    if not rows:
+        return []
+
+    description = db.execute(f"SELECT * FROM {table_name} LIMIT 0").description or ()
+    column_names = [str(current[0]) for current in description]
+    insert_columns = ", ".join(column_names)
+
+    lines: list[str] = []
+    for row in rows:
+        values = ", ".join(
+            _sql_literal(db, row[column_name]) for column_name in column_names
+        )
+        lines.append(f"INSERT INTO {table_name} ({insert_columns}) VALUES ({values});")
+
+    return lines
+
+
+def _database_path_from_config() -> str:
+    return load_app_config().database_path
 
 
 def main() -> int:
     if len(sys.argv) < 2:
-        print(
-            "Usage: python -m src.db [migrate|migration-new|seed-load|seed-dump] [name]"
-        )
+        _print_usage()
         return 1
 
-    command = sys.argv[1]
-    database_path = _database_path_from_env()
+    return _run_command(
+        sys.argv[1],
+        _database_path_from_config(),
+        sys.argv[2:],
+    )
 
+
+def _run_command(command: str, database_path: str, args: list[str]) -> int:
     if command == "migrate":
         migrate(database_path)
         print(f"Migrations applied for {database_path}")
         return 0
 
     if command == "migrate-new":
-        if len(sys.argv) < 3:
+        if not args:
             print("Usage: python -m src.db migrate-new <name>")
             return 1
-        migration_path = create_migration(" ".join(sys.argv[2:]))
+        migration_path = create_migration(" ".join(args))
         print(f"Created {migration_path}")
         return 0
 
@@ -194,8 +266,12 @@ def main() -> int:
         print(f"Saved shared data to {SEED_SQL_PATH}")
         return 0
 
-    print("Usage: python -m src.db [migrate|migrate-new|seed-load|seed-dump] [name]")
+    _print_usage()
     return 1
+
+
+def _print_usage() -> None:
+    print("Usage: python -m src.db [migrate|migrate-new|seed-load|seed-dump] [name]")
 
 
 if __name__ == "__main__":

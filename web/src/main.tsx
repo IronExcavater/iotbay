@@ -1,3 +1,4 @@
+import '@fontsource-variable/inter/wght.css';
 import ReactDOM from 'react-dom/client';
 
 import { AppProvider } from '@app/AppProvider';

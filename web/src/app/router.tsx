@@ -1,4 +1,4 @@
-import { createHashRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 
 import ErrorPage from '@app/ErrorPage';
 import AdminLayout from '@app/layouts/AdminLayout';
@@ -23,7 +23,7 @@ import AdminUsersPage from '@features/users/admin/AdminUsersPage';
 import InviteStaffPage from '@features/users/admin/InviteStaffPage';
 import UserDetailPage from '@features/users/pages/UserDetailPage';
 
-export const router = createHashRouter([
+export const router = createBrowserRouter([
     {
         path: '/',
         element: <SiteLayout />,
