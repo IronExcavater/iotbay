@@ -80,6 +80,9 @@ class OrderService:
             total_cents += product.price_cents * quantity
             order_items.append((product_id_bytes, quantity, product.price_cents))
 
+        if items:
+            total_cents += 1200
+
         user = self.user_repository.select_user_by_id(user_id=actor_user_id)
         shipping_address = {
             "shipping_address_line_one": user.address_line_one if user else None,

@@ -51,7 +51,7 @@ class CreateOrderTestCase(AppTestCase):
         self.assertEqual(response.status_code, 201)
         order = response.get_json()
         self.assertEqual(order["status"], "saved")
-        self.assertEqual(order["totalCents"], 10000)  # 5000 * 2
+        self.assertEqual(order["totalCents"], 11200)
         self.assertEqual(len(order["items"]), 1)
         self.assertEqual(order["items"][0]["productId"], product_id)
         self.assertEqual(order["items"][0]["quantity"], 2)
