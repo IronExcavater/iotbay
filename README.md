@@ -1,98 +1,201 @@
-# IOTBay Marketplace
+# IoTBay Marketplace
 
-IOTBay is a two-workspace monorepo. The `web` workspace contains the React + Vite frontend, and the `api` workspace contains the Flask backend with a SQLite database.
+IoTBay is a monorepo with two workspaces:
 
-## Prerequisites
+- `web`: React + Vite frontend
+- `api`: Flask backend with a SQLite database
 
-Install Node.js (includes npm) from https://nodejs.org/en/download and Python 3 from https://www.python.org/downloads/. Confirm both toolchains are available with:
+## Quick Start
+
+### 1. Toolchain
+
+Download [mise](https://mise.en.dev) to install the [Node.js](https://nodejs.org/en) and [uv](https://docs.astral.sh/uv/) versions used by this project.
+
 ```bash
-node -v
-npm -v
-python3 --version
+winget install jdx.mise # Windows
+brew install mise       # MacOS
 ```
 
-## Setup
+From the repository root:
 
-After cloning the repository, install JavaScript dependencies, then initialise the API virtual environment and install Python dependencies:
 ```bash
-npm install
-npm run -w api venv
-npm run -w api deps
-```
-Then initialise the backend schema:
-```bash
-npm run -w api db:migrate
+mise install --yes
 ```
 
-## Development
+### 2. Environment File
 
-Run both services in separate terminal windows so frontend and backend logs stay isolated and each process can restart independently during development:
+Create `.env` from `.env.example`.
+
+Local development needs only `IOTBAY_API_KEY`. The default value in
+`.env.example` matches the quick API check below.
+
+Leave these blank unless you use the integration:
+
+- `IOTBAY_GOOGLE_MAPS_API_KEY`: address suggestions
+- `IOTBAY_SMTP_*`: real email sending
+
+### 3. Sync Local Project
+
+Run this once after cloning the repository:
+
 ```bash
-# Terminal 1 (frontend)
-npm run -w web dev
-
-# Terminal 2 (backend)
-npm run -w api dev
-```
-- Frontend runs on port `5173`: `http://localhost:5173`
-- Backend runs on port `5001`: `http://localhost:5001`
-- Backend routes are prefixed with `/api/` (example below)
-```bash
-curl http://localhost:5001/api/health
-```
-Before committing, run the top-level quality commands below; the indented hierarchy shows what each command executes:
-```text
-npm run -w web fix:all   # Frontend quality gate
-  npm run typecheck       # Detects TypeScript type errors
-  npm run eslint:fix      # Finds and fixes JS issues
-  npm run stylelint:fix   # Finds and fixes CSS issues
-  npm run prettier:fix    # Applies consistent code formatting
-
-npm run -w api fix:all      # Backend quality gate
-  npm run typecheck       # Runs Pyright static typing
-  npm run lint:fix      # Finds and fixes Python issues
-  npm run format:fix    # Applies consistent code formatting
-
-npm run -w api test            # Runs backend unit tests
-```
-When you need backend auto-fixes, run:
-```bash
-npm run -w api fix
+npm run sync
 ```
 
-## Database
+This installs JavaScript dependencies, prepares the API virtual environment,
+runs SQLite migrations, and loads seed data.
 
-A schema change means changing database structure, for example creating a table, adding or removing a column, changing a constraint, or adding an index; it does not mean changing row data.
+### 4. Start The App
 
-To start a schema change, create a migration file:
+Run the frontend and backend:
+
 ```bash
-npm run -w api db:migrate:new -- <migration_name>
-```
-For example:
-```bash
-npm run -w api db:migrate:new -- add_product_category
-```
-The command creates a new SQL file at `api/migrations/<number>_<migration_name>.sql`; open that file and write the SQL statements for the change, then apply unapplied migrations:
-```bash
-npm run -w api db:migrate
-```
-Load shared seed data from `api/db/seed.sql` with:
-```bash
-npm run -w api db:seed:load
-```
-When intentionally updating the shared dataset, dump local rows back into `api/db/seed.sql` with:
-```bash
-npm run -w api db:seed:dump
-```
-If you need a custom local database file, set `IOTBAY_DATABASE_PATH` per command:
-```bash
-IOTBAY_DATABASE_PATH=<path_to_sqlite_file> npm run -w api db:migrate
+npm run dev
 ```
 
-## Postman
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:5001`
+- API routes are prefixed with `/api`
 
-Create a Postman environment (for example, `IOTBay Local`) with `baseUrl = http://localhost:5001`, then build requests with `{{baseUrl}}/api/...`; for example:
-```text
-GET {{baseUrl}}/api/health
+Quick API check:
+
+```bash
+curl -H "x-api-key: change-me-local-api-key" http://localhost:5001/api/health
 ```
-Save requests in a collection (for example, `IOTBay API`) so the same tests can be reused by the team.
+
+Use the `IOTBAY_API_KEY` value from your `.env` file.
+
+### Seeded Accounts
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Superadmin staff | `superadmin@iotbay.local` | `Password123!` |
+| Admin staff | `ops.admin@iotbay.local` | `Password123!` |
+| Customer | `jamie.customer@example.com` | `Password123!` |
+| Customer | `casey.customer@example.com` | `Password123!` |
+
+## Daily Use
+
+After `git pull`, run:
+
+```bash
+npm run sync
+```
+
+The Git post-merge and post-rewrite hooks run `npm run sync` after pulls,
+merges, and rebases.
+
+## Optional Integrations
+
+### Email Sending
+
+Email sending is optional for local development and uses SMTP to send emails from your own external email to reduce complexity.
+
+- use your email address for `IOTBAY_SMTP_USERNAME` in `.env`
+- use your email password for `IOTBAY_SMTP_PASSWORD`.
+
+> **Note:** For Gmail, you must use an app password not your normal Gmail password. [How to create a Google app password](https://support.google.com/accounts/answer/185833?hl=en). Google requires 2-Step Verification before app passwords are available for your account
+
+### Address Suggestions
+
+Address suggestions are also optional for local development and use Google-backed address suggestions and validation.
+
+- create a Google Maps Platform API key
+- enable billing on the Google Cloud project
+- enable `Places API (New)` and `Address Validation API` for your API key
+- put the key into `IOTBAY_GOOGLE_MAPS_API_KEY` in `.env`
+
+## Before Commit
+
+Before committing, run:
+
+```bash
+npm run check:all
+npm run test
+npm run build
+```
+
+Use `npm run fix:all` when you want lint and formatting fixes applied.
+
+Pull requests and pushes to `main` run the same checks in GitHub Actions.
+
+## Testing
+
+Backend test infrastructure lives under `api/test`:
+
+- `unit` contains isolated Python unit tests.
+- `api` contains backend HTTP/API acceptance tests.
+- `e2e` contains Selenium browser tests.
+- `shared` contains reusable fixtures and live app helpers used by multiple suites.
+
+### Unit tests
+
+Run Python unit tests for isolated checks on services, repositories, and database
+behavior.
+
+```bash
+npm run test:unit
+```
+
+### API Tests
+
+Run Python API tests for backend REST HTTP requests and responses.
+
+```bash
+npm run test:api
+```
+
+### End-to-End Tests
+
+Run Python Selenium tests for frontend layout, navigation, forms, and data
+visibility.
+The Selenium tests run Chrome in headless mode, so no browser window opens by default.
+Selenium requires [Chrome](https://www.google.com/chrome/) to be installed to run
+the E2E tests.
+
+```bash
+npm run test:e2e
+```
+
+## Database Changes
+
+### Migrations
+
+Use migrations for schema changes such as tables, columns, constraints, and
+indexes.
+
+Create a migration:
+
+```bash
+npm run -w api migrate:new -- add_product_category
+```
+
+This creates a numbered file in `api/migrations/`. Add the SQL, then apply it:
+
+```bash
+npm run -w api migrate
+```
+
+The backend also applies pending migrations on startup.
+
+### Seeding
+
+Shared development seed data lives in `api/db/seed.sql`.
+
+Load the shared seed data into your local database:
+
+```bash
+npm run -w api seed
+```
+
+Use this after pulling seed changes, or when you want to reset shared local data
+to the committed baseline.
+
+After intentionally changing shared fixtures in your local database, update the
+seed file:
+
+```bash
+npm run -w api seed:dump
+```
+
+Review the `api/db/seed.sql` diff before committing it.
