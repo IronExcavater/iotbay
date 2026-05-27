@@ -8,6 +8,7 @@ DELETE FROM addresses;
 DELETE FROM users;
 DELETE FROM media_assets;
 
+
 -- USERS
 INSERT INTO users (user_id, email, password_hash, first_name, last_name, user_type, status, profile_image_url) VALUES (X'44444444444444448444444444444444', 'casey.customer@example.com', 'pbkdf2_sha256$600000$164b26d16ac78c09dc4eddf51aaccb61$49ec3c80060973fb6e2c3134ee6d6db826046018d2197f055a8c7455f76d2743', 'Casey', 'Brown', 'customer', 'active', 'https://api.dicebear.com/9.x/initials/svg?seed=Casey%20Brown');
 INSERT INTO users (user_id, email, password_hash, first_name, last_name, user_type, status, profile_image_url) VALUES (X'33333333333343338333333333333333', 'jamie.customer@example.com', 'pbkdf2_sha256$600000$164b26d16ac78c09dc4eddf51aaccb61$49ec3c80060973fb6e2c3134ee6d6db826046018d2197f055a8c7455f76d2743', 'Jamie', 'Nguyen', 'customer', 'active', 'https://api.dicebear.com/9.x/initials/svg?seed=Jamie%20Nguyen');
