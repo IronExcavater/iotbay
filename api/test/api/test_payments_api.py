@@ -89,7 +89,7 @@ class PaymentApiTestCase(ApiAcceptanceTestCase):
     def _create_saved_method(self) -> str:
         """Create a saved payment method for the logged-in customer."""
         body: dict[str, object] = {
-            "type": "visa",
+            "type": "Visa",
             "cardholderName": "Jane Smith",
             "cardNumber": "4111111111114242",
             "expiry": "12/30",

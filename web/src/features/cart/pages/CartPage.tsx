@@ -83,7 +83,7 @@ export default function CartPage() {
 
     const navigate = useNavigate();
 
-    async function handleOrder() {
+    async function submitOrder(mode: 'place' | 'save') {
         const nextAddressErrors = validateAddressValues(addressValues, true);
         setAddressErrors(nextAddressErrors);
         if (
@@ -93,7 +93,9 @@ export default function CartPage() {
         )
             return;
 
-        setIsOrdering(true);
+        if (mode === 'place') setIsOrdering(true);
+        else setIsSaving(true);
+
         try {
             if (addressChanged) {
                 await updateMe(
@@ -114,52 +116,31 @@ export default function CartPage() {
             });
 
             clearCart();
-            navigate(`/checkout?orderId=${order.id}`);
+
+            if (mode === 'place') {
+                navigate(`/checkout?orderId=${order.id}`);
+            } else {
+                showToast('Order saved successfully');
+                navigate('/orders');
+            }
         } catch {
-            showToast('Unable to place order');
+            showToast(
+                mode === 'place'
+                    ? 'Unable to place order'
+                    : 'Unable to save order'
+            );
         } finally {
-            setIsOrdering(false);
+            if (mode === 'place') setIsOrdering(false);
+            else setIsSaving(false);
         }
     }
 
-    async function handleSaveOrder() {
-        const nextAddressErrors = validateAddressValues(addressValues, true);
-        setAddressErrors(nextAddressErrors);
-        if (
-            !canOrder ||
-            Object.values(nextAddressErrors).some(Boolean) ||
-            !user
-        )
-            return;
+    function handleOrder() {
+        return submitOrder('place');
+    }
 
-        setIsSaving(true);
-        try {
-            if (addressChanged) {
-                await updateMe(
-                    toProfileUpdateInput(addressValues, {
-                        emailChanged: false,
-                        isCustomer: true,
-                        isStaff: false,
-                    })
-                );
-            }
-
-            await orderApi.create({
-                addressId: null,
-                items: items.map((item) => ({
-                    productId: item.productId,
-                    quantity: item.quantity,
-                })),
-            });
-
-            clearCart();
-            showToast('Order saved successfully');
-            navigate(`/orders`);
-        } catch {
-            showToast('Unable to save order');
-        } finally {
-            setIsSaving(false);
-        }
+    function handleSaveOrder() {
+        return submitOrder('save');
     }
 
     return (

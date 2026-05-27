@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createHashRouter, Navigate } from 'react-router-dom';
 
 import ErrorPage from '@app/ErrorPage';
 import AdminLayout from '@app/layouts/AdminLayout';
@@ -14,8 +14,8 @@ import CartPage from '@features/cart/pages/CartPage';
 import HomePage from '@features/home/HomePage';
 import AdminOrdersPage from '@features/orders/admin/AdminOrdersPage';
 import OrdersPage from '@features/orders/pages/OrdersPage';
-import CheckoutPage from '@features/payments/CheckoutPage'; // NEW
-import PaymentHistoryPage from '@features/payments/PaymentHistoryPage'; // NEW
+import CheckoutPage from '@features/payments/CheckoutPage';
+import PaymentHistoryPage from '@features/payments/PaymentHistoryPage';
 import AdminProductsPage from '@features/products/admin/AdminProductsPage';
 import ProductCatalogPage from '@features/products/pages/ProductCatalogPage';
 import ProductDetailPage from '@features/products/pages/ProductDetailPage';
@@ -23,7 +23,7 @@ import AdminUsersPage from '@features/users/admin/AdminUsersPage';
 import InviteStaffPage from '@features/users/admin/InviteStaffPage';
 import UserDetailPage from '@features/users/pages/UserDetailPage';
 
-export const router = createBrowserRouter([
+export const router = createHashRouter([
     {
         path: '/',
         element: <SiteLayout />,
@@ -89,12 +89,10 @@ export const router = createBrowserRouter([
                         path: 'orders',
                         element: <OrdersPage />,
                     },
-                    // NEW: dedicated checkout page (reached from cart)
                     {
                         path: 'checkout',
                         element: <CheckoutPage />,
                     },
-                    // NEW: payment history page (reached from account or receipt)
                     {
                         path: 'account/payments',
                         element: <PaymentHistoryPage />,

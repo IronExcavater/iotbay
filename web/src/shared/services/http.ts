@@ -1,6 +1,7 @@
 type HttpMethod = 'DELETE' | 'GET' | 'PATCH' | 'POST';
 
 const apiKey = readEnvString('IOTBAY_API_KEY');
+const apiBaseUrl = readEnvString('VITE_API_BASE_URL').replace(/\/$/, '');
 
 interface RequestOptions<TBody> {
     body?: TBody;
@@ -62,8 +63,13 @@ const BACKEND_ERROR_MESSAGES: Record<string, string> = {
     USER_MANAGEMENT_NOT_ALLOWED: 'You cannot manage that user',
     USER_NOT_FOUND: 'User not found',
     USER_PERMISSION_ESCALATION_NOT_ALLOWED: 'You cannot assign that permission',
+    INSUFFICIENT_STOCK: 'One or more items are out of stock',
     INVALID_STATUS_TRANSITION: 'This status change is not allowed',
+    ORDER_ALREADY_PAID: 'Order has already been paid',
     ORDER_NOT_FOUND: 'Order not found',
+    ORDER_NOT_PAYABLE: 'Order cannot be paid in its current status',
+    PAYMENT_DECLINED: 'Payment was declined',
+    PAYMENT_METHOD_NOT_FOUND: 'Payment method not found',
 };
 
 export function backendErrorMessage(
@@ -202,7 +208,8 @@ async function requestJson<TResponse>(
     path: string,
     options: RequestOptions<unknown> = {}
 ): Promise<TResponse> {
-    const response = await fetch(path, buildRequestInit(options));
+    const url = apiBaseUrl ? `${apiBaseUrl}${path}` : path;
+    const response = await fetch(url, buildRequestInit(options));
     const payload = await readPayload(response);
 
     if (!response.ok) {

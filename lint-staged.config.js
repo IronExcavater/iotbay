@@ -8,5 +8,5 @@ module.exports = {
         () => 'npm run -w web stylelint:fix',
         () => 'npm run -w web prettier:fix',
     ],
-    'api/**/*.py': [() => 'npm run -w api fix:all'],
+    'api/**/*.py': [() => 'npm run -w api ruff:fix'],
 };

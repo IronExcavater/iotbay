@@ -2,6 +2,8 @@ import os
 import re
 import sqlite3
 import sys
+from collections.abc import Generator
+from contextlib import contextmanager
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -85,10 +87,23 @@ def seed_save(database_path: str) -> None:
     SEED_SQL_PATH.write_text("\n".join(lines), encoding="utf-8")
 
 
-def _connect(database_path: str) -> sqlite3.Connection:
+@contextmanager
+def connect(database_path: str) -> Generator[sqlite3.Connection, None, None]:
     if database_path != ":memory:":
         Path(database_path).parent.mkdir(parents=True, exist_ok=True)
-    return sqlite3.connect(database_path)
+    conn = sqlite3.connect(database_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+_connect = connect
 
 
 def _migration_files() -> list[Path]:
