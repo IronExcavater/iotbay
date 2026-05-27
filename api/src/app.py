@@ -38,6 +38,7 @@ def create_app(config_path: str | Path | None = None) -> Flask:
         "IOTBAY_API_KEY", ""
     )
     app.config["AUTH_COOKIE_SECURE"] = config.cookie_secure
+    app.config["AUTH_COOKIE_SAMESITE"] = config.cookie_samesite
     app.config["AUTH_SESSION_COOKIE_NAME"] = config.session_cookie_name
     app.config["AUTH_SESSION_LIFETIME_SECONDS"] = config.session_lifetime_seconds
     app.config["AUTH_TRUSTED_SESSION_COOKIE_NAME"] = config.trusted_session_cookie_name
@@ -46,7 +47,7 @@ def create_app(config_path: str | Path | None = None) -> Flask:
     )
     app.config["SESSION_COOKIE_SECURE"] = config.cookie_secure
     app.config["SESSION_COOKIE_HTTPONLY"] = True
-    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    app.config["SESSION_COOKIE_SAMESITE"] = config.cookie_samesite
 
     migrate(config.database_path)
 

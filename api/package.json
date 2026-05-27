@@ -11,7 +11,7 @@
         "migrate:new": "npm run db -- migrate-new",
         "seed": "npm run db -- seed-load",
         "seed:dump": "npm run db -- seed-dump",
-        "typecheck": "uv run pyright",
+        "typecheck": "uv run python -m pyright",
         "ruff": "uv run ruff check . && uv run ruff format . --check",
         "ruff:fix": "uv run ruff check . --fix && uv run ruff format .",
         "check:all": "npm run typecheck && npm run ruff",

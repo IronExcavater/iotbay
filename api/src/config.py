@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from src.common.pydantic import camel_case_config
 
@@ -37,12 +37,20 @@ class AddressConfig(EnvConfig):
     google_maps_api_key: str = ""
 
 
+class AppEnvConfig(EnvConfig):
+    cookie_samesite: str = ""
+    cookie_secure: bool | None = None
+    database_path: str = ""
+    web_url: str = ""
+
+
 class AppConfig(BaseModel):
     model_config = camel_case_config(
         frozen=True,
     )
 
     cookie_secure: bool
+    cookie_samesite: str = "Lax"
     database_path: str
     login_mfa_lifetime_seconds: int = 300
     session_cookie_name: str
@@ -52,6 +60,14 @@ class AppConfig(BaseModel):
     verification_code_lifetime_seconds: int
     web_url: str
 
+    @field_validator("cookie_samesite")
+    @classmethod
+    def validate_cookie_samesite(cls, value: str) -> str:
+        normalized = value.strip().capitalize()
+        if normalized not in {"Lax", "Strict", "None"}:
+            raise ValueError("cookie_samesite must be Lax, Strict, or None")
+        return normalized
+
 
 def load_app_config(config_path: str | Path | None = None) -> AppConfig:
     path = Path(config_path) if config_path is not None else DEFAULT_CONFIG_PATH
@@ -60,6 +76,19 @@ def load_app_config(config_path: str | Path | None = None) -> AppConfig:
         raise ValueError(f"config file must contain a JSON object: {path}")
 
     config = AppConfig.model_validate(payload)
+    env_config = AppEnvConfig()
+    updates: dict[str, object] = {}
+    if env_config.cookie_samesite:
+        updates["cookie_samesite"] = env_config.cookie_samesite
+    if env_config.cookie_secure is not None:
+        updates["cookie_secure"] = env_config.cookie_secure
+    if env_config.database_path:
+        updates["database_path"] = env_config.database_path
+    if env_config.web_url:
+        updates["web_url"] = env_config.web_url
+    if updates:
+        config = AppConfig.model_validate({**config.model_dump(), **updates})
+
     if not config.database_path:
         raise ValueError("config path values must be non-empty strings")
 

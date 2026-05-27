@@ -31,7 +31,7 @@ from src.auth.session import (
     staff_permission_required,
     trusted_session_cookie_name,
 )
-from src.common.app import app_bool, app_int, services
+from src.common.app import app_bool, app_int, app_str, services
 from src.common.web import ApiError, parse_query, parse_request, request_locale
 from src.emails.service import DeliveredEmailArtifact
 from src.users.models import STAFF_PERMISSION_SUPERADMIN, User
@@ -49,6 +49,10 @@ def _trusted_session_max_age() -> int:
 
 def _cookie_secure() -> bool:
     return app_bool("AUTH_COOKIE_SECURE")
+
+
+def _cookie_samesite() -> str:
+    return app_str("AUTH_COOKIE_SAMESITE")
 
 
 def _user_payload(user: User) -> dict[str, object]:
@@ -74,7 +78,7 @@ def _set_session_cookie(response: Response, session_token: str) -> None:
         session_token,
         max_age=_session_max_age(),
         httponly=True,
-        samesite="Lax",
+        samesite=_cookie_samesite(),
         secure=_cookie_secure(),
         path="/",
     )
@@ -86,7 +90,7 @@ def _set_trusted_session_cookie(response: Response, session_token: str) -> None:
         session_token,
         max_age=_trusted_session_max_age(),
         httponly=True,
-        samesite="Lax",
+        samesite=_cookie_samesite(),
         secure=_cookie_secure(),
         path="/",
     )
@@ -96,7 +100,7 @@ def _clear_session_cookie(response: Response) -> None:
     response.delete_cookie(
         session_cookie_name(),
         httponly=True,
-        samesite="Lax",
+        samesite=_cookie_samesite(),
         secure=_cookie_secure(),
         path="/",
     )
@@ -106,7 +110,7 @@ def _clear_trusted_session_cookie(response: Response) -> None:
     response.delete_cookie(
         trusted_session_cookie_name(),
         httponly=True,
-        samesite="Lax",
+        samesite=_cookie_samesite(),
         secure=_cookie_secure(),
         path="/",
     )

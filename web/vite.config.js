@@ -7,6 +7,14 @@ export default defineConfig({
     base: process.env.VITE_BASE_PATH || '/',
     build: {
         cssCodeSplit: false,
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    react: ['react', 'react-dom', 'react-router-dom'],
+                    vendor: ['clsx', 'libphonenumber-js', 'luxon'],
+                },
+            },
+        },
     },
     envDir: '..',
     // Reuse the workspace env file so the web app can read the same local API

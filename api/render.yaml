@@ -8,6 +8,10 @@ services:
     envVars:
       - key: IOTBAY_DATABASE_PATH
         value: /var/data/iotbay.sqlite3
+      - key: IOTBAY_COOKIE_SECURE
+        value: true
+      - key: IOTBAY_COOKIE_SAMESITE
+        value: None
       - key: IOTBAY_API_KEY
         sync: false
       - key: IOTBAY_ALLOWED_ORIGINS
